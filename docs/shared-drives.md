@@ -2,9 +2,19 @@
 
 # Shared drives
 
-A shared drive is a folder that is shared between several cozy instances. A
-member doesn't have the files in their Cozy, but can access them via the stack
-playing a proxy role.
+A shared drive is a federated sharing in `io.cozy.files` between several Cozy
+instances. The root can currently be either:
+
+- a directory
+- a single file
+
+A member doesn't have the files in their Cozy, but can access them via the
+stack playing a proxy role.
+
+The root kind is exposed on the sharing payload with `drive_root_type`:
+
+- `directory`
+- `file`
 
 For drives created on an organization instance, the sharing payload also
 exposes `org_drive: true`. This is an additive classification flag for clients;
@@ -18,8 +28,9 @@ There are two ways to create a shared drive:
 
 Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint either to:
 
-- convert an existing folder into a shared drive with `folder_id`
-- create a brand new shared-drive folder with `name`
+- convert an existing file or directory into a shared drive with `folder_id`
+  or `file_id`
+- create a brand new directory-root shared drive with `name`
 
 This is the recommended approach as it handles validation and setup
 automatically.
@@ -32,9 +43,11 @@ these steps:
 1. Ensure that the `/Drives` folder exists in the cozy instance with the
    [`POST /files/shared-drives`](https://docs.cozy.io/en/cozy-stack/files/#post-filesshared-drives)
    route.
-2. Create a folder inside it, with the name of shared drive.
+2. Create the root resource to share:
+   - either a folder inside it, with the name of shared drive
+   - or a file that will become the root of the shared drive
 3. Create a sharing with the `drive: true` attribute, and one rule for
-   shared folder (with `none` for `add`, `update` and `remove` attributes).
+   the shared root (with `none` for `add`, `update` and `remove` attributes).
 
 ## Managing shared drives
 
@@ -68,6 +81,7 @@ Content-Type: application/vnd.api+json
       "id": "aae62886e79611ef8381fb83ff72e425",
       "attributes": {
         "drive": true,
+        "drive_root_type": "directory",
         "org_drive": true,
         "owner": true,
         "description": "Drive for the product team",
@@ -118,21 +132,38 @@ Content-Type: application/vnd.api+json
 
 ### POST /sharings/drives
 
-Creates a new shared drive. The endpoint supports two mutually exclusive modes:
+Creates a new shared drive. The endpoint supports three mutually exclusive
+modes:
 
-- pass `folder_id` to convert an existing folder into a shared drive
-- pass `name` to create a new folder under the Shared Drives root and share it
+- pass `folder_id` to convert an existing file or directory into a shared drive
+- pass `file_id` to convert an existing file or directory into a shared drive
+- pass `name` to create a new directory under the Shared Drives root and share
+  it
 
 If the target Cozy is an organization instance, the created sharing is also
 marked with `org_drive: true`.
 
-When `folder_id` is used, the folder must:
+`folder_id` is the legacy root identifier alias. `file_id` is the preferred
+identifier alias for clients migrating to the new API. In both cases, the
+actual root kind is determined from the referenced `io.cozy.files` document and
+is exposed back as `drive_root_type`.
 
-- Exist and be a directory (not a file)
-- Not be a system folder (root, trash, shared-with-me, shared-drives, no-longer-shared)
-- Not be inside the trash
-- Not already have a sharing (directly or via a parent folder)
-- Not contain any subfolder that already has a sharing
+When an existing root is used through `folder_id` or `file_id`, that root must:
+
+- Exist
+- Not already have a sharing itself
+- Not be inside another shared folder
+
+Additional rules for directory roots:
+
+- Must not be a system folder (`root`, `trash`, `shared-with-me`,
+  `shared-drives`, `no-longer-shared`)
+- Must not be inside the trash
+- Must not contain any subfolder that already has a sharing
+
+Additional rules for file roots:
+
+- Must not be trashed
 
 #### Request
 
@@ -181,15 +212,30 @@ Or create a brand new shared drive directly:
 }
 ```
 
+Or create a file-root shared drive explicitly:
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "attributes": {
+      "description": "Quarterly report",
+      "file_id": "357665ec-e797-11ef-94fb-f3d08ccb3ff5"
+    }
+  }
+}
+```
+
 **Attributes:**
 
 | Attribute     | Required | Description |
 |---------------|----------|-------------|
-| `folder_id`   | No       | The ID of the existing folder to convert into a shared drive |
-| `name`        | No       | The name of the folder to create under Shared Drives for a new shared drive |
-| `description` | No       | A description for the shared drive. If not provided, defaults to the folder name |
+| `folder_id`   | No       | Legacy root ID alias. Can reference an existing file or directory to convert into a shared drive |
+| `file_id`     | No       | Preferred root ID alias. Can reference an existing file or directory to convert into a shared drive |
+| `name`        | No       | The name of the directory to create under Shared Drives for a new directory-root shared drive |
+| `description` | No       | A description for the shared drive. If not provided, defaults to the root resource name |
 
-Exactly one of `folder_id` or `name` must be provided.
+Exactly one of `folder_id`, `file_id`, or `name` must be provided.
 
 **Relationships:**
 
@@ -215,6 +261,7 @@ Content-Type: application/vnd.api+json
     "id": "aae62886e79611ef8381fb83ff72e425",
     "attributes": {
       "drive": true,
+      "drive_root_type": "directory",
       "owner": true,
       "description": "Project Documents",
       "app_slug": "drive",
@@ -262,11 +309,11 @@ Content-Type: application/vnd.api+json
 |--------|-------|-------------|
 | 400    | Bad Request | Invalid JSON body |
 | 403    | Forbidden | Insufficient permissions to create a sharing |
-| 404    | Not Found | The folder with the given `folder_id` does not exist |
-| 409    | Conflict | The folder already has a sharing, is inside a shared folder, contains a shared subfolder, or the new `name` already exists in Shared Drives |
-| 422    | Unprocessable Entity | Invalid request: missing both `folder_id` and `name`, both provided together, folder is a file, folder is a system folder, or the new `name` is invalid |
+| 404    | Not Found | The file or directory with the given `folder_id` or `file_id` does not exist |
+| 409    | Conflict | The root already has a sharing, is inside a shared folder, contains a shared subfolder, or the new `name` already exists in Shared Drives |
+| 400    | Bad Request | Invalid request: missing all of `folder_id`, `file_id`, and `name`, conflicting attributes, invalid root type, system folder, trashed root, or invalid `name` |
 
-**Example error (folder already shared):**
+**Example error (root already shared):**
 
 ```http
 HTTP/1.1 409 Conflict
@@ -290,6 +337,11 @@ Content-Type: application/vnd.api+json
 Unless stated otherwise, a permission on the whole `io.cozy.files` doctype is
 required to use the following routes.
 
+For file-root shared drives (`drive_root_type = file`), iteration 1 currently
+supports only file-shaped routes. Directory-only routes return
+`422 Unprocessable Entity`. `_changes` and realtime are available with exact
+root-file semantics for file-root shared drives.
+
 ### GET /sharings/drives/:id/download/:file-id
 
 Download a file via a drive share.
@@ -312,6 +364,9 @@ Does not require an `Authorization` header (the secret acts as the credential).
 ### POST /sharings/drives/:id/archive
 
 Create a temporary zip archive of multiple files and/or folders inside a shared drive. Works for both owners and recipients (including read-only recipients).
+
+This route is supported only for directory-root shared drives. File-root shared
+drives return `422 Unprocessable Entity`.
 
 The request body follows the same format as [`POST /files/archive`](files.md#post-filesarchive). The `links.related` in the response points to `/sharings/drives/:id/archive/:secret/:name.zip` instead of `/files/archive/...`.
 
@@ -377,6 +432,9 @@ See there for request and response examples, differences are the URL and:
   eg: `//io.cozy.files.shared-drives-dir/1/ba3b516812f636fc022f3968f991357a/Meetings/Checklist.txt`
 
   Schema and it's version, followed by the shared drive ID, and the path within
+
+For file-root shared drives, this route returns only changes for the root file.
+Unrelated file changes are filtered out.
 
 ### GET /sharings/drives/:id/:file-id
 
@@ -506,6 +564,9 @@ Content-Type: application/vnd.api+json
 This endpoint returns the size taken by the files in a directory inside a shared
 drive, including those in subdirectories.
 
+This route is supported only for directory-root shared drives. File-root shared
+drives return `422 Unprocessable Entity`.
+
 #### Request
 
 ```http
@@ -539,6 +600,9 @@ Duplicates a file.
 
 Identical call to [`POST /files/:file-id/copy`](files.md#post-filesfile-idcopy) but over a shared drive.
 See there for request and response examples, the only difference is the URL.
+
+This route is supported only for directory-root shared drives. File-root shared
+drives return `422 Unprocessable Entity`.
 
 ### POST /sharings/drives/move
 
@@ -594,6 +658,15 @@ Notes on behavior:
 - Cross-stack operations perform a remote download/upload and delete the remote source upon success (only for move operations).
 - When `copy: true`, source files and directories are preserved in their original location.
 - When `copy: false` (default), source files and directories are deleted after successful copy to destination.
+
+Additional rules for file-root shared drives:
+
+- A file-root shared drive can be used only as a copy source.
+- `move` is rejected when the source shared drive is file-root.
+- A file-root shared drive cannot be used as a destination for either move or
+  copy.
+- When a file-root shared drive is the source, only its root file can be
+  copied.
 
 #### Responses
 
@@ -657,6 +730,9 @@ Some specific attributes of the patch can be used:
 
 - `dir_id` attribute can be updated to move a file or directory (the new
   directory needs to be in the same shared drive as the old one)
+
+For file-root shared drives, metadata updates and rename are supported, but
+changing `dir_id` is rejected with `422 Unprocessable Entity`.
 
 #### HTTP headers
 
@@ -769,6 +845,13 @@ drive.
 #### POST /sharings/drives/trash/:file-id
 #### DELETE /sharings/drives/trash/:file-id
 
+For file-root shared drives:
+
+- `GET /sharings/drives/:id/metadata` is not supported and returns `422`
+- `POST /sharings/drives/upload/metadata` is not supported and returns `422`
+- `DELETE /sharings/drives/:file-id` is supported for the root file
+- trash and restore routes are supported for the root file
+
 Trash operations keep the same file metadata shape as `/files`: when an item is
 moved to the trash, `cozyMetadata.trashedAt` and `cozyMetadata.trashedBy` are
 exposed on both the caller side and the replicated shared-drive copies. On
@@ -791,6 +874,8 @@ shared drive:
 Lists the share-by-link permissions for the requested file or folder IDs inside
 the shared drive.
 
+For file-root shared drives, the only valid target is the root file.
+
 Authorization rules:
 
 - The shared-drive owner can list all matching links.
@@ -812,6 +897,8 @@ Status codes:
 
 Creates a share-by-link permission for one file or folder in the shared drive.
 The request body uses the same JSON:API shape as [`POST /permissions`](permissions.md#post-permissions).
+
+For file-root shared drives, the only valid target is the root file.
 
 Authorization rules:
 
@@ -866,6 +953,7 @@ Validation:
   RFC3339 date-time).
 - `permissions`, when provided, must still target the same file or folder
   inside the shared drive.
+- for file-root shared drives, that target must remain the root file
 - A write-capable creator or the owner can promote a read-only link to a
   writable link if their current token grants those verbs.
 - A read-only shared-drive recipient can only update `password` and
@@ -943,6 +1031,9 @@ difference is the URL.
 
 Create a note inside a shared drive. Identical to [`POST /notes`](notes.md#post-notes).
 
+This route is supported only for directory-root shared drives. File-root shared
+drives return `422 Unprocessable Entity`.
+
 ### GET /sharings/drives/:id/notes/:file-id/open
 
 Return the parameters to build the URL where the note can be opened.
@@ -961,6 +1052,10 @@ Returns the parameters to open an office document. Identical to
 
 Get the changes inside a shared drive in real-time from a websocket.
 Identical to [`GET /realtime`](realtime.md), except subscribing to the shared drive is automatically done.
+
+This route is currently available only for directory-root shared drives.
+For file-root shared drives, the websocket stream emits only events whose
+target is the root file of the drive. Unrelated file events are filtered out.
 
 ```
 client > {"method": "AUTH",

@@ -29,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -272,6 +273,76 @@ func createSharedDrive(
 	sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
 	// Extract invitation link
+	publicName, _ := inst.SettingsPublicName()
+	sentDescription, disco := extractInvitationLink(t, inst, sharingID, publicName, "")
+	assert.Equal(t, sentDescription, description)
+	assert.Contains(t, disco, "/discovery?state=")
+	discovery = disco
+
+	return
+}
+
+func createFileRootSharedDrive(
+	t *testing.T,
+	inst *instance.Instance,
+	appToken string,
+	tsURL string,
+	fileID string,
+	description string,
+	recipients []RecipientInfo,
+) (
+	sharingID string,
+	discovery string,
+) {
+	t.Helper()
+
+	e := httpexpect.Default(t, tsURL)
+
+	if recipients == nil {
+		recipients = DefaultRecipients()
+	}
+
+	var rwRecipientRefs, roRecipientRefs []string
+	for _, r := range recipients {
+		c := createContact(t, inst, r.Name, r.Email)
+		require.NotNil(t, c)
+		ref := `{"id": "` + c.ID() + `", "type": "` + c.DocType() + `"}`
+		if r.ReadOnly {
+			roRecipientRefs = append(roRecipientRefs, ref)
+		} else {
+			rwRecipientRefs = append(rwRecipientRefs, ref)
+		}
+	}
+
+	rwRecipientsJSON := "[" + strings.Join(rwRecipientRefs, ",") + "]"
+	roRecipientsJSON := "[" + strings.Join(roRecipientRefs, ",") + "]"
+
+	obj := e.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+appToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "` + consts.Sharings + `",
+				"attributes": {
+					"description": "` + description + `",
+					"file_id": "` + fileID + `"
+				},
+				"relationships": {
+					"recipients": {
+						"data": ` + rwRecipientsJSON + `
+					},
+					"read_only_recipients": {
+						"data": ` + roRecipientsJSON + `
+					}
+				}
+			}
+		}`)).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
 	publicName, _ := inst.SettingsPublicName()
 	sentDescription, disco := extractInvitationLink(t, inst, sharingID, publicName, "")
 	assert.Equal(t, sentDescription, description)
@@ -1249,7 +1320,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		require.Equal(t, sharedDrivesDir.ID(), createdDir.DirID)
 	})
 
-	t.Run("FailOnMissingFolderIDAndName", func(t *testing.T) {
+	t.Run("FailOnMissingFolderIDFileIDAndName", func(t *testing.T) {
 		resp := eOwner.POST("/sharings/drives").
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -1265,7 +1336,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.errors[0].detail").String().
-			Contains("folder_id or name is required")
+			Contains("folder_id, file_id or name is required")
 	})
 
 	t.Run("FailOnBothFolderIDAndName", func(t *testing.T) {
@@ -1283,6 +1354,29 @@ func TestCreateDriveFromFolder(t *testing.T) {
 					}
 				}
 			}`, consts.Sharings, dirID))).
+			Expect().Status(400)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("mutually exclusive")
+	})
+
+	t.Run("FailOnBothFolderIDAndFileID", func(t *testing.T) {
+		dirID := createRootDirectory(t, eOwner, "AmbiguousFileDriveFolder", ownerAppToken)
+		fileID := createFile(t, eOwner, "", "AmbiguousFileDrive.txt", ownerAppToken)
+
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s",
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, dirID, fileID))).
 			Expect().Status(400)
 
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -1333,8 +1427,22 @@ func TestCreateDriveFromFolder(t *testing.T) {
 			Expect().Status(404)
 	})
 
-	t.Run("FailOnFile", func(t *testing.T) {
-		// Create a file instead of directory
+	t.Run("FailOnNonexistentFile", func(t *testing.T) {
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "nonexistent-file-id"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(404)
+	})
+
+	t.Run("AllowOnFileWithFolderID", func(t *testing.T) {
 		fileID := createFile(t, eOwner, "", "test.txt", ownerAppToken)
 
 		eOwner.POST("/sharings/drives").
@@ -1348,7 +1456,30 @@ func TestCreateDriveFromFolder(t *testing.T) {
 					}
 				}
 			}`, consts.Sharings, fileID))).
-			Expect().Status(422)
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+	})
+
+	t.Run("AllowOnDirectoryWithFileID", func(t *testing.T) {
+		dirID := createRootDirectory(t, eOwner, "NotAFileDriveRoot", ownerAppToken)
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.drive_root_type").String().IsEqual("directory")
 	})
 
 	t.Run("FailOnSystemFolder", func(t *testing.T) {
@@ -1357,14 +1488,14 @@ func TestCreateDriveFromFolder(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(fmt.Sprintf(`{
-				"data": {
+			"data": {
 					"type": "%s",
 					"attributes": {
 						"folder_id": "%s"
 					}
 				}
 			}`, consts.Sharings, consts.RootDirID))).
-			Expect().Status(422)
+			Expect().Status(400)
 
 		// Verify error message
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -1376,14 +1507,14 @@ func TestCreateDriveFromFolder(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(fmt.Sprintf(`{
-				"data": {
+			"data": {
 					"type": "%s",
 					"attributes": {
 						"folder_id": "%s"
 					}
 				}
 			}`, consts.Sharings, consts.TrashDirID))).
-			Expect().Status(422)
+			Expect().Status(400)
 
 		// Verify error message
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -1395,14 +1526,14 @@ func TestCreateDriveFromFolder(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(fmt.Sprintf(`{
-				"data": {
+			"data": {
 					"type": "%s",
 					"attributes": {
 						"folder_id": "%s"
 					}
 				}
 			}`, consts.Sharings, consts.SharedDrivesDirID))).
-			Expect().Status(422)
+			Expect().Status(400)
 
 		// Verify error message
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -1498,6 +1629,82 @@ func TestCreateDriveFromFolder(t *testing.T) {
 			Expect().Status(409)
 
 		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("already has an existing sharing")
+	})
+
+	t.Run("FailOnAlreadySharedFile", func(t *testing.T) {
+		fileID := createFile(t, eOwner, "", "AlreadySharedFile.txt", ownerAppToken)
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(201)
+
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(409)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("already has an existing sharing")
+	})
+
+	t.Run("FailOnFileInsideSharedFolder", func(t *testing.T) {
+		parentID := createRootDirectory(t, eOwner, "ParentSharedForFile", ownerAppToken)
+		fileID := createFile(t, eOwner, parentID, "NestedDriveFile.txt", ownerAppToken)
+
+		recipientContact := createContact(t, ownerInstance, "Eve", "eve@example.net")
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, parentID, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201)
+
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(409)
+
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.errors[0].detail").String().
 			Contains("already has an existing sharing")
@@ -1999,6 +2206,93 @@ func TestSharedDriveChanges(t *testing.T) {
 	})
 }
 
+func TestFileRootSharedDriveChanges(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	rootFileID := createFile(t, eA, "", "FileRootChanges.txt", env.acmeToken)
+	unrelatedFileID := createFile(t, eA, "", "OutsideInitialChanges.txt", env.acmeToken)
+	sharingID, _ := createFileRootSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File-root changes drive",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+	initial := eB.GET("/sharings/drives/"+sharingID+"/_changes").
+		WithQuery("include_docs", true).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+		Object()
+
+	lastSeq := initial.Value("last_seq").String().NotEmpty().Raw()
+	results := initial.Value("results").Array()
+	foundRoot := false
+	foundUnrelated := false
+	for i := 0; i < int(results.Length().Raw()); i++ {
+		change := results.Value(i).Object()
+		switch change.Value("id").String().Raw() {
+		case rootFileID:
+			foundRoot = true
+			change.Path("$.doc.driveId").String().IsEqual(sharingID)
+		case unrelatedFileID:
+			foundUnrelated = true
+		}
+	}
+	require.True(t, foundRoot, "root file should be present in file-root changes feed")
+	require.False(t, foundUnrelated, "unrelated files should not be present in file-root changes feed")
+
+	eA.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "io.cozy.files",
+				"id": "` + rootFileID + `",
+				"attributes": {
+					"name": "FileRootChangesRenamed.txt"
+				}
+			}
+		}`)).
+		Expect().Status(200)
+
+	newUnrelatedFileID := createFile(t, eA, "", "OutsideSinceChanges.txt", env.acmeToken)
+
+	since := eB.GET("/sharings/drives/"+sharingID+"/_changes").
+		WithQuery("since", lastSeq).
+		WithQuery("include_docs", true).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+		Object()
+
+	sinceResults := since.Value("results").Array()
+	foundRootUpdate := false
+	foundNewUnrelated := false
+	for i := 0; i < int(sinceResults.Length().Raw()); i++ {
+		change := sinceResults.Value(i).Object()
+		switch change.Value("id").String().Raw() {
+		case rootFileID:
+			foundRootUpdate = true
+			change.Path("$.doc.driveId").String().IsEqual(sharingID)
+			change.Path("$.doc.name").String().IsEqual("FileRootChangesRenamed.txt")
+		case newUnrelatedFileID:
+			foundNewUnrelated = true
+		}
+	}
+	require.True(t, foundRootUpdate, "root file update should be present in file-root changes feed")
+	require.False(t, foundNewUnrelated, "unrelated changes should be filtered out from file-root changes feed")
+}
+
 func TestSharedDriveCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -2027,6 +2321,7 @@ func TestSharedDriveCreation(t *testing.T) {
 		attrs.Value("app_slug").IsEqual("drive")
 		attrs.Value("owner").IsEqual(true)
 		attrs.Value("drive").IsEqual(true)
+		attrs.Value("drive_root_type").IsEqual("directory")
 
 		members := attrs.Value("members").Array()
 		members.Length().Ge(2) // At least owner + Betty
@@ -2077,6 +2372,141 @@ func TestSharedDriveCreation(t *testing.T) {
 
 		require.NotEmpty(t, sharingID, "Sharing ID should not be empty")
 		require.NotEmpty(t, dirID, "Directory ID should not be empty")
+	})
+
+	t.Run("CreateDriveFromFile", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFile(t, eA, "", "SharedDriveFile.txt", env.acmeToken)
+
+		obj := eA.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Drive created from file",
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		sharingID := obj.Path("$.data.id").String().NotEmpty().Raw()
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.Value("drive").Boolean().IsTrue()
+		attrs.Value("drive_root_type").String().IsEqual("file")
+		attrs.Value("description").String().IsEqual("Drive created from file")
+		rule := attrs.Value("rules").Array().Value(0).Object()
+		rule.Value("title").String().IsEqual("SharedDriveFile.txt")
+		rule.Value("values").Array().Value(0).String().IsEqual(fileID)
+
+		sharedFile, err := env.acme.VFS().FileByID(fileID)
+		require.NoError(t, err)
+		require.Contains(t, sharedFile.ReferencedBy, couchdb.DocReference{
+			ID:   sharingID,
+			Type: consts.Sharings,
+		})
+
+		eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+
+		listObj := eA.GET("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		found := false
+		for _, item := range listObj.Path("$.data").Array().Iter() {
+			drive := item.Object()
+			if drive.Value("id").String().Raw() != sharingID {
+				continue
+			}
+			drive.Path("$.attributes.drive_root_type").String().IsEqual("file")
+			found = true
+		}
+		require.True(t, found, "file-root shared drive should be listed")
+	})
+
+	t.Run("CreateDriveFromFolderViaFileID", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		dirID := createRootDirectory(t, eA, "SharedDriveFolderViaFileID", env.acmeToken)
+
+		obj := eA.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"file_id": "%s"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("directory")
+		obj.Path("$.data.attributes.rules[0].values[0]").String().IsEqual(dirID)
+	})
+
+	t.Run("CreateDriveFromFileViaFolderID", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFile(t, eA, "", "SharedDriveFileViaFolderID.txt", env.acmeToken)
+
+		obj := eA.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+		obj.Path("$.data.attributes.rules[0].values[0]").String().IsEqual(fileID)
+	})
+
+	t.Run("LegacyDriveCreationInfersFileRootType", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFile(t, eA, "", "LegacyDriveFile.txt", env.acmeToken)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Legacy file-root shared drive",
+						"drive": true,
+						"rules": [{
+							"title": "LegacyDriveFile.txt",
+							"doctype": "%s",
+							"values": ["%s"]
+						}]
+					}
+				}
+			}`, consts.Sharings, consts.Files, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
 	})
 }
 
@@ -2254,6 +2684,302 @@ func TestSharedDriveTrashAttribution(t *testing.T) {
 			payload.Data.Attributes.CozyMetadata.TrashedBy.DisplayName == trashedByDisplayName &&
 			payload.Data.Attributes.CozyMetadata.TrashedBy.Domain == trashedByDomain
 	}, 10*time.Second, 200*time.Millisecond, "owner should receive recipient trash attribution")
+}
+
+func TestFileRootSharedDriveReadRoutes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	t.Run("HeadGetAndDownloadRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "SharedDriveRootFile.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"File-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+		unrelatedFileID := createFile(t, eA, "", "OutsideFile.txt", env.acmeToken)
+
+		eA.HEAD("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200)
+
+		obj := eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.id").String().IsEqual(rootFileID)
+		obj.Path("$.data.type").String().IsEqual(consts.Files)
+		obj.Path("$.data.attributes.name").String().IsEqual("SharedDriveRootFile.txt")
+
+		res := eB.GET("/sharings/drives/"+sharingID+"/download/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+		res.Header("Content-Disposition").IsEqual(`inline; filename="SharedDriveRootFile.txt"`)
+		res.Body().IsEqual("foo")
+
+		related := eB.POST("/sharings/drives/"+sharingID+"/downloads").
+			WithQuery("Id", rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
+
+		eB.GET(related).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			Body().IsEqual("foo")
+
+		eB.GET("/sharings/drives/"+sharingID+"/"+unrelatedFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(403)
+
+		eB.GET("/sharings/drives/"+sharingID+"/download/"+unrelatedFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(403)
+	})
+
+	t.Run("OpenNoteRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		noteObj := eA.POST("/notes").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.notes.documents",
+					"attributes": {
+						"title": "Root Note",
+						"schema": {
+							"nodes": [
+								["doc", { "content": "block+" }],
+								["paragraph", { "content": "inline*", "group": "block" }],
+								["text", { "group": "inline" }]
+							],
+							"marks": [],
+							"topNode": "doc"
+						}
+					}
+				}
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		noteID := noteObj.Value("data").Object().Value("id").String().Raw()
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			noteID,
+			"Note-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		obj := eB.GET("/sharings/drives/"+sharingID+"/notes/"+noteID+"/open").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.type").String().IsEqual(consts.NotesURL)
+		obj.Path("$.data.id").String().IsEqual(noteID)
+		obj.Path("$.data.attributes.note_id").String().IsEqual(noteID)
+		obj.Path("$.data.attributes.sharecode").String().NotEmpty()
+	})
+}
+
+func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	t.Run("MutateRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "MutableRoot.txt", env.acmeToken)
+		outsideDirID := createRootDirectory(t, eA, "OutsidePatchTarget", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Mutable file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.PUT("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte("bar")).
+			Expect().Status(200)
+
+		eB.GET("/sharings/drives/"+sharingID+"/download/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			Body().IsEqual("bar")
+
+		patched := eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + rootFileID + `",
+					"attributes": {
+						"name": "RenamedRoot.txt",
+						"cozyMetadata": {
+							"favorite": true
+						}
+					}
+				}
+			}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		patched.Path("$.data.attributes.name").String().IsEqual("RenamedRoot.txt")
+		patched.Path("$.data.attributes.cozyMetadata.favorite").Boolean().True()
+
+		eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + rootFileID + `",
+					"attributes": {
+						"dir_id": "` + outsideDirID + `"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().True()
+
+		eB.POST("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().False()
+	})
+
+	t.Run("DestroyTrashedRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "DestroyableRoot.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Destroyable file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(204)
+	})
+
+	t.Run("RejectDirectoryOnlyRoutes", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "UnsupportedRoutesRoot.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Unsupported routes file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.GET("/sharings/drives/"+sharingID+"/metadata").
+			WithQuery("Path", "/UnsupportedRoutesRoot.txt").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.type").String().IsEqual("file")
+
+		eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID+"/size").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithQuery("Name", "Child.txt").
+			WithQuery("Type", "file").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte("child")).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/upload/metadata").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files.metadata",
+					"attributes": {
+						"device-id": "123456789"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/archive").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/"+rootFileID+"/copy").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/notes").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.notes.documents",
+					"attributes": {
+						"title": "Should Fail"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+	})
 }
 
 func TestSharedDriveDownload(t *testing.T) {
@@ -2579,6 +3305,24 @@ func TestSharedDriveMetadata(t *testing.T) {
 		movedFile.Path("$.data.attributes.dir_id").String().IsEqual(env.productDirID)
 	})
 
+	t.Run("CannotMoveRootDirectory", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		eB.PATCH("/sharings/drives/"+env.firstSharingID+"/"+env.firstRootDirID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + env.firstRootDirID + `",
+					"attributes": {
+						"dir_id": "` + env.productDirID + `"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+	})
+
 	t.Run("CannotMoveFileOutsideDrive", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
@@ -2873,6 +3617,97 @@ func TestSharedDriveRealtime(t *testing.T) {
 		payload := obj.Value("payload").Object()
 		payload.HasValue("type", consts.Files)
 		payload.HasValue("id", newFileID)
+	})
+
+	t.Run("IgnoreUnrelatedEventForFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "RealtimeRootIgnore.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Realtime file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		unrelatedFileID := createFile(t, eA, "", "RealtimeOutside.txt", env.acmeToken)
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.FileDoc{
+			Type:    consts.Files,
+			DocID:   unrelatedFileID,
+			DocName: "RealtimeOutsideRenamed.txt",
+		}, nil)
+
+		raw := ws.Raw()
+		require.NoError(t, raw.SetReadDeadline(time.Now().Add(250*time.Millisecond)))
+		_, _, err := raw.ReadMessage()
+		require.Error(t, err)
+		netErr, ok := err.(net.Error)
+		require.True(t, ok, "expected a timeout while waiting for an unrelated file event")
+		require.True(t, netErr.Timeout(), "expected a timeout while waiting for an unrelated file event")
+	})
+
+	t.Run("ReceiveUpdatedEventForFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "RealtimeRootUpdate.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Realtime file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		raw := ws.Raw()
+		require.NoError(t, raw.SetReadDeadline(time.Now().Add(5*time.Second)))
+
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.FileDoc{
+			Type:    consts.Files,
+			DocID:   rootFileID,
+			DocName: "RealtimeRootRenamed.txt",
+		}, nil)
+
+		var msg struct {
+			Event   string `json:"event"`
+			Payload struct {
+				Type string `json:"type"`
+				ID   string `json:"id"`
+				Doc  struct {
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"doc"`
+			} `json:"payload"`
+		}
+		require.NoError(t, raw.ReadJSON(&msg))
+		require.Equal(t, "UPDATED", msg.Event)
+		require.Equal(t, consts.Files, msg.Payload.Type)
+		require.Equal(t, rootFileID, msg.Payload.ID)
+		require.Equal(t, "RealtimeRootRenamed.txt", msg.Payload.Doc.Name)
 	})
 }
 

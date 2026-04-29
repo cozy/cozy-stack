@@ -66,6 +66,7 @@ func CreateSharedDrive(c echo.Context) error {
 	var attrs struct {
 		Description string `json:"description"`
 		FolderID    string `json:"folder_id"`
+		FileID      string `json:"file_id"`
 		Name        string `json:"name"`
 	}
 	obj, err := jsonapi.Bind(c.Request().Body, &attrs)
@@ -73,11 +74,13 @@ func CreateSharedDrive(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 
-	if attrs.FolderID == "" && attrs.Name == "" {
-		return jsonapi.BadRequest(errors.New("folder_id or name is required"))
+	if attrs.FolderID == "" && attrs.FileID == "" && attrs.Name == "" {
+		return jsonapi.BadRequest(errors.New("one of folder_id, file_id or name is required"))
 	}
-	if attrs.FolderID != "" && attrs.Name != "" {
-		return jsonapi.BadRequest(errors.New("folder_id and name are mutually exclusive"))
+	if (attrs.FolderID != "" && attrs.FileID != "") ||
+		(attrs.FolderID != "" && attrs.Name != "") ||
+		(attrs.FileID != "" && attrs.Name != "") {
+		return jsonapi.BadRequest(errors.New("folder_id, file_id and name are mutually exclusive"))
 	}
 
 	if attrs.Name != "" {
@@ -92,10 +95,13 @@ func CreateSharedDrive(c echo.Context) error {
 		attrs.FolderID = newDir.DocID
 	}
 
-	// Create the sharing from folder first (builds the rules).
-	newSharing, err := sharing.CreateDrive(inst, attrs.FolderID, attrs.Description, "")
+	rootID := attrs.FileID
+	if rootID == "" {
+		rootID = attrs.FolderID
+	}
+	newSharing, err := sharing.CreateDrive(inst, rootID, attrs.Description, "")
 	if err != nil {
-		return wrapErrors(err)
+		return wrapDriveRootErrors(err)
 	}
 
 	// Check permissions using the existing function (validates against the rules)
@@ -147,6 +153,19 @@ func wrapDriveNameErrors(err error) error {
 		return jsonapi.Conflict(err)
 	case vfs.ErrIllegalFilename, vfs.ErrIllegalPath:
 		return jsonapi.InvalidParameter("name", err)
+	default:
+		return wrapErrors(err)
+	}
+}
+
+func wrapDriveRootErrors(err error) error {
+	switch err {
+	case sharing.ErrDriveRootNotFound:
+		return jsonapi.NotFound(err)
+	case sharing.ErrFolderAlreadyShared, sharing.ErrFileAlreadyShared:
+		return jsonapi.Conflict(err)
+	case sharing.ErrSystemFolder, sharing.ErrFileInTrash:
+		return jsonapi.BadRequest(err)
 	default:
 		return wrapErrors(err)
 	}
@@ -270,6 +289,9 @@ func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *shar
 // GetDirSize returns the size of a directory (the sum of the size of the files
 // in this directory, including those in subdirectories).
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	fs := inst.VFS()
 	dir, err := loadDirFromParam(c, inst)
 	if err != nil {
@@ -291,6 +313,12 @@ func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *shari
 	patch, err := getPatch(c, c.Param("file-id"))
 	if err != nil {
 		return files.WrapVfsError(err)
+	}
+	if patch.DirID != nil {
+		rootID, err := s.DriveRootID()
+		if err == nil && c.Param("file-id") == rootID {
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root of a shared drive")
+		}
 	}
 	if err = applyPatch(c, inst.VFS(), patch); err != nil {
 		return files.WrapVfsError(err)
@@ -384,12 +412,19 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 // ChangesFeed is the handler for CouchDB's changes feed requests with some
 // additional options, like skip_trashed.
 //
-// The feed will be filtered by the given sharing directory returning only
-// files that are below this directory (anything outside this directory should
-// only be deletions with the document ID as only information).
+// Directory-root drives use the existing subtree changes feed. File-root drives
+// use an exact root-file match and ignore unrelated file changes.
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
+	if s.HasFileDriveRoot() {
+		sharedFile, err := s.GetFileDriveRoot(inst)
+		if err != nil {
+			return jsonapi.NotFound(errors.New("shared drive not found"))
+		}
+		return files.ChangesFeedForSharedFile(c, inst, sharedFile)
+	}
+
 	sharedDir, err := s.GetSharingDir(inst)
 	if err != nil {
 		return jsonapi.NotFound(errors.New("shared drive not found"))
@@ -403,10 +438,16 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 // - url query param: `DirID`: optional destination folder's ID
 // - url query param: `Name`: optional destination file name
 func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.CopyFile(c, inst, s)
 }
 
 func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.Create(c, s)
 }
 
@@ -437,6 +478,9 @@ func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) e
 // UploadMetadataHandler accepts a metadata objet and persists it, so that it
 // can be used in a future file upload.
 func UploadMetadataHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.UploadMetadataHandler(c)
 }
 
@@ -448,6 +492,8 @@ func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 // FileDownloadCreateHandler stores the required path into a secret usable for
 // the download handler below.
 func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	// TODO: The route contract can be broader than the drive root, especially
+	// for owner requests. To fix it, we need explicit shared-drive scope check here.
 	return files.FileDownload(c, s)
 }
 
@@ -459,6 +505,9 @@ func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 
 // ArchiveDownloadCreateHandler creates a zip archive link for files in a shared drive.
 func ArchiveDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.ArchiveDownload(c, s)
 }
 
@@ -469,6 +518,9 @@ func ArchiveDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.
 
 // CreateNote allows to create a note inside a shared drive.
 func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return notes.CreateNote(c)
 }
 
@@ -567,22 +619,13 @@ func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance
 	return webperm.HandleCreateShareByLink(c, inst, opts)
 }
 
-// validateSharedDrivePermission checks that all file IDs in the permission rules are:
-// - expressed as a single io.cozy.files target,
-// - accessible by the current caller token,
-// - and located inside the shared drive.
-func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
-	rootDir, err := s.GetSharingDir(inst)
-	if err != nil {
-		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
-	}
-
+func validateSharedDrivePermissionTargetID(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	fileID string,
+) error {
 	fs := inst.VFS()
-
-	fileID, err := getSharedDrivePermissionTargetID(perms)
-	if err != nil {
-		return jsonapi.BadRequest(err)
-	}
 
 	dir, file, err := fs.DirOrFileByID(fileID)
 	if err != nil {
@@ -597,11 +640,38 @@ func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *s
 			return err
 		}
 	}
-	// Check if the file/directory is within the shared drive
+
+	if s.HasFileDriveRoot() {
+		rootID, err := s.DriveRootID()
+		if err != nil {
+			return jsonapi.NotFound(errors.New("shared drive root file not found"))
+		}
+		if fileID != rootID {
+			return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
+		}
+		return nil
+	}
+
+	rootDir, err := s.GetSharingDir(inst)
+	if err != nil {
+		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
+	}
 	if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
 		return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
 	}
 	return nil
+}
+
+// validateSharedDrivePermission checks that all file IDs in the permission rules are:
+// - expressed as a single io.cozy.files target,
+// - accessible by the current caller token,
+// - and located inside the shared drive.
+func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
+	fileID, err := getSharedDrivePermissionTargetID(perms)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	return validateSharedDrivePermissionTargetID(c, inst, s, fileID)
 }
 
 func getSharedDrivePermissionTargetID(perms permission.Set) (string, error) {
@@ -649,12 +719,7 @@ func ListSharedDriveShareByLinkPermissions(c echo.Context, inst *instance.Instan
 		return err
 	}
 
-	rootDir, err := s.GetSharingDir(inst)
-	if err != nil {
-		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
-	}
-
-	targetIDs, err := extractSharedDrivePermissionTargetIDs(c, inst, rootDir)
+	targetIDs, err := extractSharedDrivePermissionTargetIDs(c, inst, s)
 	if err != nil {
 		return err
 	}
@@ -682,20 +747,19 @@ func ListSharedDriveShareByLinkPermissions(c echo.Context, inst *instance.Instan
 	return jsonapi.DataList(c, http.StatusOK, out, nil)
 }
 
-func extractSharedDrivePermissionTargetIDs(c echo.Context, inst *instance.Instance, rootDir *vfs.DirDoc) ([]string, error) {
+func extractSharedDrivePermissionTargetIDs(c echo.Context, inst *instance.Instance, s *sharing.Sharing) ([]string, error) {
 	rawIDs := strings.TrimSpace(c.QueryParam("ids"))
 	if rawIDs == "" {
 		return nil, jsonapi.InvalidParameter("ids", errors.New("ids is required"))
 	}
 
-	fs := inst.VFS()
 	ids := make([]string, 0)
 	for _, id := range strings.Split(rawIDs, ",") {
 		id = strings.TrimSpace(id)
 		if id == "" {
 			return nil, jsonapi.InvalidParameter("ids", errors.New("ids must contain file or folder IDs"))
 		}
-		if err := isWithinDirectory(fs, id, rootDir); err != nil {
+		if err := validateSharedDrivePermissionTargetID(c, inst, s, id); err != nil {
 			return nil, jsonapi.InvalidParameter("ids", errors.New("file is not within the shared drive"))
 		}
 
@@ -1400,4 +1464,11 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string, requi
 	}
 
 	return s, nil
+}
+
+func ensureDirectoryBackedSharedDrive(s *sharing.Sharing) error {
+	if s.HasFileDriveRoot() {
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives do not support this endpoint")
+	}
+	return nil
 }

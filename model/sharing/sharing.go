@@ -39,6 +39,11 @@ import (
 const (
 	// StateLen is the number of bytes for the OAuth state parameter
 	StateLen = 16
+
+	// DriveRootTypeDirectory means the shared drive root is a directory.
+	DriveRootTypeDirectory = "directory"
+	// DriveRootTypeFile means the shared drive root is a single file.
+	DriveRootTypeFile = "file"
 )
 
 // Triggers keep record of which triggers are active
@@ -54,21 +59,22 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	Triggers    Triggers  `json:"triggers"`
-	Drive       bool      `json:"drive,omitempty"`
-	OrgDrive    bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
-	Active      bool      `json:"active,omitempty"`
-	Owner       bool      `json:"owner,omitempty"`
-	Open        bool      `json:"open_sharing,omitempty"`
-	Description string    `json:"description,omitempty"`
-	AppSlug     string    `json:"app_slug"`
-	PreviewPath string    `json:"preview_path,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
-	Initial     bool      `json:"initial_sync,omitempty"`
-	ShortcutID  string    `json:"shortcut_id,omitempty"`
-	MovedFrom   string    `json:"moved_from,omitempty"`
+	Triggers      Triggers  `json:"triggers"`
+	Drive         bool      `json:"drive,omitempty"`
+	DriveRootType string    `json:"drive_root_type,omitempty"`
+	OrgDrive      bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
+	Active        bool      `json:"active,omitempty"`
+	Owner         bool      `json:"owner,omitempty"`
+	Open          bool      `json:"open_sharing,omitempty"`
+	Description   string    `json:"description,omitempty"`
+	AppSlug       string    `json:"app_slug"`
+	PreviewPath   string    `json:"preview_path,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	NbFiles       int       `json:"initial_number_of_files_to_sync,omitempty"`
+	Initial       bool      `json:"initial_sync,omitempty"`
+	ShortcutID    string    `json:"shortcut_id,omitempty"`
+	MovedFrom     string    `json:"moved_from,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
@@ -120,6 +126,59 @@ func (s *Sharing) Clone() couchdb.Doc {
 		copy(cloned.Credentials[i].XorKey, s.Credentials[i].XorKey)
 	}
 	return &cloned
+}
+
+// NormalizedDriveRootType returns the stored drive root type, defaulting
+// legacy drive documents with no explicit type to a directory root.
+func (s *Sharing) NormalizedDriveRootType() string {
+	if s.DriveRootType == "" {
+		return DriveRootTypeDirectory
+	}
+	return s.DriveRootType
+}
+
+// HasDirectoryDriveRoot returns true when the drive root is a directory.
+func (s *Sharing) HasDirectoryDriveRoot() bool {
+	return s.NormalizedDriveRootType() == DriveRootTypeDirectory
+}
+
+// HasFileDriveRoot returns true when the drive root is a single file.
+func (s *Sharing) HasFileDriveRoot() bool {
+	return s.NormalizedDriveRootType() == DriveRootTypeFile
+}
+
+// DriveRootID returns the identifier of the shared-drive root target.
+func (s *Sharing) DriveRootID() (string, error) {
+	rule := s.FirstFilesRule()
+	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		return "", ErrDriveRootNotFound
+	}
+	return rule.Values[0], nil
+}
+
+// GetFileDriveRoot returns the root file of a file-root shared drive.
+func (s *Sharing) GetFileDriveRoot(inst *instance.Instance) (*vfs.FileDoc, error) {
+	rootID, err := s.DriveRootID()
+	if err != nil {
+		return nil, err
+	}
+	file, err := inst.VFS().FileByID(rootID)
+	if err != nil {
+		return nil, ErrDriveRootNotFound
+	}
+	return file, nil
+}
+
+// IsValidDriveRootType returns true when the given drive root type is one of
+// the supported values. The empty string is accepted for legacy documents and
+// normalized to a directory root.
+func IsValidDriveRootType(rootType string) bool {
+	switch rootType {
+	case "", DriveRootTypeDirectory, DriveRootTypeFile:
+		return true
+	default:
+		return false
+	}
 }
 
 // ReadOnlyFlag returns true only if the given instance is declared a read-only
@@ -387,6 +446,12 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	if err := s.ValidateRules(); err != nil {
 		return nil, err
 	}
+	if s.Drive {
+		if !IsValidDriveRootType(s.DriveRootType) {
+			return nil, ErrInvalidRule
+		}
+		s.inferDriveRootType(inst)
+	}
 	if !s.Drive && len(s.Members) < 2 {
 		return nil, ErrNoRecipients
 	}
@@ -395,9 +460,9 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 		return nil, err
 	}
 	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
-		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+		if err := s.AddReferenceForSharing(inst, rule); err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
+				Warnf("Error on referenced_by for the sharing root (%s): %s", s.SID, err)
 		}
 	}
 
@@ -407,31 +472,60 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	return nil, nil
 }
 
-// CreateDrive creates a new shared drive from an existing unshared folder.
-func CreateDrive(inst *instance.Instance, folderID, description, appSlug string) (*Sharing, error) {
-	// Validate the folder
-	dir, err := ValidateFolderForDrive(inst, folderID)
+func (s *Sharing) inferDriveRootType(inst *instance.Instance) {
+	if s.DriveRootType != "" {
+		return
+	}
+	rootID, err := s.DriveRootID()
+	if err != nil {
+		return
+	}
+
+	dir, file, err := inst.VFS().DirOrFileByID(rootID)
+	if err != nil {
+		return
+	}
+	switch {
+	case file != nil:
+		s.DriveRootType = DriveRootTypeFile
+	case dir != nil:
+		s.DriveRootType = DriveRootTypeDirectory
+	}
+}
+
+// CreateDrive creates a new shared drive from an existing unshared folder or file.
+func CreateDrive(inst *instance.Instance, rootID, description, appSlug string) (*Sharing, error) {
+	dir, file, err := ValidateDriveRoot(inst, rootID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build the sharing structure
+	rootType := DriveRootTypeDirectory
+	rootName := ""
+	if dir != nil {
+		rootName = dir.DocName
+	}
+	if file != nil {
+		rootType = DriveRootTypeFile
+		rootName = file.DocName
+	}
+
 	s := &Sharing{
-		Drive:       true,
-		Description: description,
+		Drive:         true,
+		DriveRootType: rootType,
+		Description:   description,
 		Rules: []Rule{{
-			Title:   dir.DocName,
+			Title:   rootName,
 			DocType: consts.Files,
-			Values:  []string{folderID},
+			Values:  []string{rootID},
 			Add:     ActionRuleNone,
 			Update:  ActionRuleNone,
 			Remove:  ActionRuleNone,
 		}},
 	}
 
-	// Use folder name as description if not provided
 	if s.Description == "" {
-		s.Description = dir.DocName
+		s.Description = rootName
 	}
 
 	// Initialize as owner

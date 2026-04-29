@@ -203,6 +203,15 @@ func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	f.ReferencedBy = referenced
 }
 
+func (f *FileDoc) SharingID() string {
+	for _, ref := range f.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			return ref.ID
+		}
+	}
+	return ""
+}
+
 // NewFileDoc is the FileDoc constructor. The given name is validated.
 func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mimeType, class string, cdate time.Time, executable, trashed, encrypted bool, tags []string) (*FileDoc, error) {
 	if err := checkFileName(name); err != nil {

@@ -73,6 +73,25 @@ func TestFiles(t *testing.T) {
 		assert.Equal(t, expected, files)
 	})
 
+	t.Run("DriveRootTypeDefaults", func(t *testing.T) {
+		s := &Sharing{Drive: true}
+		assert.Equal(t, DriveRootTypeDirectory, s.NormalizedDriveRootType())
+		assert.True(t, s.HasDirectoryDriveRoot())
+		assert.False(t, s.HasFileDriveRoot())
+	})
+
+	t.Run("DriveRootTypeHelpers", func(t *testing.T) {
+		fileDrive := &Sharing{Drive: true, DriveRootType: DriveRootTypeFile}
+		assert.Equal(t, DriveRootTypeFile, fileDrive.NormalizedDriveRootType())
+		assert.True(t, fileDrive.HasFileDriveRoot())
+		assert.False(t, fileDrive.HasDirectoryDriveRoot())
+
+		assert.True(t, IsValidDriveRootType(""))
+		assert.True(t, IsValidDriveRootType(DriveRootTypeDirectory))
+		assert.True(t, IsValidDriveRootType(DriveRootTypeFile))
+		assert.False(t, IsValidDriveRootType("album"))
+	})
+
 	t.Run("SharingDir", func(t *testing.T) {
 		s := Sharing{
 			SID: uuidv7(),

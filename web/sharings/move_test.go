@@ -1011,6 +1011,64 @@ func TestSharedDrivesMove(t *testing.T) {
 		}`, 400)
 	})
 
+	t.Run("Unprocessable_MoveFromFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileName := testify(t, "file-root-root.txt")
+		rootFileID := createFile(t, eA, "", rootFileName, env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			testify(t, "File-root move source"),
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		destDirID := createRootDirectory(t, eB, testify(t, "Betty move dest"), env.bettyToken)
+
+		postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {
+			    "instance": "https://`+env.acme.Domain+`",
+			    "sharing_id": "`+sharingID+`",
+			    "file_id": "`+rootFileID+`"
+			  },
+			  "dest": {
+			    "dir_id": "`+destDirID+`"
+			  }
+			}`, 422)
+	})
+
+	t.Run("Unprocessable_MoveToFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		sourceFileID := createFile(t, eB, "", testify(t, "local-move-to-file-drive.txt"), env.bettyToken)
+		destRootFileID := createFile(t, eA, "", testify(t, "file-root-dest-root.txt"), env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			destRootFileID,
+			testify(t, "File-root move dest"),
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {
+			    "file_id": "`+sourceFileID+`"
+			  },
+			  "dest": {
+			    "instance": "https://`+env.acme.Domain+`",
+			    "sharing_id": "`+sharingID+`",
+			    "dir_id": "`+destRootFileID+`"
+			  }
+			}`, 422)
+	})
+
 	// Dave is a read-only member; he must not be able to move files to a shared drive
 	t.Run("PermissionDeniedWithoutShare_ToSharedDrive", func(t *testing.T) {
 		_, _, eD := env.createClients(t)
@@ -1233,6 +1291,41 @@ func TestSharedDrivesCopy(t *testing.T) {
 		verifyFileExists(t, env.acme, fileToCopy, "file-to-copy.txt", env.meetingsDirID, "foo")
 	})
 
+	t.Run("SuccessfulCopy_FileFromFileRootSharedDriveToDirectoryBackedSharedDrive_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		fileName := testify(t, "file-root-to-shared.txt")
+		rootFileID := createFile(t, eA, "", fileName, env.acmeToken)
+		sourceSharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			testify(t, "File-root copy source"),
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sourceSharingID)
+
+		responseObj := postMove(t, eB, env.bettyToken, `{
+			"source": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+sourceSharingID+`",
+				"file_id": "`+rootFileID+`"
+			},
+			"dest": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+env.firstSharingID+`",
+				"dir_id": "`+env.productDirID+`"
+			},
+			"copy": true
+		}`)
+
+		copiedFileID := assertMoveResponseWithSharing(t, responseObj, fileName, env.productDirID, env.firstSharingID)
+		verifyFileMove(t, env.acme, copiedFileID, fileName, env.productDirID, "foo")
+		verifyFileExists(t, env.acme, rootFileID, fileName, "", "foo")
+	})
+
 	// Test 2: Copy directory between shared drives, same stack
 	t.Run("SuccessfulCopy_DirectoryBetweenSharedDrives_SameStack", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
@@ -1398,6 +1491,43 @@ func TestSharedDrivesCopy(t *testing.T) {
 		verifyFileExists(t, env.acme, fileToMoveID, fileToMoveName, secondRootDirID, "foo")
 	})
 
+	t.Run("SuccessfulCopy_FileFromFileRootSharedDriveToLocal_Readonly_DifferentStack", func(t *testing.T) {
+		eA, _, eD := env.createClients(t)
+		cleanup := forceCrossStack(t, env.tsA.URL)
+		defer cleanup()
+
+		fileName := testify(t, "file-root-readonly-copy.txt")
+		rootFileID := createFile(t, eA, "", fileName, env.acmeToken)
+		sourceSharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			testify(t, "File-root readonly copy source"),
+			[]RecipientInfo{{Name: "Dave", Email: "dave@example.net", ReadOnly: true}},
+		)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, sourceSharingID)
+
+		daveDirID := createDirectory(t, eD, "", testify(t, "DaveFileBackedDir"), env.daveToken)
+
+		responseObj := postMove(t, eD, env.daveToken, `{
+			  "source": {
+			    "file_id": "`+rootFileID+`",
+				"sharing_id": "`+sourceSharingID+`",
+				"instance": "https://`+env.acme.Domain+`"
+			  },
+			  "dest": {
+			    "dir_id": "`+daveDirID+`"
+			  },
+			  "copy": true
+			}`)
+
+		copiedFileID := assertMoveResponse(t, responseObj, fileName, daveDirID)
+		verifyFileMove(t, env.dave, copiedFileID, fileName, daveDirID, "foo")
+		verifyFileExists(t, env.acme, rootFileID, fileName, "", "foo")
+	})
+
 	t.Run("SuccessfulCopy_FileFromSharedDriveToLocal_Readonly_SameStack", func(t *testing.T) {
 		eA, _, eD := env.createClients(t)
 
@@ -1442,6 +1572,66 @@ func TestSharedDrivesCopy(t *testing.T) {
 
 		// Verify the original directory still exists (not deleted)
 		verifyFileExists(t, env.acme, fileToMoveID, fileToMoveName, secondRootDirID, "foo")
+	})
+
+	t.Run("Unprocessable_CopyFromFileRootSharedDriveWithNonRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", testify(t, "file-root-root.txt"), env.acmeToken)
+		otherFileID := createFile(t, eA, "", testify(t, "file-root-outside.txt"), env.acmeToken)
+		sourceSharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			testify(t, "File-root non-root copy source"),
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sourceSharingID)
+
+		destDirID := createRootDirectory(t, eB, testify(t, "Betty copy dest"), env.bettyToken)
+
+		postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {
+			    "instance": "https://`+env.acme.Domain+`",
+			    "sharing_id": "`+sourceSharingID+`",
+			    "file_id": "`+otherFileID+`"
+			  },
+			  "dest": {
+			    "dir_id": "`+destDirID+`"
+			  },
+			  "copy": true
+			}`, 422)
+	})
+
+	t.Run("Unprocessable_CopyToFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		sourceFileID := createFile(t, eB, "", testify(t, "local-copy-to-file-drive.txt"), env.bettyToken)
+		destRootFileID := createFile(t, eA, "", testify(t, "file-root-copy-dest-root.txt"), env.acmeToken)
+		destSharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			destRootFileID,
+			testify(t, "File-root copy dest"),
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, destSharingID)
+
+		postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {
+			    "file_id": "`+sourceFileID+`"
+			  },
+			  "dest": {
+			    "instance": "https://`+env.acme.Domain+`",
+			    "sharing_id": "`+destSharingID+`",
+			    "dir_id": "`+destRootFileID+`"
+			  },
+			  "copy": true
+			}`, 422)
 	})
 }
 
