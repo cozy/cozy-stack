@@ -339,8 +339,8 @@ required to use the following routes.
 
 For file-root shared drives (`drive_root_type = file`), iteration 1 currently
 supports only file-shaped routes. Directory-only routes return
-`422 Unprocessable Entity`. `_changes` and realtime are not available yet for
-file-root shared drives.
+`422 Unprocessable Entity`. `_changes` and realtime are available with exact
+root-file semantics for file-root shared drives.
 
 ### GET /sharings/drives/:id/download/:file-id
 
@@ -1054,7 +1054,8 @@ Get the changes inside a shared drive in real-time from a websocket.
 Identical to [`GET /realtime`](realtime.md), except subscribing to the shared drive is automatically done.
 
 This route is currently available only for directory-root shared drives.
-File-root shared drives return `422 Unprocessable Entity`.
+For file-root shared drives, the websocket stream emits only events whose
+target is the root file of the drive. Unrelated file events are filtered out.
 
 ```
 client > {"method": "AUTH",

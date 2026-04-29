@@ -29,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -2884,7 +2885,6 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().
 			Path("$.data.attributes.trashed").Boolean().False()
-
 	})
 
 	t.Run("DestroyTrashedRootFile", func(t *testing.T) {
@@ -3596,6 +3596,97 @@ func TestSharedDriveRealtime(t *testing.T) {
 		payload := obj.Value("payload").Object()
 		payload.HasValue("type", consts.Files)
 		payload.HasValue("id", newFileID)
+	})
+
+	t.Run("IgnoreUnrelatedEventForFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "RealtimeRootIgnore.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Realtime file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		unrelatedFileID := createFile(t, eA, "", "RealtimeOutside.txt", env.acmeToken)
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.FileDoc{
+			Type:    consts.Files,
+			DocID:   unrelatedFileID,
+			DocName: "RealtimeOutsideRenamed.txt",
+		}, nil)
+
+		raw := ws.Raw()
+		require.NoError(t, raw.SetReadDeadline(time.Now().Add(250*time.Millisecond)))
+		_, _, err := raw.ReadMessage()
+		require.Error(t, err)
+		netErr, ok := err.(net.Error)
+		require.True(t, ok, "expected a timeout while waiting for an unrelated file event")
+		require.True(t, netErr.Timeout(), "expected a timeout while waiting for an unrelated file event")
+	})
+
+	t.Run("ReceiveUpdatedEventForFileRootSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "RealtimeRootUpdate.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Realtime file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		raw := ws.Raw()
+		require.NoError(t, raw.SetReadDeadline(time.Now().Add(5*time.Second)))
+
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.FileDoc{
+			Type:    consts.Files,
+			DocID:   rootFileID,
+			DocName: "RealtimeRootRenamed.txt",
+		}, nil)
+
+		var msg struct {
+			Event   string `json:"event"`
+			Payload struct {
+				Type string `json:"type"`
+				ID   string `json:"id"`
+				Doc  struct {
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"doc"`
+			} `json:"payload"`
+		}
+		require.NoError(t, raw.ReadJSON(&msg))
+		require.Equal(t, "UPDATED", msg.Event)
+		require.Equal(t, consts.Files, msg.Payload.Type)
+		require.Equal(t, rootFileID, msg.Payload.ID)
+		require.Equal(t, "RealtimeRootRenamed.txt", msg.Payload.Doc.Name)
 	})
 }
 

@@ -169,6 +169,34 @@ func wsWrite(ws *websocket.Conn, ch chan *wsResponse, errc chan *wsError) error 
 func filterMapEvents(ds *realtime.Subscriber, ch chan *wsResponse, inst *instance.Instance, s *sharing.Sharing) {
 	log := inst.Logger().WithNamespace("sharing-realtime")
 
+	if s.HasFileDriveRoot() {
+		rule := s.FirstFilesRule()
+		if rule == nil || len(rule.Values) == 0 {
+			log.Errorf("filterMapEvents: missing root file for sharing %s", s.SID)
+			return
+		}
+		rootFileID := rule.Values[0]
+		log.Debugf("filterMapEvents: watching file %s for sharing %s", rootFileID, s.SID)
+
+		match := func(doc realtime.Doc) bool {
+			return doc != nil && doc.ID() == rootFileID
+		}
+
+		for e := range ds.Channel {
+			if match(e.Doc) || match(e.OldDoc) {
+				ch <- &wsResponse{
+					Event: e.Verb,
+					Payload: wsResponsePayload{
+						Type: e.Doc.DocType(),
+						ID:   e.Doc.ID(),
+						Doc:  e.Doc,
+					},
+				}
+			}
+		}
+		return
+	}
+
 	var dir vfs.DirDoc
 	if err := couchdb.GetDoc(inst, consts.Files, s.Rules[0].Values[0], &dir); err != nil {
 		log.Errorf("filterMapEvents: failed to get root dir %s: %s", s.Rules[0].Values[0], err)
