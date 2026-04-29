@@ -2929,7 +2929,10 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 		eB.GET("/sharings/drives/"+sharingID+"/metadata").
 			WithQuery("Path", "/UnsupportedRoutesRoot.txt").
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
-			Expect().Status(422)
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.type").String().IsEqual("file")
 
 		eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID+"/size").
 			WithHeader("Authorization", "Bearer "+env.bettyToken).

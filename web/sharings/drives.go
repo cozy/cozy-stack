@@ -252,9 +252,6 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 
 // ReadMetadataFromPath allows to get file/dir information for a path.
 func ReadMetadataFromPath(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
-		return err
-	}
 	return files.ReadMetadataFromPath(c, s)
 }
 
