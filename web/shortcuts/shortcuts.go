@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -141,13 +140,8 @@ func Create(c echo.Context) error {
 // Accept header.
 func Get(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	return GetFromInst(c, inst, c.Param("id"))
-}
-
-// GetFromInst handles a shortcut GET using the provided instance and file ID.
-// It is used both by the regular route and by the shared drive proxy route.
-func GetFromInst(c echo.Context, inst *instance.Instance, fileID string) error {
 	fs := inst.VFS()
+	fileID := c.Param("id")
 	file, err := fs.FileByID(fileID)
 	if err != nil {
 		return wrapError(err)

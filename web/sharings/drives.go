@@ -526,9 +526,18 @@ func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 }
 
 // GetShortcut handles GET /sharings/drives/:id/shortcuts/:file-id.
-// The proxy() wrapper ensures inst is the owner's instance for recipients.
 func GetShortcut(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return shortcuts.GetFromInst(c, inst, c.Param("file-id"))
+	fileID := c.Param("file-id")
+	paramNames := append([]string(nil), c.ParamNames()...)
+	paramValues := append([]string(nil), c.ParamValues()...)
+	defer func() {
+		c.SetParamNames(paramNames...)
+		c.SetParamValues(paramValues...)
+	}()
+
+	c.SetParamNames("id")
+	c.SetParamValues(fileID)
+	return shortcuts.Get(c)
 }
 
 // OpenNoteURL returns the parameters to open a note inside a shared drive.
