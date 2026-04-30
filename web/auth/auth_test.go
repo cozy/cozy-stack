@@ -2503,12 +2503,12 @@ func TestTokenExchange(t *testing.T) {
 			WithHeader("Origin", "https://admin.example.com").
 			WithJSON(map[string]string{
 				"id_token": idToken,
-				"scope":    "io.cozy.contacts",
+				"scope":    "io.cozy.unknown",
 			}).
 			Expect().
 			Status(http.StatusBadRequest).
 			JSON().Object().
-			ValueEqual("error", "invalid scope")
+			ValueEqual("error", `scope "io.cozy.unknown" is not allowed`)
 	})
 }
 
