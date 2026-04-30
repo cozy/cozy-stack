@@ -173,39 +173,8 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 		log.Debugf("user.created: no domain provided, using default: %s", DefaultDomain)
 		msg.Domain = DefaultDomain
 	}
-	if msg.Hash == "" {
-		return fmt.Errorf("user.created: missing passphrase hash")
-	}
 	if msg.WorkplaceFqdn == "" {
 		return fmt.Errorf("user.created: missing workplaceFqdn")
-	}
-	if msg.Iterations <= 0 {
-		return fmt.Errorf("user.created: missing iterations")
-	}
-	log.Debugf("user.created: message validation passed for TwakeID: %s", msg.TwakeID)
-
-	decoded, err := decodePassword(msg.Hash)
-	if err != nil {
-		return err
-	}
-
-	params := lifecycle.PassParameters{
-		Pass:       decoded,
-		Iterations: msg.Iterations,
-	}
-
-	if msg.Key != "" {
-		log.Debugf("user.created: setting key parameter for TwakeID: %s", msg.TwakeID)
-		params.Key = msg.Key
-	}
-
-	// if one of the keys is missing, do not update any of the keys
-	if msg.PublicKey != "" && msg.PrivateKey != "" {
-		log.Debugf("user.created: setting public/private key parameters for TwakeID: %s", msg.TwakeID)
-		params.PublicKey = msg.PublicKey
-		params.PrivateKey = msg.PrivateKey
-	} else {
-		log.Debugf("user.created: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
 	log.Debugf("user.created: looking for instance for domain: %s", msg.WorkplaceFqdn)
@@ -213,11 +182,46 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	if err != nil {
 		return fmt.Errorf("user.created: get instance: %w", err)
 	}
+	log.Debugf("user.created: message validation passed for TwakeID: %s", msg.TwakeID)
 
-	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, params.Pass, params); err != nil {
-		return fmt.Errorf("user.created: update passphrase: %w", err)
+	if msg.Hash == "" {
+		if !inst.HasForcedOIDC() {
+			return fmt.Errorf("user.created: missing passphrase hash")
+		}
+		log.Infof("user.created: skipping passphrase update for instance %s (forced OIDC context: %s)", inst.Domain, inst.ContextName)
+	} else {
+		if msg.Iterations <= 0 {
+			return fmt.Errorf("user.created: missing iterations")
+		}
+		decoded, err := decodePassword(msg.Hash)
+		if err != nil {
+			return err
+		}
+
+		params := lifecycle.PassParameters{
+			Pass:       decoded,
+			Iterations: msg.Iterations,
+		}
+
+		if msg.Key != "" {
+			log.Debugf("user.created: setting key parameter for TwakeID: %s", msg.TwakeID)
+			params.Key = msg.Key
+		}
+
+		// if one of the keys is missing, do not update any of the keys
+		if msg.PublicKey != "" && msg.PrivateKey != "" {
+			log.Debugf("user.created: setting public/private key parameters for TwakeID: %s", msg.TwakeID)
+			params.PublicKey = msg.PublicKey
+			params.PrivateKey = msg.PrivateKey
+		} else {
+			log.Debugf("user.created: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
+		}
+
+		if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, params.Pass, params); err != nil {
+			return fmt.Errorf("user.created: update passphrase: %w", err)
+		}
+		log.Infof("user.created: successfully updated passphrase for instance: %s (PasswordDefined: %v)", inst.Domain, inst.PasswordDefined)
 	}
-	log.Infof("user.created: successfully updated passphrase for instance: %s (PasswordDefined: %v)", inst.Domain, inst.PasswordDefined)
 
 	if msg.OrganizationDomain != "" {
 		if err := SyncCreatedOrgContact(ctx, inst, msg); err != nil {
