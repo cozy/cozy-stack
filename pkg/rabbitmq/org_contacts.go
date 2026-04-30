@@ -41,7 +41,11 @@ func SyncCreatedOrgContact(ctx context.Context, target *instance.Instance, msg U
 			return err
 		}
 		if inst.HasDomain(msg.WorkplaceFqdn) {
-			log.Debugf("user.created: skipping own instance %s for organization contact %s", inst.Domain, targetURL)
+			log.Debugf("user.created: creating contacts for own instance %s for organization contact %s", inst.Domain, targetURL)
+			if err := syncExistingOrgContactsToCreatedUser(ctx, target, instances, msg.WorkplaceFqdn); err != nil {
+				log.Errorf("%v", err)
+				lastErr = err
+			}
 			continue
 		}
 
@@ -139,6 +143,76 @@ func listOrgContactInstances(eventName, orgDomain string) ([]*instance.Instance,
 		return nil, fmt.Errorf("%s: organization has no instances", eventName)
 	}
 	return list, nil
+}
+
+func syncExistingOrgContactsToCreatedUser(ctx context.Context, target *instance.Instance, instances []*instance.Instance, workplaceFqdn string) error {
+	var lastErr error
+	for _, inst := range instances {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if inst.HasDomain(workplaceFqdn) {
+			continue
+		}
+
+		opts, err := externalOrgContactFromInstance(inst)
+		if err != nil {
+			wrappedErr := fmt.Errorf("user.created: build existing user contact for %s: %w", inst.Domain, err)
+			log.Errorf("%v", wrappedErr)
+			lastErr = wrappedErr
+			continue
+		}
+
+		existing, err := findExternalOrgContactByEmail(target, opts.Email)
+		if err != nil {
+			wrappedErr := fmt.Errorf("user.created: find external contact for %s in %s: %w", opts.Email, target.Domain, err)
+			log.Errorf("%v", wrappedErr)
+			lastErr = wrappedErr
+			continue
+		}
+		if existing != nil {
+			log.Infof("user.created: external contact for %s already exists in %s, skipping", opts.Email, target.Domain)
+			continue
+		}
+
+		if _, err := contact.Create(target, opts); err != nil {
+			wrappedErr := fmt.Errorf("user.created: create contact for %s in %s: %w", opts.Email, target.Domain, err)
+			log.Errorf("%v", wrappedErr)
+			lastErr = wrappedErr
+			continue
+		}
+		log.Infof("user.created: created organization contact for %s in %s", opts.Email, target.Domain)
+	}
+	return lastErr
+}
+
+func externalOrgContactFromInstance(inst *instance.Instance) (contact.CreateOptions, error) {
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return contact.CreateOptions{}, err
+	}
+
+	email, _ := settings.M["email"].(string)
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return contact.CreateOptions{}, fmt.Errorf("missing email in settings")
+	}
+
+	name, _ := settings.M["public_name"].(string)
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return contact.CreateOptions{}, fmt.Errorf("missing public_name in settings")
+	}
+
+	phone, _ := settings.M["phone"].(string)
+
+	return contact.CreateOptions{
+		Email:    email,
+		Name:     name,
+		CozyURL:  inst.PageURL("", nil),
+		Phone:    phone,
+		External: true,
+	}, nil
 }
 
 func findExternalOrgContactByEmail(inst *instance.Instance, email string) (*contact.Contact, error) {

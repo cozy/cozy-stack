@@ -1054,15 +1054,19 @@ func waitForDeclaredQueues(t *testing.T, mq *testutils.RabbitFixture, checks ...
 	})
 }
 
-func createInstanceInOrg(t *testing.T, domain, orgDomain, orgID, email, publicName string) *instance.Instance {
+func createInstanceInOrg(t *testing.T, domain, orgDomain, orgID, email, publicName string, phone ...string) *instance.Instance {
 	t.Helper()
-	inst, err := lifecycle.Create(&lifecycle.Options{
+	opts := &lifecycle.Options{
 		Domain:     domain,
 		OrgDomain:  orgDomain,
 		OrgID:      orgID,
 		Email:      email,
 		PublicName: publicName,
-	})
+	}
+	if len(phone) > 0 {
+		opts.Phone = phone[0]
+	}
+	inst, err := lifecycle.Create(opts)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = lifecycle.Destroy(inst.Domain) })
 	return inst

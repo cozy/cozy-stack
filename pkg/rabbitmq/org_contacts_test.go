@@ -25,9 +25,11 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		orgDomain := "sync-created-" + suffix + ".example"
 		orgID := "org-sync-created-" + suffix
 		target := createInstanceInOrg(t, "sync-created-alice-"+suffix+".local", orgDomain, orgID, "alice@example.com", "Alice")
-		bob := createInstanceInOrg(t, "sync-created-bob-"+suffix+".local", orgDomain, orgID, "bob@example.com", "Bob")
+		bob := createInstanceInOrg(t, "sync-created-bob-"+suffix+".local", orgDomain, orgID, "bob@example.com", "Bob", "+33987654321")
 		carol := createInstanceInOrg(t, "sync-created-carol-"+suffix+".local", orgDomain, orgID, "carol@example.com", "Carol")
 		targetURL := target.PageURL("", nil)
+		bobURL := bob.PageURL("", nil)
+		carolURL := carol.PageURL("", nil)
 
 		preexisting := createContact(t, bob, "alice@example.com", "https://manual.example", false, "Existing Alice")
 
@@ -77,6 +79,21 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		} else {
 			require.True(t, errors.Is(err, contact.ErrNotFound))
 		}
+
+		targetBobContacts, err := contact.FindAllByEmail(target, "bob@example.com")
+		require.NoError(t, err)
+		require.Len(t, targetBobContacts, 1)
+		require.True(t, targetBobContacts[0].IsExternal())
+		require.Equal(t, "Bob", targetBobContacts[0].PrimaryName())
+		require.Equal(t, "+33987654321", targetBobContacts[0].PrimaryPhoneNumber())
+		require.Equal(t, bobURL, targetBobContacts[0].PrimaryCozyURL())
+
+		targetCarolContacts, err := contact.FindAllByEmail(target, "carol@example.com")
+		require.NoError(t, err)
+		require.Len(t, targetCarolContacts, 1)
+		require.True(t, targetCarolContacts[0].IsExternal())
+		require.Equal(t, "Carol", targetCarolContacts[0].PrimaryName())
+		require.Equal(t, carolURL, targetCarolContacts[0].PrimaryCozyURL())
 	})
 
 	t.Run("SkipsExistingExternalContact", func(t *testing.T) {
