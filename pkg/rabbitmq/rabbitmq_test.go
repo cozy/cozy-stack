@@ -337,6 +337,97 @@ func TestHandlers(t *testing.T) {
 		require.Equal(t, prevPriv, bw.PrivateKey)
 	})
 
+	t.Run("CreateUserWithoutHashInForcedOIDCContext", func(t *testing.T) {
+		setup := setUpRabbitMQConfig(t, MQ, "CreateUserWithoutHashInForcedOIDCContext")
+		cfg := config.GetConfig()
+		prevAuthentication := cfg.Authentication
+		const oidcContext = "oidc-no-password-context"
+		cfg.Authentication = map[string]interface{}{
+			oidcContext: map[string]interface{}{
+				"disable_password_authentication": true,
+			},
+		}
+		t.Cleanup(func() {
+			cfg.Authentication = prevAuthentication
+		})
+
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		orgDomain := "no-hash-org-" + suffix + ".example"
+		orgID := "org-no-hash-" + suffix
+		targetEmail := "target-" + suffix + "@example.com"
+		target := setup.GetTestInstance(&lifecycle.Options{
+			Domain:      "no-hash-target-" + suffix + ".local",
+			ContextName: oidcContext,
+			OrgDomain:   orgDomain,
+			OrgID:       orgID,
+			Email:       targetEmail,
+			PublicName:  "Target User",
+		})
+		other := createInstanceInOrg(
+			t,
+			"no-hash-other-"+suffix+".local",
+			orgDomain,
+			orgID,
+			"other-"+suffix+"@example.com",
+			"Other User",
+		)
+
+		initialHash := string(target.PassphraseHash)
+		require.NotEmpty(t, initialHash)
+		require.NotNil(t, target.PasswordDefined)
+		require.False(t, *target.PasswordDefined)
+
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		slug, _ := SplitDomain(t, target.Domain)
+		msg := rabbitmq.UserCreatedMessage{
+			TwakeID:            slug,
+			Mobile:             "+33700000000",
+			InternalEmail:      targetEmail,
+			Timestamp:          time.Now().Unix(),
+			WorkplaceFqdn:      target.Domain,
+			OrganizationID:     orgID,
+			OrganizationDomain: orgDomain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.created",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			matches, err := contact.FindAllByEmail(other, targetEmail)
+			if err != nil {
+				return false
+			}
+			for _, doc := range matches {
+				if doc.IsExternal() {
+					return true
+				}
+			}
+			return false
+		})
+
+		updated, err := lifecycle.GetInstance(target.Domain)
+		require.NoError(t, err)
+		require.Equal(t, initialHash, string(updated.PassphraseHash))
+		require.NotNil(t, updated.PasswordDefined)
+		require.False(t, *updated.PasswordDefined)
+	})
+
 	t.Run("DeleteUserHandler", func(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "DeleteUserHandler")
 		_ = setup.GetTestInstance()
