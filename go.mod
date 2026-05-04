@@ -14,7 +14,7 @@ require (
 	github.com/cozy/prosemirror-go v0.5.3
 	github.com/dhowden/tag v0.0.0-20240413230847-dc579f508b6b
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.7.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.16.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
