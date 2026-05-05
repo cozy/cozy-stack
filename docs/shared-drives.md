@@ -1017,6 +1017,16 @@ another string called the `version-id`, separated by a `/`. So, when a route
 makes reference to `/something/:file-id/:version-id`, you can use the identifier
 of the version document (without having to prepend the file identifier).
 
+### POST /sharings/drives/:id/:file-id/versions
+
+Create a new version of a file, with the same content but new metadata.
+
+Identical call to [`POST /files/:file-id/versions`](files.md#post-filesfile-idversions)
+but over a shared drive. See there for request and response examples, the only
+difference is the URL.
+
+For file-root shared drives, this route is supported for the root file.
+
 ### GET /sharings/drives/:id/download/:file-id/:version-id
 
 Downloads an old version of the file content.
