@@ -414,7 +414,7 @@ func TestHandlers(t *testing.T) {
 				return false
 			}
 			for _, doc := range matches {
-				if doc.IsExternal() {
+				if doc.IsExternal() && doc.IsTrusted() {
 					return true
 				}
 			}

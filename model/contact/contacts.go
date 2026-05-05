@@ -326,11 +326,12 @@ func CreateMyself(inst *instance.Instance, settings *couchdb.JSONDoc) (*Contact,
 
 // CreateOptions describes the input used to create a contact.
 type CreateOptions struct {
-	Email    string
-	Name     string
-	CozyURL  string
-	Phone    string
-	External bool
+	Email             string
+	Name              string
+	CozyURL           string
+	Phone             string
+	External          bool
+	TrustedForSharing bool
 }
 
 // Create creates a contact from the provided options.
@@ -372,6 +373,9 @@ func Create(db prefixer.Prefixer, opts CreateOptions) (*Contact, error) {
 		doc.JSONDoc.M["metadata"] = map[string]interface{}{
 			"external": true,
 		}
+	}
+	if opts.TrustedForSharing {
+		doc.JSONDoc.M[TrustedForSharingKey] = true
 	}
 
 	index := email

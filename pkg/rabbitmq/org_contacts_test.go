@@ -51,6 +51,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 				bobFoundManual = true
 				require.Equal(t, "Existing Alice", doc.PrimaryName())
 				require.False(t, doc.IsExternal())
+				require.False(t, doc.IsTrusted())
 				continue
 			}
 			if doc.IsExternal() {
@@ -58,6 +59,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 				require.Equal(t, "Alice", doc.PrimaryName())
 				require.Equal(t, "+33123456789", doc.PrimaryPhoneNumber())
 				require.Equal(t, targetURL, doc.PrimaryCozyURL())
+				require.True(t, doc.IsTrusted())
 			}
 		}
 		require.True(t, bobFoundManual)
@@ -70,6 +72,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		require.Equal(t, "Alice", carolContacts[0].PrimaryName())
 		require.Equal(t, "+33123456789", carolContacts[0].PrimaryPhoneNumber())
 		require.Equal(t, targetURL, carolContacts[0].PrimaryCozyURL())
+		require.True(t, carolContacts[0].IsTrusted())
 
 		targetContacts, err := contact.FindAllByEmail(target, "alice@example.com")
 		if err == nil {
@@ -87,6 +90,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		require.Equal(t, "Bob", targetBobContacts[0].PrimaryName())
 		require.Equal(t, "+33987654321", targetBobContacts[0].PrimaryPhoneNumber())
 		require.Equal(t, bobURL, targetBobContacts[0].PrimaryCozyURL())
+		require.True(t, targetBobContacts[0].IsTrusted())
 
 		targetCarolContacts, err := contact.FindAllByEmail(target, "carol@example.com")
 		require.NoError(t, err)
@@ -94,6 +98,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		require.True(t, targetCarolContacts[0].IsExternal())
 		require.Equal(t, "Carol", targetCarolContacts[0].PrimaryName())
 		require.Equal(t, carolURL, targetCarolContacts[0].PrimaryCozyURL())
+		require.True(t, targetCarolContacts[0].IsTrusted())
 	})
 
 	t.Run("SkipsExistingExternalContact", func(t *testing.T) {
@@ -125,12 +130,14 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		require.True(t, bobContacts[0].IsExternal())
 		require.Equal(t, "Old Alice", bobContacts[0].PrimaryName())
 		require.Equal(t, "https://old.example", bobContacts[0].PrimaryCozyURL())
+		require.False(t, bobContacts[0].IsTrusted())
 
 		carolContacts, err := contact.FindAllByEmail(carol, "alice@example.com")
 		require.NoError(t, err)
 		require.Len(t, carolContacts, 1)
 		require.True(t, carolContacts[0].IsExternal())
 		require.Equal(t, targetURL, carolContacts[0].PrimaryCozyURL())
+		require.True(t, carolContacts[0].IsTrusted())
 	})
 
 	t.Run("FailsOnMultipleExternalContactsForEmail", func(t *testing.T) {
@@ -182,6 +189,7 @@ func TestSyncCreatedOrgContact(t *testing.T) {
 		require.Len(t, carolContacts, 1)
 		require.True(t, carolContacts[0].IsExternal())
 		require.Equal(t, target.PageURL("", nil), carolContacts[0].PrimaryCozyURL())
+		require.True(t, carolContacts[0].IsTrusted())
 	})
 
 	t.Run("MissingInternalEmail", func(t *testing.T) {
