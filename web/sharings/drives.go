@@ -287,6 +287,14 @@ func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *shar
 	return files.ReadFileContentFromVersion(c)
 }
 
+// CopyVersionHandler handles POST requests on /sharings/drives/:id/:file-id/versions.
+//
+// It can be used to create a new version of a file, with the same content but
+// new metadata.
+func CopyVersionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.CopyVersionHandler(c)
+}
+
 // GetDirSize returns the size of a directory (the sum of the size of the files
 // in this directory, including those in subdirectories).
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
@@ -1263,6 +1271,7 @@ func drivesRoutes(router *echo.Group) {
 
 	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion, true))
 	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion, true))
+	drive.POST("/:file-id/versions", proxy(CopyVersionHandler, true))
 
 	drive.GET("/_changes", proxy(ChangesFeed, true))
 

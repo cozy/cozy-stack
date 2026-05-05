@@ -2853,6 +2853,33 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			Expect().Status(200).
 			Body().IsEqual("bar")
 
+		versioned := eB.POST("/sharings/drives/"+sharingID+"/"+rootFileID+"/versions").
+			WithQuery("Tags", "checkpoint").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+					"data": {
+						"type": "io.cozy.files.metadata",
+						"attributes": {
+							"label": "root-version"
+						}
+					}
+				}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		versionedAttrs := versioned.Path("$.data.attributes").Object()
+		versionedTags := versionedAttrs.Value("tags").Array()
+		versionedTags.Length().Equal(1)
+		versionedTags.First().String().IsEqual("checkpoint")
+		versionedAttrs.Value("metadata").Object().ValueEqual("label", "root-version")
+
+		eB.GET("/sharings/drives/"+sharingID+"/download/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			Body().IsEqual("bar")
+
 		patched := eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			WithHeader("Content-Type", "application/json").
