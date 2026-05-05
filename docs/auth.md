@@ -1068,7 +1068,7 @@ The target Cozy instance is the request host. The exchanged `id_token` must:
 The request body is JSON:
 
 - `id_token`, the external OIDC token
-- `scope`, currently limited to `io.cozy.files`
+- `scope`, a space-separated list of allowed doctypes: `io.cozy.files`, `io.cozy.contacts`, `io.cozy.contacts.groups`
 
 Example:
 

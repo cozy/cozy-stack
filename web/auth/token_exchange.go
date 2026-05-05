@@ -25,10 +25,15 @@ import (
 const (
 	tokenExchangeAdminRole             = "admin"
 	tokenExchangeOwnerRole             = "owner"
-	tokenExchangeAllowedScope          = "io.cozy.files"
 	tokenExchangeOAuthClientName       = "Twake Admin Panel"
 	tokenExchangeOAuthClientSoftwareID = "twake-admin-panel"
 )
+
+var tokenExchangeAllowedScopes = map[string]struct{}{
+	"io.cozy.files":           {},
+	"io.cozy.contacts":        {},
+	"io.cozy.contacts.groups": {},
+}
 
 type tokenExchangeRequest struct {
 	IDToken string `json:"id_token"`
@@ -47,8 +52,8 @@ func executeTokenExchange(c echo.Context, inst *instance.Instance, req tokenExch
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	if req.Scope != tokenExchangeAllowedScope {
-		return nil, echo.NewHTTPError(http.StatusBadRequest, "invalid scope")
+	if err := validateTokenExchangeScope(req.Scope); err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	client, err := createTokenExchangeOAuthClient(c, inst)
@@ -65,6 +70,18 @@ func executeTokenExchange(c echo.Context, inst *instance.Instance, req tokenExch
 	}
 
 	return buildTokenExchangeResponse(inst, client, req.Scope)
+}
+
+func validateTokenExchangeScope(scope string) error {
+	if scope == "" {
+		return errors.New("scope is required")
+	}
+	for _, s := range strings.Split(scope, " ") {
+		if _, ok := tokenExchangeAllowedScopes[s]; !ok {
+			return fmt.Errorf("scope %q is not allowed", s)
+		}
+	}
+	return nil
 }
 
 func validateTokenExchangeIDToken(inst *instance.Instance, raw string) (jwt.MapClaims, error) {
