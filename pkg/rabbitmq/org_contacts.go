@@ -62,11 +62,12 @@ func SyncCreatedOrgContact(ctx context.Context, target *instance.Instance, msg U
 		}
 
 		if _, err := contact.Create(inst, contact.CreateOptions{
-			Email:    email,
-			Name:     name,
-			CozyURL:  targetURL,
-			Phone:    msg.Mobile,
-			External: true,
+			Email:             email,
+			Name:              name,
+			CozyURL:           targetURL,
+			Phone:             msg.Mobile,
+			External:          true,
+			TrustedForSharing: true,
 		}); err != nil {
 			wrappedErr := fmt.Errorf("user.created: create contact for %s in %s: %w", email, inst.Domain, err)
 			log.Errorf("%v", wrappedErr)
@@ -207,11 +208,12 @@ func externalOrgContactFromInstance(inst *instance.Instance) (contact.CreateOpti
 	phone, _ := settings.M["phone"].(string)
 
 	return contact.CreateOptions{
-		Email:    email,
-		Name:     name,
-		CozyURL:  inst.PageURL("", nil),
-		Phone:    phone,
-		External: true,
+		Email:             email,
+		Name:              name,
+		CozyURL:           inst.PageURL("", nil),
+		Phone:             phone,
+		External:          true,
+		TrustedForSharing: true,
 	}, nil
 }
 
