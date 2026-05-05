@@ -4,7 +4,7 @@
 
 
 # Multi-stage image: this step builds cozy-stack (and mailhog)
-FROM golang:1.25-bullseye as build
+FROM golang:1.25-bookworm AS build
 WORKDIR /app
 
 # MailHog
