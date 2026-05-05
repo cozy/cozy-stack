@@ -32,6 +32,18 @@ func (a *apiAccount) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/data/" + consts.Accounts + "/" + a.ID()}
 }
 
+func mapRefreshError(err error) error {
+	if account.IsRefreshOAuthErrorCode(err, account.RefreshOAuthErrorCodeInvalidToken) {
+		return &jsonapi.Error{
+			Status: http.StatusUnauthorized,
+			Title:  "Unauthorized",
+			Code:   account.RefreshOAuthErrorCodeInvalidToken,
+			Detail: "OAuth refresh token is invalid or expired; reconnect account.",
+		}
+	}
+	return err
+}
+
 func start(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -231,7 +243,7 @@ func refresh(c echo.Context) error {
 
 	err = accountType.RefreshAccount(acc)
 	if err != nil {
-		return err
+		return mapRefreshError(err)
 	}
 
 	err = couchdb.UpdateDoc(instance, &acc)
