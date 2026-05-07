@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	weberrors "github.com/cozy/cozy-stack/web/errors"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,7 @@ func TestOauth(t *testing.T) {
 
 	setup := testutils.NewSetup(t, t.Name())
 	ts := setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
+		r.HTTPErrorHandler = weberrors.ErrorHandler
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun, "")
 			cookie, _ := sess.ToCookie()
@@ -329,6 +331,58 @@ func TestOauth(t *testing.T) {
 		res.Header("Location").HasPrefix(serviceType.AuthEndpoint)
 		res.Cookies().Length().Equal(1)
 		res.Cookie("cozysessid").Value().NotEmpty()
+	})
+
+	t.Run("RefreshReturnsStructuredInvalidTokenError", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		_, token := setup.GetTestClient(consts.Accounts)
+
+		service := httptest.NewServer(http.HandlerFunc(func(c http.ResponseWriter, r *http.Request) {
+			require.Equal(t, http.MethodPost, r.Method)
+			require.NoError(t, r.ParseForm())
+			assert.Equal(t, "refresh_token", r.FormValue("grant_type"))
+			assert.Equal(t, "bad-refresh-token", r.FormValue("refresh_token"))
+			assert.Equal(t, "the-client-id", r.FormValue("client_id"))
+			assert.Equal(t, "the-client-secret", r.FormValue("client_secret"))
+			c.Header().Set("Content-Type", "application/json")
+			c.WriteHeader(http.StatusUnauthorized)
+			_, _ = c.Write([]byte(`{"error":"invalid_token","error_description":"refresh token rejected"}`))
+		}))
+		t.Cleanup(service.Close)
+
+		serviceType := account.AccountType{
+			DocID:         "test-service-refresh",
+			TokenEndpoint: service.URL + "/oauth2/token",
+			ClientID:      "the-client-id",
+			ClientSecret:  "the-client-secret",
+		}
+		err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
+
+		acc := &account.Account{
+			AccountType: serviceType.DocID,
+			Oauth: &account.OauthInfo{
+				RefreshToken: "bad-refresh-token",
+			},
+		}
+		require.NoError(t, couchdb.CreateDoc(testInstance, acc))
+		t.Cleanup(func() {
+			acc.ManualCleaning = true
+			_ = couchdb.DeleteDoc(testInstance, acc)
+		})
+
+		obj := e.POST("/accounts/test-service-refresh/"+acc.ID()+"/refresh").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(http.StatusUnauthorized).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		errObj := obj.Value("errors").Array().First().Object()
+		errObj.ValueEqual("status", "401")
+		errObj.ValueEqual("title", "Unauthorized")
+		errObj.ValueEqual("code", account.RefreshOAuthErrorCodeInvalidToken)
+		errObj.ValueEqual("detail", "OAuth refresh token is invalid or expired; reconnect account.")
 	})
 }
 

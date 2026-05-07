@@ -65,6 +65,56 @@ var RefreshToken = "refresh_token"
 // within an account does not allow refreshing it.
 var ErrUnrefreshable = errors.New("this account can not be refreshed")
 
+const (
+	// RefreshOAuthErrorCodeInvalidToken indicates the refresh token has been
+	// rejected by the OAuth provider and the account should be reconnected.
+	RefreshOAuthErrorCodeInvalidToken = "oauth_refresh_invalid_token"
+)
+
+// RefreshOAuthError represents a classified OAuth refresh failure.
+type RefreshOAuthError struct {
+	Code           string
+	ProviderStatus int
+	ProviderError  string
+}
+
+func (e *RefreshOAuthError) Error() string {
+	if e == nil {
+		return "oauth refresh failed"
+	}
+	msg := "oauth refresh failed"
+	if e.Code != "" {
+		msg += ": " + e.Code
+	}
+	if e.ProviderStatus != 0 {
+		msg += fmt.Sprintf(" (status %d)", e.ProviderStatus)
+	}
+	if e.ProviderError != "" {
+		msg += ", provider_error=" + e.ProviderError
+	}
+	return msg
+}
+
+// IsRefreshOAuthErrorCode checks if err is a refresh error with the given code.
+func IsRefreshOAuthErrorCode(err error, code string) bool {
+	var refreshErr *RefreshOAuthError
+	if !errors.As(err, &refreshErr) {
+		return false
+	}
+	return refreshErr.Code == code
+}
+
+func isInvalidRefreshTokenError(out tokenEndpointResponse) bool {
+	switch out.Error {
+	case "invalid_token":
+		return true
+	case "invalid_grant":
+		return true
+	default:
+		return false
+	}
+}
+
 // AccountType holds configuration information for
 type AccountType struct {
 	DocID  string `json:"_id,omitempty"`
@@ -417,8 +467,38 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	if res.StatusCode != 200 {
-		log.Errorf("Account %s: OAuth service error (status %d): %s", a.ID(), res.StatusCode, string(resBody))
-		return fmt.Errorf("oauth service responded with status %d: %s", res.StatusCode, string(resBody))
+		var out tokenEndpointResponse
+		if err = json.Unmarshal(resBody, &out); err != nil {
+			log.Errorf(
+				"Account %s: OAuth service error (status %d): non-JSON response: %s (body=%s)",
+				a.ID(),
+				res.StatusCode,
+				err,
+				string(resBody),
+			)
+			return fmt.Errorf("oauth service responded with status %d", res.StatusCode)
+		}
+
+		if isInvalidRefreshTokenError(out) {
+			log.Errorf(
+				"Account %s: OAuth refresh token rejected by provider (status %d, error=%s)",
+				a.ID(),
+				res.StatusCode,
+				out.Error,
+			)
+			return &RefreshOAuthError{
+				Code:           RefreshOAuthErrorCodeInvalidToken,
+				ProviderStatus: res.StatusCode,
+				ProviderError:  out.Error,
+			}
+		}
+
+		if out.Error != "" {
+			log.Errorf("Account %s: OAuth service error (status %d, error=%s)", a.ID(), res.StatusCode, out.Error)
+		} else {
+			log.Errorf("Account %s: OAuth service error (status %d)", a.ID(), res.StatusCode)
+		}
+		return fmt.Errorf("oauth service responded with status %d", res.StatusCode)
 	}
 
 	var out tokenEndpointResponse

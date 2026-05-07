@@ -644,6 +644,25 @@ POST /accounts/:accountType/:accountID/refresh HTTP/1.1
 Host: bob.cozy.rocks
 ```
 
+If the OAuth provider rejects the refresh token, the stack returns a structured
+JSON:API error that can be mapped to a reconnect flow:
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/vnd.api+json
+
+{
+  "errors": [
+    {
+      "status": "401",
+      "title": "Unauthorized",
+      "code": "oauth_refresh_invalid_token",
+      "detail": "OAuth refresh token is invalid or expired; reconnect account."
+    }
+  ]
+}
+```
+
 ### Konnectors Marketplace Requirements
 
 The following is a few points to be careful for in konnectors when we start
