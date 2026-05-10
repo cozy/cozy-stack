@@ -302,6 +302,9 @@ func (sfs *s3VFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOpti
 			PartSize:    5 * 1024 * 1024, // 5 MiB
 			NumThreads:  1,
 		})
+		// Propagate the outcome to the writer side: if PutObject errored before
+		// draining the pipe, an in-flight Write would otherwise block forever.
+		_ = pr.CloseWithError(err)
 		resultCh <- putResult{info: info, err: err}
 	}()
 
