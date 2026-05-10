@@ -744,7 +744,6 @@ func TestVfs(t *testing.T) {
 			assert.Equal(t, true, updated.Metadata["only"])
 		})
 	}
-
 }
 
 func (d *diskImpl) DiskQuota() int64 {
