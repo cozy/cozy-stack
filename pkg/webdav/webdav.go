@@ -25,6 +25,23 @@ type Client struct {
 	Logger   *logger.Entry
 }
 
+// unexpectedStatus logs the surprising response and returns the
+// internal-server-error sentinel. The req() helper already records
+// every status at INFO; routing the breaker cases through ERROR
+// makes them grep-able when a caller surfaces an opaque 500.
+func (c *Client) unexpectedStatus(method, path string, status int) error {
+	c.Logger.Errorf("%s %s %s: unexpected status %d", method, c.Host, path, status)
+	return ErrInternalServerError
+}
+
+// unexpectedMoveStatus is a Move/Copy variant that also logs the
+// destination path; the source alone is rarely enough to identify
+// why the operation failed.
+func (c *Client) unexpectedMoveStatus(method, oldPath, newPath string, status int) error {
+	c.Logger.Errorf("%s %s %s -> %s: unexpected status %d", method, c.Host, oldPath, newPath, status)
+	return ErrInternalServerError
+}
+
 func (c *Client) Mkcol(path string) error {
 	res, err := c.req("MKCOL", path, 0, nil, nil)
 	if err != nil {
@@ -41,7 +58,7 @@ func (c *Client) Mkcol(path string) error {
 	case 409:
 		return ErrParentNotFound
 	default:
-		return ErrInternalServerError
+		return c.unexpectedStatus("MKCOL", path, res.StatusCode)
 	}
 }
 
@@ -59,7 +76,7 @@ func (c *Client) Delete(path string) error {
 	case 404:
 		return ErrNotFound
 	default:
-		return ErrInternalServerError
+		return c.unexpectedStatus("DELETE", path, res.StatusCode)
 	}
 }
 
@@ -88,7 +105,7 @@ func (c *Client) Move(oldPath, newPath string) error {
 	case 412:
 		return ErrAlreadyExist
 	default:
-		return ErrInternalServerError
+		return c.unexpectedMoveStatus("MOVE", oldPath, newPath, res.StatusCode)
 	}
 }
 
@@ -117,7 +134,7 @@ func (c *Client) Copy(oldPath, newPath string) error {
 	case 412:
 		return ErrAlreadyExist
 	default:
-		return ErrInternalServerError
+		return c.unexpectedMoveStatus("COPY", oldPath, newPath, res.StatusCode)
 	}
 }
 
@@ -142,7 +159,7 @@ func (c *Client) Put(
 	case 404, 409:
 		return ErrParentNotFound
 	default:
-		return ErrInternalServerError
+		return c.unexpectedStatus("PUT", path, res.StatusCode)
 	}
 }
 
@@ -169,7 +186,7 @@ func (c *Client) Get(path string) (*Download, error) {
 	case 404:
 		return nil, ErrNotFound
 	default:
-		return nil, ErrInternalServerError
+		return nil, c.unexpectedStatus("GET", path, res.StatusCode)
 	}
 }
 
@@ -207,7 +224,7 @@ func (c *Client) List(path string) ([]Item, error) {
 	case 404:
 		return nil, ErrNotFound
 	default:
-		return nil, ErrInternalServerError
+		return nil, c.unexpectedStatus("PROPFIND", path, res.StatusCode)
 	}
 
 	// https://docs.nextcloud.com/server/20/developer_manual/client_apis/WebDAV/basic.html#requesting-properties
@@ -291,7 +308,7 @@ func (c *Client) Size(path string) (uint64, error) {
 	case 404:
 		return 0, ErrNotFound
 	default:
-		return 0, ErrInternalServerError
+		return 0, c.unexpectedStatus("PROPFIND", path, res.StatusCode)
 	}
 
 	var multistatus multistatus
