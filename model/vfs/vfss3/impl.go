@@ -142,7 +142,7 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 }
 
 func (sfs *s3VFS) MaxFileSize() int64 {
-	return 0 // no per-file limit — S3 multipart handles large files transparently
+	return -1 // no per-file limit — S3 multipart handles large files transparently
 }
 
 func (sfs *s3VFS) DBCluster() int {
@@ -245,9 +245,10 @@ func (sfs *s3VFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOpti
 	if err != nil {
 		return nil, err
 	}
-	if newsize > maxsize {
-		return nil, vfs.ErrFileTooBig
-	}
+	// CheckAvailableDiskSpace already returns ErrFileTooBig / ErrMaxFileSize
+	// when the upload would exceed the per-file or quota budget. The
+	// streaming-time check below (s3FileCreation.Write) re-checks against
+	// maxsize once the actual byte count is known.
 
 	if olddoc != nil {
 		newdoc.SetID(olddoc.ID())
@@ -703,12 +704,9 @@ func (sfs *s3VFS) CopyFileFromOtherFS(
 	}
 	defer sfs.mu.Unlock()
 
-	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(sfs, newdoc)
+	newsize, _, capsize, err := vfs.CheckAvailableDiskSpace(sfs, newdoc)
 	if err != nil {
 		return err
-	}
-	if newsize > maxsize {
-		return vfs.ErrFileTooBig
 	}
 
 	newpath, err := sfs.Indexer.FilePath(newdoc)
