@@ -23,6 +23,13 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// installedMarkerSuffix is appended to the app's base key to form the
+// "installation complete" marker object. The suffix is chosen so the marker
+// can't collide with any file under <slug>/<version>/... — S3 browsers
+// would otherwise display the marker as a file sitting next to a folder of
+// the same name.
+const installedMarkerSuffix = ".cozy-installed"
+
 // s3Copier implements the Copier interface backed by S3.
 type s3Copier struct {
 	client      *minio.Client
@@ -47,7 +54,7 @@ func (f *s3Copier) Exist(slug, version, shasum string) (bool, error) {
 	if shasum != "" {
 		f.appObj += "-" + shasum
 	}
-	_, err := f.client.StatObject(f.ctx, f.bucket, f.appObj, minio.StatObjectOptions{})
+	_, err := f.client.StatObject(f.ctx, f.bucket, f.appObj+installedMarkerSuffix, minio.StatObjectOptions{})
 	if err == nil {
 		return true, nil
 	}
@@ -120,8 +127,10 @@ func (f *s3Copier) Abort() error {
 }
 
 func (f *s3Copier) Commit() (err error) {
-	// Create the marker object that signals the version is complete.
-	_, err = f.client.PutObject(f.ctx, f.bucket, f.appObj,
+	// Create the marker object that signals the version is complete. The
+	// suffix keeps it on a distinct key from the <slug>/<version>/... files,
+	// so S3 browsers don't render a folder and a file with the same name.
+	_, err = f.client.PutObject(f.ctx, f.bucket, f.appObj+installedMarkerSuffix,
 		bytes.NewReader(nil), 0, minio.PutObjectOptions{
 			ContentType: "text/plain",
 		})
