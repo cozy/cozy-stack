@@ -686,6 +686,20 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 	})
 }
 
+func renderInvalidSharing(c echo.Context, inst *instance.Instance) error {
+	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Illustration":   "/images/generic-error.svg",
+		"Error":          "Error Invalid sharing",
+		"SupportEmail":   inst.SupportEmailAddress(),
+		"SupportPageURL": inst.SupportPageURL(),
+	})
+}
+
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode, shortcut string, m *sharing.Member) error {
 	publicName, _ := settings.PublicName(inst)
 	fqdn := strings.TrimPrefix(m.Instance, "https://")
@@ -774,6 +788,20 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	})
 }
 
+func discoveryStateForMember(s *sharing.Sharing, currentState string, m *sharing.Member) (string, error) {
+	if currentState != "" {
+		return currentState, nil
+	}
+	if m == nil {
+		return "", sharing.ErrInvalidSharing
+	}
+	credentials := s.FindCredentials(m)
+	if credentials == nil || credentials.State == "" {
+		return "", sharing.ErrInvalidSharing
+	}
+	return credentials.State, nil
+}
+
 // GetDiscovery displays a form where a recipient can give the address of their
 // cozy instance
 func GetDiscovery(c echo.Context) error {
@@ -785,17 +813,7 @@ func GetDiscovery(c echo.Context) error {
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":         inst.ContextualDomain(),
-			"ContextName":    inst.ContextName,
-			"Locale":         inst.Locale,
-			"Title":          inst.TemplateTitle(),
-			"Favicon":        middlewares.Favicon(inst),
-			"Illustration":   "/images/generic-error.svg",
-			"Error":          "Error Invalid sharing",
-			"SupportEmail":   inst.SupportEmailAddress(),
-			"SupportPageURL": inst.SupportPageURL(),
-		})
+		return renderInvalidSharing(c, inst)
 	}
 
 	m := &sharing.Member{}
@@ -806,22 +824,15 @@ func GetDiscovery(c echo.Context) error {
 			m, err = s.FindMemberByState(state)
 		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain":         inst.ContextualDomain(),
-				"ContextName":    inst.ContextName,
-				"Locale":         inst.Locale,
-				"Title":          inst.TemplateTitle(),
-				"Favicon":        middlewares.Favicon(inst),
-				"Illustration":   "/images/generic-error.svg",
-				"Error":          "Error Invalid sharing",
-				"SupportEmail":   inst.SupportEmailAddress(),
-				"SupportPageURL": inst.SupportPageURL(),
-			})
+			return renderInvalidSharing(c, inst)
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&
 			m.Status != sharing.MemberStatusPendingInvitation &&
 			m.Status != sharing.MemberStatusSeen {
 			return renderAlreadyAccepted(c, inst, m.Instance)
+		}
+		if state, err = discoveryStateForMember(s, state, m); err != nil {
+			return renderInvalidSharing(c, inst)
 		}
 	}
 
@@ -885,6 +896,9 @@ func PostDiscovery(c echo.Context) error {
 			if err != nil {
 				return wrapErrors(err)
 			}
+		}
+		if state, err = discoveryStateForMember(s, state, member); err != nil {
+			return wrapErrors(err)
 		}
 		if strings.Contains(cozyURL, "@") {
 			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, shortcut, member)
