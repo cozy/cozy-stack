@@ -428,6 +428,57 @@ func TestSharings(t *testing.T) {
 		assert.Contains(t, discoveryLink, "/preview?sharecode=")
 	})
 
+	t.Run("DiscoveryWithPreviewOIDCLinkUsesMemberState", func(t *testing.T) {
+		u, err := url.Parse(discoveryLink)
+		require.NoError(t, err)
+		sharecode := u.Query().Get("sharecode")
+		require.NotEmpty(t, sharecode)
+
+		s, err := sharing.FindSharing(aliceInstance, sharingID)
+		require.NoError(t, err)
+		member, err := s.FindMemberBySharecode(aliceInstance, sharecode)
+		require.NoError(t, err)
+		credentials := s.FindCredentials(member)
+		require.NotNil(t, credentials)
+		require.NotEmpty(t, credentials.State)
+
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		oidcContext := "preview-oidc-test"
+		originalContext := aliceInstance.ContextName
+		previousAuth, hadPreviousAuth := conf.Authentication[oidcContext]
+		conf.Authentication[oidcContext] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id": "preview-oidc-client",
+			},
+		}
+		aliceInstance.ContextName = oidcContext
+		require.NoError(t, instance.Update(aliceInstance))
+		t.Cleanup(func() {
+			if hadPreviousAuth {
+				conf.Authentication[oidcContext] = previousAuth
+			} else {
+				delete(conf.Authentication, oidcContext)
+			}
+			aliceInstance.ContextName = originalContext
+			if err := instance.Update(aliceInstance); err != nil {
+				t.Errorf("cannot restore Alice context: %s", err)
+			}
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		body := eA.GET("/sharings/"+sharingID+"/discovery").
+			WithQuery("sharecode", sharecode).
+			Expect().Status(200).
+			Body().Raw()
+
+		assert.Contains(t, body, "/oidc/sharing?")
+		assert.Contains(t, body, "state="+credentials.State)
+		assert.NotContains(t, body, "state=&")
+	})
+
 	t.Run("DiscoveryWithPreview", func(t *testing.T) {
 		u, err := url.Parse(discoveryLink)
 		assert.NoError(t, err)
