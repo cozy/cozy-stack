@@ -3,6 +3,7 @@
 package permission
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
+	stackconfig "github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -17,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -243,15 +246,27 @@ func GetForSharePreview(db prefixer.Prefixer, sharingID string) (*Permission, er
 }
 
 // GetForShareInteract retrieves the Permission doc for a given sharing to
-// read/write a note
+// read/write a note. It may repair legacy duplicate share-interact permission
+// docs as part of the read by creating/updating the canonical permission doc
+// and deleting duplicate legacy docs.
 func GetForShareInteract(db prefixer.Prefixer, sharingID string) (*Permission, error) {
-	return getFromSource(db, TypeShareInteract, consts.Sharings, sharingID)
+	mu := stackconfig.Lock().ReadWrite(db, shareInteractLockName(sharingID))
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
+	defer mu.Unlock()
+
+	return getOrRepairShareInteractPermissions(db, sharingID)
 }
 
 // ShareInteractPermissionID returns the canonical permission document ID for a
 // share-interact permission set.
 func ShareInteractPermissionID(sharingID string) string {
 	return TypeShareInteract + "-" + sharingID
+}
+
+func shareInteractLockName(sharingID string) string {
+	return "permissions/share-interact/" + sharingID
 }
 
 func getShareInteractPermissions(db prefixer.Prefixer, sharingID string) ([]Permission, error) {
@@ -271,33 +286,44 @@ func getShareInteractPermissions(db prefixer.Prefixer, sharingID string) ([]Perm
 	return res, nil
 }
 
-// RepairShareInteractPermissions merges duplicate share-interact permission
-// documents for a sharing into the canonical document and deletes the legacy
-// duplicates.
-func RepairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, error) {
-	var lastErr error
-	for attempt := 0; attempt < 5; attempt++ {
-		perm, retry, err := repairShareInteractPermissions(db, sharingID)
+func getOrRepairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, error) {
+	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
+		perms, err := getShareInteractPermissions(db, sharingID)
+		if err != nil {
+			return nil, err
+		}
+		if canonical, needsRepair, err := shareInteractRepairState(perms, sharingID); err != nil || !needsRepair {
+			return canonical, err
+		}
+
+		perm, retry, err := repairShareInteractPermissions(db, sharingID, perms)
 		if err == nil && !retry {
 			return perm, nil
 		}
-		lastErr = err
-	}
-	if lastErr != nil {
-		return nil, lastErr
-	}
-	return nil, &couchdb.Error{
-		StatusCode: http.StatusConflict,
-		Name:       "conflict",
-		Reason:     "could not repair share-interact permissions after retries",
+		if retry && err == nil {
+			return nil, &couchdb.Error{
+				StatusCode: http.StatusConflict,
+				Name:       "conflict",
+				Reason:     "could not repair share-interact permissions after retries",
+			}
+		}
+		return nil, err
+	})
+}
+
+func shareInteractRetryOptions() utils.RetryOptions {
+	return utils.RetryOptions{
+		Attempts:     5,
+		Delay:        10 * time.Millisecond,
+		MaxDelay:     100 * time.Millisecond,
+		JitterFactor: 0.25,
+		ShouldRetry: func(err error) bool {
+			return couchdb.IsConflictError(err) || couchdb.IsFileExists(err)
+		},
 	}
 }
 
-func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, bool, error) {
-	perms, err := getShareInteractPermissions(db, sharingID)
-	if err != nil {
-		return nil, false, err
-	}
+func shareInteractRepairState(perms []Permission, sharingID string) (*Permission, bool, error) {
 	if len(perms) == 0 {
 		return nil, false, &couchdb.Error{
 			StatusCode: http.StatusNotFound,
@@ -306,6 +332,28 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Pe
 		}
 	}
 
+	canonicalID := ShareInteractPermissionID(sharingID)
+	var canonical *Permission
+	usable := 0
+	for i := range perms {
+		if perms[i].Expired() {
+			continue
+		}
+		usable++
+		if perms[i].ID() == canonicalID {
+			canonical = &perms[i]
+		}
+	}
+	if usable == 0 {
+		return nil, false, ErrExpiredToken
+	}
+	if usable == 1 && canonical != nil {
+		return canonical, false, nil
+	}
+	return nil, true, nil
+}
+
+func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perms []Permission) (*Permission, bool, error) {
 	canonicalID := ShareInteractPermissionID(sharingID)
 	merged := &Permission{
 		PID:      canonicalID,
@@ -318,15 +366,17 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Pe
 	duplicates := make([]*Permission, 0, len(perms))
 	for i := range perms {
 		p := &perms[i]
+		if p.ID() == canonicalID {
+			hasCanonical = true
+			// If the canonical doc is expired, update that doc ID but rebuild its content from non-expired docs.
+			merged.SetRev(p.Rev())
+		}
 		if p.Expired() {
 			continue
 		}
 
 		hasUsablePermission = true
-		if p.ID() == canonicalID {
-			hasCanonical = true
-			merged.SetRev(p.Rev())
-		} else {
+		if p.ID() != canonicalID {
 			duplicates = append(duplicates, p)
 		}
 
@@ -743,21 +793,75 @@ func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes, shortc
 	return doc, nil
 }
 
-// CreateShareInteractSet creates a Permission doc for reading/writing a note
-// inside a sharing
+// CreateShareInteractSet creates or updates the Permission doc for reading and
+// writing a note inside a sharing. When subdoc.Permissions is not empty, it
+// replaces the existing permission rules with that full set.
 func CreateShareInteractSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
 	doc := &Permission{
+		PID:         ShareInteractPermissionID(sharingID),
 		Type:        TypeShareInteract,
 		Permissions: subdoc.Permissions,
 		Codes:       codes,
 		SourceID:    consts.Sharings + "/" + sharingID,
 		Metadata:    subdoc.Metadata,
 	}
-	err := couchdb.CreateDoc(db, doc)
-	if err != nil {
+
+	if doc.Codes == nil {
+		doc.Codes = make(map[string]string)
+	}
+
+	mu := stackconfig.Lock().ReadWrite(db, shareInteractLockName(sharingID))
+	if err := mu.Lock(); err != nil {
 		return nil, err
 	}
-	return doc, nil
+	defer mu.Unlock()
+
+	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
+		existing, err := getOrRepairShareInteractPermissions(db, sharingID)
+		if err != nil && !couchdb.IsNotFoundError(err) {
+			return nil, err
+		}
+		if err == nil {
+			merged := existing.Clone().(*Permission)
+			merged.Type = TypeShareInteract
+			merged.SourceID = consts.Sharings + "/" + sharingID
+			merged.SetID(ShareInteractPermissionID(sharingID))
+			if len(subdoc.Permissions) > 0 {
+				// Callers pass the complete interact rule set, so replace instead of merging rules.
+				merged.Permissions = subdoc.Permissions
+			}
+			if merged.Metadata == nil && subdoc.Metadata != nil {
+				merged.Metadata = subdoc.Metadata.Clone()
+			}
+			if merged.Metadata != nil {
+				merged.Metadata.ChangeUpdatedAt()
+			}
+			if merged.Codes == nil {
+				merged.Codes = make(map[string]string)
+			}
+			for key, code := range codes {
+				if key == "" {
+					continue
+				}
+				if existingCode, ok := merged.Codes[key]; ok && existingCode != code {
+					logger.WithDomain(db.DomainName()).WithNamespace("permissions").
+						Warnf("keeping existing share-interact code for %s in sharing %s", key, sharingID)
+					continue
+				}
+				merged.Codes[key] = code
+			}
+			if err := couchdb.UpdateDoc(db, merged); err != nil {
+				return nil, err
+			}
+			return merged, nil
+		}
+
+		err = couchdb.CreateNamedDoc(db, doc)
+		if err == nil {
+			return doc, nil
+		}
+		return nil, err
+	})
 }
 
 // ForceWebapp creates or updates a Permission doc for a given webapp
