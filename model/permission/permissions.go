@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
@@ -245,6 +246,143 @@ func GetForSharePreview(db prefixer.Prefixer, sharingID string) (*Permission, er
 // read/write a note
 func GetForShareInteract(db prefixer.Prefixer, sharingID string) (*Permission, error) {
 	return getFromSource(db, TypeShareInteract, consts.Sharings, sharingID)
+}
+
+// ShareInteractPermissionID returns the canonical permission document ID for a
+// share-interact permission set.
+func ShareInteractPermissionID(sharingID string) string {
+	return TypeShareInteract + "-" + sharingID
+}
+
+func getShareInteractPermissions(db prefixer.Prefixer, sharingID string) ([]Permission, error) {
+	var res []Permission
+	req := couchdb.FindRequest{
+		UseIndex: "by-source-and-type",
+		Selector: mango.And(
+			mango.Equal("type", TypeShareInteract),
+			mango.Equal("source_id", consts.Sharings+"/"+sharingID),
+		),
+		Limit: 1000,
+	}
+	err := couchdb.FindDocs(db, consts.Permissions, &req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// RepairShareInteractPermissions merges duplicate share-interact permission
+// documents for a sharing into the canonical document and deletes the legacy
+// duplicates.
+func RepairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, error) {
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		perm, retry, err := repairShareInteractPermissions(db, sharingID)
+		if err == nil && !retry {
+			return perm, nil
+		}
+		lastErr = err
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, &couchdb.Error{
+		StatusCode: http.StatusConflict,
+		Name:       "conflict",
+		Reason:     "could not repair share-interact permissions after retries",
+	}
+}
+
+func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, bool, error) {
+	perms, err := getShareInteractPermissions(db, sharingID)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(perms) == 0 {
+		return nil, false, &couchdb.Error{
+			StatusCode: http.StatusNotFound,
+			Name:       "not_found",
+			Reason:     fmt.Sprintf("no permission doc for %v", sharingID),
+		}
+	}
+
+	canonicalID := ShareInteractPermissionID(sharingID)
+	merged := &Permission{
+		PID:      canonicalID,
+		Type:     TypeShareInteract,
+		SourceID: consts.Sharings + "/" + sharingID,
+		Codes:    make(map[string]string),
+	}
+	hasUsablePermission := false
+	hasCanonical := false
+	duplicates := make([]*Permission, 0, len(perms))
+	for i := range perms {
+		p := &perms[i]
+		if p.Expired() {
+			continue
+		}
+
+		hasUsablePermission = true
+		if p.ID() == canonicalID {
+			hasCanonical = true
+			merged.SetRev(p.Rev())
+		} else {
+			duplicates = append(duplicates, p)
+		}
+
+		if len(merged.Permissions) == 0 && len(p.Permissions) > 0 {
+			merged.Permissions = p.Clone().(*Permission).Permissions
+		}
+		if merged.Metadata == nil && p.Metadata != nil {
+			merged.Metadata = p.Metadata.Clone()
+		}
+		if merged.ExpiresAt == nil && p.ExpiresAt != nil {
+			merged.ExpiresAt = p.ExpiresAt
+		}
+
+		for key, code := range p.Codes {
+			if key == "" {
+				continue
+			}
+			if existing, ok := merged.Codes[key]; ok && existing != code {
+				logger.WithDomain(db.DomainName()).WithNamespace("permissions").
+					Warnf("conflicting share-interact code for %s in sharing %s", key, sharingID)
+				continue
+			}
+			merged.Codes[key] = code
+		}
+	}
+	if !hasUsablePermission {
+		return nil, false, ErrExpiredToken
+	}
+
+	if !hasCanonical {
+		if err := couchdb.CreateNamedDoc(db, merged); err != nil {
+			if couchdb.IsConflictError(err) || couchdb.IsFileExists(err) {
+				return nil, true, err
+			}
+			return nil, false, err
+		}
+	} else if err := couchdb.UpdateDoc(db, merged); err != nil {
+		if couchdb.IsConflictError(err) {
+			return nil, true, err
+		}
+		return nil, false, err
+	}
+
+	for _, p := range duplicates {
+		if err := couchdb.DeleteDoc(db, p); err != nil {
+			if couchdb.IsNotFoundError(err) {
+				continue
+			}
+			if couchdb.IsConflictError(err) {
+				return nil, true, err
+			}
+			return nil, false, err
+		}
+	}
+
+	return merged, false, nil
 }
 
 func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permission, error) {

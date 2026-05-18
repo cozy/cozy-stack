@@ -6,9 +6,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+var testPrefix = prefixer.NewPrefixer(0, "test", "permission-tests")
 
 func TestCheckDoctypeName(t *testing.T) {
 	assert.NoError(t, CheckDoctypeName("io.cozy.files", false))
@@ -421,6 +428,58 @@ func TestShareSetPermissions(t *testing.T) {
 	childFileRule[0].Verbs = Verbs(POST)
 	err = CheckSetPermissions(childFileRule, parent)
 	assert.Error(t, err)
+}
+
+func TestRepairShareInteractPermissionsMergesDuplicateDocs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	require.NoError(t, couchdb.ResetDB(testPrefix, consts.Permissions))
+
+	const sharingID = "sharing-duplicate-interact-permissions"
+	perms := Permission{
+		Permissions: Set{{
+			Title:  "Shared drive",
+			Type:   consts.Files,
+			Values: []string{"shared-drive-root"},
+			Verbs:  ALL,
+		}},
+	}
+
+	_, err := CreateShareInteractSet(testPrefix, sharingID, map[string]string{
+		"alice@example.test": "alice-token",
+	}, perms)
+	require.NoError(t, err)
+	_, err = CreateShareInteractSet(testPrefix, sharingID, map[string]string{
+		"bob@example.test": "bob-token",
+	}, perms)
+	require.NoError(t, err)
+
+	repaired, err := RepairShareInteractPermissions(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Equal(t, ShareInteractPermissionID(sharingID), repaired.ID())
+	require.Equal(t, map[string]string{
+		"alice@example.test": "alice-token",
+		"bob@example.test":   "bob-token",
+	}, repaired.Codes)
+
+	all, err := getShareInteractPermissions(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
+
+	repaired, err = RepairShareInteractPermissions(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{
+		"alice@example.test": "alice-token",
+		"bob@example.test":   "bob-token",
+	}, repaired.Codes)
+
+	all, err = getShareInteractPermissions(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
 }
 
 func TestCreateShareSetBlocklist(t *testing.T) {
