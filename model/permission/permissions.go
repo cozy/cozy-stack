@@ -820,10 +820,6 @@ func CreateShareInteractSet(db prefixer.Prefixer, sharingID string, codes map[st
 		Metadata:    subdoc.Metadata,
 	}
 
-	if doc.Codes == nil {
-		doc.Codes = make(map[string]string)
-	}
-
 	mu := config.Lock().ReadWrite(db, shareInteractLockName(sharingID))
 	if err := mu.Lock(); err != nil {
 		return nil, err
