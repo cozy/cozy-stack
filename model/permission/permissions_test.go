@@ -597,6 +597,92 @@ func TestCreateShareInteractSetUsesCanonicalDoc(t *testing.T) {
 	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
 }
 
+func TestCreateShareInteractSetReactivatesExpiredCanonicalDoc(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	db := testPrefix(t)
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
+
+	const sharingID = "sharing-expired-canonical-interact-permissions"
+	rules := Set{{
+		Title:  "Shared drive",
+		Type:   consts.Files,
+		Values: []string{"shared-drive-root"},
+		Verbs:  ALL,
+	}}
+	expiredAt := time.Now().Add(-time.Hour).Format(time.RFC3339)
+
+	err := couchdb.CreateNamedDoc(db, &Permission{
+		PID:         ShareInteractPermissionID(sharingID),
+		Type:        TypeShareInteract,
+		Permissions: rules,
+		Codes: map[string]string{
+			"alice@example.test": "alice-token",
+		},
+		ExpiresAt: expiredAt,
+		SourceID:  consts.Sharings + "/" + sharingID,
+	})
+	require.NoError(t, err)
+
+	updated, err := CreateShareInteractSet(db, sharingID, map[string]string{
+		"bob@example.test": "bob-token",
+	}, Permission{Permissions: rules})
+	require.NoError(t, err)
+	require.Nil(t, updated.ExpiresAt)
+	require.Equal(t, map[string]string{
+		"alice@example.test": "alice-token",
+		"bob@example.test":   "bob-token",
+	}, updated.Codes)
+
+	stored, err := GetForShareInteract(db, sharingID)
+	require.NoError(t, err)
+	require.Nil(t, stored.ExpiresAt)
+}
+
+func TestCreateShareInteractSetDoesNotRepairLegacyDuplicates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	db := testPrefix(t)
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
+
+	const sharingID = "sharing-create-with-legacy-duplicate"
+	rules := Set{{
+		Title:  "Shared drive",
+		Type:   consts.Files,
+		Values: []string{"shared-drive-root"},
+		Verbs:  ALL,
+	}}
+
+	err := couchdb.CreateDoc(db, &Permission{
+		Type:        TypeShareInteract,
+		Permissions: rules,
+		Codes: map[string]string{
+			"alice@example.test": "alice-token",
+		},
+		SourceID: consts.Sharings + "/" + sharingID,
+	})
+	require.NoError(t, err)
+
+	created, err := CreateShareInteractSet(db, sharingID, map[string]string{
+		"bob@example.test": "bob-token",
+	}, Permission{Permissions: rules})
+	require.NoError(t, err)
+	require.Equal(t, ShareInteractPermissionID(sharingID), created.ID())
+	require.Equal(t, map[string]string{
+		"bob@example.test": "bob-token",
+	}, created.Codes)
+
+	all, err := getShareInteractPermissions(db, sharingID)
+	require.NoError(t, err)
+	require.Len(t, all, 2)
+}
+
 func TestCreateShareSetBlocklist(t *testing.T) {
 	s := Set{Rule{Type: "io.cozy.notifications"}}
 	subdoc := Permission{

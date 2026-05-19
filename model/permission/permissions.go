@@ -827,50 +827,51 @@ func CreateShareInteractSet(db prefixer.Prefixer, sharingID string, codes map[st
 	defer mu.Unlock()
 
 	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
-		existing, err := getOrRepairShareInteractPermissionsOnce(db, sharingID)
-		if err != nil && !couchdb.IsNotFoundError(err) {
-			return nil, err
-		}
-		if err == nil {
-			merged := existing.Clone().(*Permission)
-			merged.Type = TypeShareInteract
-			merged.SourceID = consts.Sharings + "/" + sharingID
-			merged.SetID(ShareInteractPermissionID(sharingID))
-			if len(subdoc.Permissions) > 0 {
-				// Callers pass the complete interact rule set, so replace instead of merging rules.
-				merged.Permissions = subdoc.Permissions
-			}
-			if merged.Metadata == nil && subdoc.Metadata != nil {
-				merged.Metadata = subdoc.Metadata.Clone()
-			}
-			if merged.Metadata != nil {
-				merged.Metadata.ChangeUpdatedAt()
-			}
-			if merged.Codes == nil {
-				merged.Codes = make(map[string]string)
-			}
-			for key, code := range codes {
-				if key == "" {
-					continue
-				}
-				if existingCode, ok := merged.Codes[key]; ok && existingCode != code {
-					logger.WithDomain(db.DomainName()).WithNamespace("permissions").
-						Warnf("keeping existing share-interact code for %s in sharing %s", key, sharingID)
-					continue
-				}
-				merged.Codes[key] = code
-			}
-			if err := couchdb.UpdateDoc(db, merged); err != nil {
+		existing, err := GetPermissionByIDIncludingExpired(db, ShareInteractPermissionID(sharingID))
+		if err != nil {
+			if !couchdb.IsNotFoundError(err) {
 				return nil, err
 			}
-			return merged, nil
+			err = couchdb.CreateNamedDoc(db, doc)
+			if err == nil {
+				return doc, nil
+			}
+			return nil, err
 		}
 
-		err = couchdb.CreateNamedDoc(db, doc)
-		if err == nil {
-			return doc, nil
+		merged := existing.Clone().(*Permission)
+		merged.Type = TypeShareInteract
+		merged.SourceID = consts.Sharings + "/" + sharingID
+		merged.SetID(ShareInteractPermissionID(sharingID))
+		merged.ExpiresAt = nil
+		if len(subdoc.Permissions) > 0 {
+			// Callers pass the complete interact rule set, so replace instead of merging rules.
+			merged.Permissions = subdoc.Permissions
 		}
-		return nil, err
+		if merged.Metadata == nil && subdoc.Metadata != nil {
+			merged.Metadata = subdoc.Metadata.Clone()
+		}
+		if merged.Metadata != nil {
+			merged.Metadata.ChangeUpdatedAt()
+		}
+		if merged.Codes == nil {
+			merged.Codes = make(map[string]string)
+		}
+		for key, code := range codes {
+			if key == "" {
+				continue
+			}
+			if existingCode, ok := merged.Codes[key]; ok && existingCode != code {
+				logger.WithDomain(db.DomainName()).WithNamespace("permissions").
+					Warnf("keeping existing share-interact code for %s in sharing %s", key, sharingID)
+				continue
+			}
+			merged.Codes[key] = code
+		}
+		if err := couchdb.UpdateDoc(db, merged); err != nil {
+			return nil, err
+		}
+		return merged, nil
 	})
 }
 
