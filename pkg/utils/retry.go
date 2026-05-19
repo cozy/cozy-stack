@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 )
 
@@ -19,7 +19,8 @@ type RetryOptions struct {
 	// MaxDelay caps the exponential backoff delay before jitter is applied.
 	MaxDelay time.Duration
 	// JitterFactor adds a random delay between 0 and the current backoff delay
-	// multiplied by JitterFactor. For example, 0.25 adds up to 25% jitter.
+	// multiplied by JitterFactor. This jitter is one-sided: it can only extend
+	// the delay, never shorten it. For example, 0.25 adds up to 25% jitter.
 	// Values lower than or equal to 0 disable jitter.
 	JitterFactor float64
 	// ShouldRetry can be used to retry only some errors. When nil, every
@@ -109,14 +110,14 @@ func backoffDelay(initial time.Duration, attempt int, maxDelay time.Duration) ti
 	delay := initial
 	for i := 0; i < attempt; i++ {
 		if delay > maxRetryDelay/2 {
-			delay = maxRetryDelay
-		} else {
-			delay *= 2
+			return cappedDelay(maxRetryDelay, maxDelay)
 		}
-		if maxDelay > 0 && delay > maxDelay {
-			return maxDelay
-		}
+		delay *= 2
 	}
+	return cappedDelay(delay, maxDelay)
+}
+
+func cappedDelay(delay time.Duration, maxDelay time.Duration) time.Duration {
 	if maxDelay > 0 && delay > maxDelay {
 		return maxDelay
 	}
@@ -141,7 +142,7 @@ func addJitter(delay time.Duration, jitterFactor float64) time.Duration {
 	if maxJitter <= 0 {
 		return delay
 	}
-	jitter := time.Duration(rand.Int63n(int64(maxJitter)))
+	jitter := time.Duration(rand.Int64N(int64(maxJitter)))
 	if maxRetryDelay-delay < jitter {
 		return maxRetryDelay
 	}

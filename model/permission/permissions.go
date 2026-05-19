@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
-	stackconfig "github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -250,12 +251,6 @@ func GetForSharePreview(db prefixer.Prefixer, sharingID string) (*Permission, er
 // docs as part of the read by creating/updating the canonical permission doc
 // and deleting duplicate legacy docs.
 func GetForShareInteract(db prefixer.Prefixer, sharingID string) (*Permission, error) {
-	mu := stackconfig.Lock().ReadWrite(db, shareInteractLockName(sharingID))
-	if err := mu.Lock(); err != nil {
-		return nil, err
-	}
-	defer mu.Unlock()
-
 	return getOrRepairShareInteractPermissions(db, sharingID)
 }
 
@@ -294,28 +289,41 @@ func getShareInteractPermissions(db prefixer.Prefixer, sharingID string) ([]Perm
 }
 
 func getOrRepairShareInteractPermissions(db prefixer.Prefixer, sharingID string) (*Permission, error) {
-	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
-		perms, err := getShareInteractPermissions(db, sharingID)
-		if err != nil {
-			return nil, err
-		}
-		if canonical, needsRepair, err := shareInteractRepairState(perms, sharingID); err != nil || !needsRepair {
-			return canonical, err
-		}
-
-		perm, retry, err := repairShareInteractPermissions(db, sharingID, perms)
-		if err == nil && !retry {
-			return perm, nil
-		}
-		if retry && err == nil {
-			return nil, &couchdb.Error{
-				StatusCode: http.StatusConflict,
-				Name:       "conflict",
-				Reason:     "could not repair share-interact permissions after retries",
-			}
-		}
+	perms, err := getShareInteractPermissions(db, sharingID)
+	if err != nil {
 		return nil, err
+	}
+	if canonical, needsRepair, err := shareInteractRepairState(perms, sharingID); err != nil || !needsRepair {
+		return canonical, err
+	}
+
+	return repairShareInteractPermissionsWithLock(db, sharingID)
+}
+
+func repairShareInteractPermissionsWithLock(db prefixer.Prefixer, sharingID string) (*Permission, error) {
+	mu := config.Lock().ReadWrite(db, shareInteractLockName(sharingID))
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
+	defer mu.Unlock()
+
+	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
+		return getOrRepairShareInteractPermissionsOnce(db, sharingID)
 	})
+}
+
+// getOrRepairShareInteractPermissionsOnce performs a single read+repair pass.
+// The caller must hold the share-interact write lock for sharingID.
+func getOrRepairShareInteractPermissionsOnce(db prefixer.Prefixer, sharingID string) (*Permission, error) {
+	perms, err := getShareInteractPermissions(db, sharingID)
+	if err != nil {
+		return nil, err
+	}
+	if canonical, needsRepair, err := shareInteractRepairState(perms, sharingID); err != nil || !needsRepair {
+		return canonical, err
+	}
+
+	return repairShareInteractPermissions(db, sharingID, perms)
 }
 
 func shareInteractRetryOptions() utils.RetryOptions {
@@ -344,15 +352,17 @@ func shareInteractRepairState(perms []Permission, sharingID string) (*Permission
 	usable := 0
 	hasDuplicate := false
 	for i := range perms {
-		if perms[i].ID() != canonicalID {
+		p := &perms[i]
+		isCanonical := p.ID() == canonicalID
+		if !isCanonical {
 			hasDuplicate = true
 		}
-		if perms[i].Expired() {
+		if p.Expired() {
 			continue
 		}
 		usable++
-		if perms[i].ID() == canonicalID {
-			canonical = &perms[i]
+		if isCanonical {
+			canonical = p
 		}
 	}
 	if usable == 0 {
@@ -364,7 +374,10 @@ func shareInteractRepairState(perms []Permission, sharingID string) (*Permission
 	return nil, true, nil
 }
 
-func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perms []Permission) (*Permission, bool, error) {
+// repairShareInteractPermissions merges usable share-interact permission docs
+// into the canonical doc and deletes non-canonical duplicates. The caller must
+// hold the share-interact write lock for sharingID.
+func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perms []Permission) (*Permission, error) {
 	canonicalID := ShareInteractPermissionID(sharingID)
 	merged := &Permission{
 		PID:      canonicalID,
@@ -391,7 +404,7 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perm
 		hasUsablePermission = true
 
 		if len(merged.Permissions) == 0 && len(p.Permissions) > 0 {
-			merged.Permissions = p.Clone().(*Permission).Permissions
+			merged.Permissions = slices.Clone(p.Permissions)
 		}
 		if merged.Metadata == nil && p.Metadata != nil {
 			merged.Metadata = p.Metadata.Clone()
@@ -413,21 +426,15 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perm
 		}
 	}
 	if !hasUsablePermission {
-		return nil, false, ErrExpiredToken
+		return nil, ErrExpiredToken
 	}
 
 	if !hasCanonical {
 		if err := couchdb.CreateNamedDoc(db, merged); err != nil {
-			if couchdb.IsConflictError(err) || couchdb.IsFileExists(err) {
-				return nil, true, err
-			}
-			return nil, false, err
+			return nil, err
 		}
 	} else if err := couchdb.UpdateDoc(db, merged); err != nil {
-		if couchdb.IsConflictError(err) {
-			return nil, true, err
-		}
-		return nil, false, err
+		return nil, err
 	}
 
 	for _, p := range duplicates {
@@ -435,14 +442,11 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perm
 			if couchdb.IsNotFoundError(err) {
 				continue
 			}
-			if couchdb.IsConflictError(err) {
-				return nil, true, err
-			}
-			return nil, false, err
+			return nil, err
 		}
 	}
 
-	return merged, false, nil
+	return merged, nil
 }
 
 func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permission, error) {
@@ -820,14 +824,14 @@ func CreateShareInteractSet(db prefixer.Prefixer, sharingID string, codes map[st
 		doc.Codes = make(map[string]string)
 	}
 
-	mu := stackconfig.Lock().ReadWrite(db, shareInteractLockName(sharingID))
+	mu := config.Lock().ReadWrite(db, shareInteractLockName(sharingID))
 	if err := mu.Lock(); err != nil {
 		return nil, err
 	}
 	defer mu.Unlock()
 
 	return utils.RetryWithBackoffValue(context.Background(), shareInteractRetryOptions(), func() (*Permission, error) {
-		existing, err := getOrRepairShareInteractPermissions(db, sharingID)
+		existing, err := getOrRepairShareInteractPermissionsOnce(db, sharingID)
 		if err != nil && !couchdb.IsNotFoundError(err) {
 			return nil, err
 		}

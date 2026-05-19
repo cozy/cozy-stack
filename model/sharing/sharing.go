@@ -400,7 +400,7 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 	if stored, ok := updated.Codes[key]; ok {
 		return stored, nil
 	}
-	return code, nil
+	return "", fmt.Errorf("share-interact code for %s was not stored in sharing %s", key, s.SID)
 }
 
 func (s *Sharing) createInteractPermissions(inst *instance.Instance, m *Member) (string, error) {

@@ -92,6 +92,11 @@ func TestRetryWithBackoffCapsDelay(t *testing.T) {
 	}, delays)
 }
 
+func TestRetryDelaySaturatesOnOverflow(t *testing.T) {
+	assert.Equal(t, maxRetryDelay, backoffDelay(maxRetryDelay, 1, 0))
+	assert.Equal(t, time.Hour, backoffDelay(maxRetryDelay, 1, time.Hour))
+}
+
 func TestRetryWithBackoffStopsWhenContextIsCanceled(t *testing.T) {
 	errTemporary := errors.New("temporary")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -114,13 +119,16 @@ func TestRetryWithBackoffStopsWhenContextIsCanceled(t *testing.T) {
 
 func TestRetryDelayWithJitter(t *testing.T) {
 	base := 4 * time.Second
+	hasJitter := false
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		delay := retryDelay(base, 0, 0, 0.25)
 
 		assert.GreaterOrEqual(t, delay, base)
 		assert.Less(t, delay, base+time.Second)
+		hasJitter = hasJitter || delay > base
 	}
+	assert.True(t, hasJitter)
 }
 
 func TestRetryWithExpBackoffRunsAtLeastOnce(t *testing.T) {

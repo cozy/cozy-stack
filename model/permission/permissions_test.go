@@ -17,7 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testPrefix = prefixer.NewPrefixer(0, "test", "permission-tests")
+func testPrefix(t *testing.T) prefixer.Prefixer {
+	t.Helper()
+	return prefixer.NewPrefixer(0, "test", t.Name())
+}
 
 func TestCheckDoctypeName(t *testing.T) {
 	assert.NoError(t, CheckDoctypeName("io.cozy.files", false))
@@ -438,7 +441,8 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 	}
 
 	config.UseTestFile(t)
-	require.NoError(t, couchdb.ResetDB(testPrefix, consts.Permissions))
+	db := testPrefix(t)
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
 
 	const sharingID = "sharing-duplicate-interact-permissions"
 	perms := Permission{
@@ -450,7 +454,7 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 		}},
 	}
 
-	err := couchdb.CreateDoc(testPrefix, &Permission{
+	err := couchdb.CreateDoc(db, &Permission{
 		Type:        TypeShareInteract,
 		Permissions: perms.Permissions,
 		Codes: map[string]string{
@@ -459,7 +463,7 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 		SourceID: consts.Sharings + "/" + sharingID,
 	})
 	require.NoError(t, err)
-	err = couchdb.CreateDoc(testPrefix, &Permission{
+	err = couchdb.CreateDoc(db, &Permission{
 		Type:        TypeShareInteract,
 		Permissions: perms.Permissions,
 		Codes: map[string]string{
@@ -469,7 +473,7 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	repaired, err := GetForShareInteract(testPrefix, sharingID)
+	repaired, err := GetForShareInteract(db, sharingID)
 	require.NoError(t, err)
 	require.Equal(t, ShareInteractPermissionID(sharingID), repaired.ID())
 	require.Equal(t, map[string]string{
@@ -477,19 +481,19 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 		"bob@example.test":   "bob-token",
 	}, repaired.Codes)
 
-	all, err := getShareInteractPermissions(testPrefix, sharingID)
+	all, err := getShareInteractPermissions(db, sharingID)
 	require.NoError(t, err)
 	require.Len(t, all, 1)
 	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
 
-	repaired, err = GetForShareInteract(testPrefix, sharingID)
+	repaired, err = GetForShareInteract(db, sharingID)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{
 		"alice@example.test": "alice-token",
 		"bob@example.test":   "bob-token",
 	}, repaired.Codes)
 
-	all, err = getShareInteractPermissions(testPrefix, sharingID)
+	all, err = getShareInteractPermissions(db, sharingID)
 	require.NoError(t, err)
 	require.Len(t, all, 1)
 }
@@ -500,7 +504,8 @@ func TestGetForShareInteractRepairsExpiredDuplicateDocs(t *testing.T) {
 	}
 
 	config.UseTestFile(t)
-	require.NoError(t, couchdb.ResetDB(testPrefix, consts.Permissions))
+	db := testPrefix(t)
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
 
 	const sharingID = "sharing-expired-duplicate-interact-permissions"
 	rules := Set{{
@@ -511,7 +516,7 @@ func TestGetForShareInteractRepairsExpiredDuplicateDocs(t *testing.T) {
 	}}
 	expiredAt := time.Now().Add(-time.Hour).Format(time.RFC3339)
 
-	err := couchdb.CreateNamedDoc(testPrefix, &Permission{
+	err := couchdb.CreateNamedDoc(db, &Permission{
 		PID:         ShareInteractPermissionID(sharingID),
 		Type:        TypeShareInteract,
 		Permissions: rules,
@@ -521,7 +526,7 @@ func TestGetForShareInteractRepairsExpiredDuplicateDocs(t *testing.T) {
 		SourceID: consts.Sharings + "/" + sharingID,
 	})
 	require.NoError(t, err)
-	err = couchdb.CreateDoc(testPrefix, &Permission{
+	err = couchdb.CreateDoc(db, &Permission{
 		Type:        TypeShareInteract,
 		Permissions: rules,
 		Codes: map[string]string{
@@ -532,14 +537,14 @@ func TestGetForShareInteractRepairsExpiredDuplicateDocs(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	repaired, err := GetForShareInteract(testPrefix, sharingID)
+	repaired, err := GetForShareInteract(db, sharingID)
 	require.NoError(t, err)
 	require.Equal(t, ShareInteractPermissionID(sharingID), repaired.ID())
 	require.Equal(t, map[string]string{
 		"alice@example.test": "alice-token",
 	}, repaired.Codes)
 
-	all, err := getShareInteractPermissions(testPrefix, sharingID)
+	all, err := getShareInteractPermissions(db, sharingID)
 	require.NoError(t, err)
 	require.Len(t, all, 1)
 	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
@@ -551,7 +556,8 @@ func TestCreateShareInteractSetUsesCanonicalDoc(t *testing.T) {
 	}
 
 	config.UseTestFile(t)
-	require.NoError(t, couchdb.ResetDB(testPrefix, consts.Permissions))
+	db := testPrefix(t)
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
 
 	const sharingID = "sharing-canonical-interact-permissions"
 	md := metadata.New()
@@ -566,13 +572,13 @@ func TestCreateShareInteractSetUsesCanonicalDoc(t *testing.T) {
 		Metadata: md,
 	}
 
-	first, err := CreateShareInteractSet(testPrefix, sharingID, map[string]string{
+	first, err := CreateShareInteractSet(db, sharingID, map[string]string{
 		"alice@example.test": "alice-token",
 	}, perms)
 	require.NoError(t, err)
 	require.Equal(t, ShareInteractPermissionID(sharingID), first.ID())
 
-	second, err := CreateShareInteractSet(testPrefix, sharingID, map[string]string{
+	second, err := CreateShareInteractSet(db, sharingID, map[string]string{
 		"bob@example.test": "bob-token",
 	}, perms)
 	require.NoError(t, err)
@@ -585,7 +591,7 @@ func TestCreateShareInteractSetUsesCanonicalDoc(t *testing.T) {
 	require.NotNil(t, second.Metadata)
 	require.True(t, second.Metadata.UpdatedAt.After(first.Metadata.UpdatedAt))
 
-	all, err := getShareInteractPermissions(testPrefix, sharingID)
+	all, err := getShareInteractPermissions(db, sharingID)
 	require.NoError(t, err)
 	require.Len(t, all, 1)
 	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
