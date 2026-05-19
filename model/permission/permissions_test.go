@@ -494,6 +494,57 @@ func TestGetForShareInteractRepairsDuplicateDocs(t *testing.T) {
 	require.Len(t, all, 1)
 }
 
+func TestGetForShareInteractRepairsExpiredDuplicateDocs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	require.NoError(t, couchdb.ResetDB(testPrefix, consts.Permissions))
+
+	const sharingID = "sharing-expired-duplicate-interact-permissions"
+	rules := Set{{
+		Title:  "Shared drive",
+		Type:   consts.Files,
+		Values: []string{"shared-drive-root"},
+		Verbs:  ALL,
+	}}
+	expiredAt := time.Now().Add(-time.Hour).Format(time.RFC3339)
+
+	err := couchdb.CreateNamedDoc(testPrefix, &Permission{
+		PID:         ShareInteractPermissionID(sharingID),
+		Type:        TypeShareInteract,
+		Permissions: rules,
+		Codes: map[string]string{
+			"alice@example.test": "alice-token",
+		},
+		SourceID: consts.Sharings + "/" + sharingID,
+	})
+	require.NoError(t, err)
+	err = couchdb.CreateDoc(testPrefix, &Permission{
+		Type:        TypeShareInteract,
+		Permissions: rules,
+		Codes: map[string]string{
+			"expired@example.test": "expired-token",
+		},
+		ExpiresAt: expiredAt,
+		SourceID:  consts.Sharings + "/" + sharingID,
+	})
+	require.NoError(t, err)
+
+	repaired, err := GetForShareInteract(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Equal(t, ShareInteractPermissionID(sharingID), repaired.ID())
+	require.Equal(t, map[string]string{
+		"alice@example.test": "alice-token",
+	}, repaired.Codes)
+
+	all, err := getShareInteractPermissions(testPrefix, sharingID)
+	require.NoError(t, err)
+	require.Len(t, all, 1)
+	require.Equal(t, ShareInteractPermissionID(sharingID), all[0].ID())
+}
+
 func TestCreateShareInteractSetUsesCanonicalDoc(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")

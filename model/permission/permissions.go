@@ -281,7 +281,14 @@ func getShareInteractPermissions(db prefixer.Prefixer, sharingID string) ([]Perm
 	}
 	err := couchdb.FindDocs(db, consts.Permissions, &req, &res)
 	if err != nil {
-		return nil, err
+		// With a cluster of couchdb, we can have a race condition where we
+		// query an index before it has been updated for a doc that has just
+		// been created. Keep the same fallback as getFromSource.
+		time.Sleep(1 * time.Second)
+		err = couchdb.FindDocs(db, consts.Permissions, &req, &res)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }
@@ -335,7 +342,11 @@ func shareInteractRepairState(perms []Permission, sharingID string) (*Permission
 	canonicalID := ShareInteractPermissionID(sharingID)
 	var canonical *Permission
 	usable := 0
+	hasDuplicate := false
 	for i := range perms {
+		if perms[i].ID() != canonicalID {
+			hasDuplicate = true
+		}
 		if perms[i].Expired() {
 			continue
 		}
@@ -347,7 +358,7 @@ func shareInteractRepairState(perms []Permission, sharingID string) (*Permission
 	if usable == 0 {
 		return nil, false, ErrExpiredToken
 	}
-	if usable == 1 && canonical != nil {
+	if usable == 1 && canonical != nil && !hasDuplicate {
 		return canonical, false, nil
 	}
 	return nil, true, nil
@@ -370,15 +381,14 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perm
 			hasCanonical = true
 			// If the canonical doc is expired, update that doc ID but rebuild its content from non-expired docs.
 			merged.SetRev(p.Rev())
+		} else {
+			duplicates = append(duplicates, p)
 		}
 		if p.Expired() {
 			continue
 		}
 
 		hasUsablePermission = true
-		if p.ID() != canonicalID {
-			duplicates = append(duplicates, p)
-		}
 
 		if len(merged.Permissions) == 0 && len(p.Permissions) > 0 {
 			merged.Permissions = p.Clone().(*Permission).Permissions
