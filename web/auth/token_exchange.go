@@ -34,6 +34,7 @@ var tokenExchangeAllowedScopes = map[string]struct{}{
 	"io.cozy.contacts":        {},
 	"io.cozy.contacts.groups": {},
 	"io.cozy.apps":            {},
+	"io.cozy.sharings":        {},
 }
 
 type tokenExchangeRequest struct {
