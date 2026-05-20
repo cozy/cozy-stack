@@ -459,7 +459,9 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 		if !IsValidDriveRootType(s.DriveRootType) {
 			return nil, ErrInvalidRule
 		}
-		s.inferDriveRootType(inst)
+		if err := s.inferDriveRootType(inst); err != nil {
+			return nil, err
+		}
 	}
 	if !s.Drive && len(s.Members) < 2 {
 		return nil, ErrNoRecipients
@@ -481,25 +483,28 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	return nil, nil
 }
 
-func (s *Sharing) inferDriveRootType(inst *instance.Instance) {
-	if s.DriveRootType != "" {
-		return
+func (s *Sharing) inferDriveRootType(inst *instance.Instance) error {
+	rule := s.FirstFilesRule()
+	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		return ErrDriveRootNotFound
 	}
-	rootID, err := s.DriveRootID()
-	if err != nil {
-		return
-	}
+	rootID := rule.Values[0]
 
 	dir, file, err := inst.VFS().DirOrFileByID(rootID)
 	if err != nil {
-		return
+		return err
 	}
 	switch {
 	case file != nil:
 		s.DriveRootType = DriveRootTypeFile
+		rule.Mime = file.Mime
 	case dir != nil:
 		s.DriveRootType = DriveRootTypeDirectory
+		rule.Mime = ""
+	default:
+		return ErrDriveRootNotFound
 	}
+	return nil
 }
 
 // CreateDrive creates a new shared drive from an existing unshared folder or file.
@@ -514,9 +519,11 @@ func CreateDrive(inst *instance.Instance, rootID, description, appSlug string) (
 	if dir != nil {
 		rootName = dir.DocName
 	}
+	rootMime := ""
 	if file != nil {
 		rootType = DriveRootTypeFile
 		rootName = file.DocName
+		rootMime = file.Mime
 	}
 
 	s := &Sharing{
@@ -526,6 +533,7 @@ func CreateDrive(inst *instance.Instance, rootID, description, appSlug string) (
 		Rules: []Rule{{
 			Title:   rootName,
 			DocType: consts.Files,
+			Mime:    rootMime,
 			Values:  []string{rootID},
 			Add:     ActionRuleNone,
 			Update:  ActionRuleNone,

@@ -92,6 +92,37 @@ func TestFiles(t *testing.T) {
 		assert.False(t, IsValidDriveRootType("album"))
 	})
 
+	t.Run("CreateFileRootDriveShortcutMetadata", func(t *testing.T) {
+		s := Sharing{
+			SID:           uuidv7(),
+			Drive:         true,
+			DriveRootType: DriveRootTypeFile,
+			Rules: []Rule{
+				{
+					Title:   "report.txt",
+					DocType: consts.Files,
+					Mime:    "text/plain",
+					Values:  []string{uuidv7()},
+				},
+			},
+			Members: []Member{
+				{Instance: "https://owner.example.net/"},
+			},
+		}
+
+		err := s.CreateDriveShortcut(inst, true)
+		require.NoError(t, err)
+		require.NotEmpty(t, s.ShortcutID)
+
+		shortcut, err := inst.VFS().FileByID(s.ShortcutID)
+		require.NoError(t, err)
+		target, ok := shortcut.Metadata["target"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, consts.Files, target["_type"])
+		assert.Equal(t, DriveRootTypeFile, target["drive_root_type"])
+		assert.Equal(t, "text/plain", target["mime"])
+	})
+
 	t.Run("SharingDir", func(t *testing.T) {
 		s := Sharing{
 			SID: uuidv7(),
