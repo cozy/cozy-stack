@@ -395,20 +395,26 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	}
 
 	if dir != nil {
+		oldDirName := dir.DocName
 		files.UpdateDirCozyMetadata(c, dir)
 		dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 		if err != nil {
 			return err
 		}
-		if patch.Name != nil {
+		if patch.Name != nil && oldDirName != *patch.Name {
 			// Update sharing description if this directory is a sharing root
-			sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir)
+			sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir.ReferencedBy, dir.DocName)
 		}
 	} else {
+		oldFileName := file.DocName
 		files.UpdateFileCozyMetadata(c, file, false)
 		file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
 		if err != nil {
 			return err
+		}
+		if patch.Name != nil && oldFileName != *patch.Name {
+			// Update sharing description if this file is a file-root sharing root
+			sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), file.ReferencedBy, file.DocName)
 		}
 	}
 
