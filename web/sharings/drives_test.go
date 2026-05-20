@@ -2901,6 +2901,17 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 
 		patched.Path("$.data.attributes.name").String().IsEqual("RenamedRoot.txt")
 		patched.Path("$.data.attributes.cozyMetadata.favorite").Boolean().True()
+		require.Eventually(t, func() bool {
+			ownerSharing, err := sharing.FindSharing(env.acme, sharingID)
+			if err != nil || ownerSharing.Description != "RenamedRoot.txt" {
+				return false
+			}
+			recipientSharing, err := sharing.FindSharing(env.betty, sharingID)
+			if err != nil {
+				return false
+			}
+			return recipientSharing.Description == "RenamedRoot.txt"
+		}, 5*time.Second, 50*time.Millisecond)
 
 		eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
@@ -2929,6 +2940,49 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().
 			Path("$.data.attributes.trashed").Boolean().False()
+	})
+
+	t.Run("OwnerCanRenameFileRootViaFilesPatch", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "OwnerRenamedRoot.txt", env.acmeToken)
+		sharingID, _ := createFileRootSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Owner file-root shared drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		newDriveName := testify(t, "Owner renamed file-root via files patch")
+
+		renamed := eA.PATCH("/files/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + rootFileID + `",
+					"attributes": {
+						"name": "` + newDriveName + `"
+					}
+				}
+			}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		renamed.Path("$.data.attributes.name").String().IsEqual(newDriveName)
+
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.betty, sharingID)
+			if err != nil {
+				return false
+			}
+			return s.Description == newDriveName
+		}, 5*time.Second, 50*time.Millisecond)
 	})
 
 	t.Run("DestroyTrashedRootFile", func(t *testing.T) {

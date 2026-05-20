@@ -743,11 +743,15 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 			UpdateDirCozyMetadata(c, dir)
 			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 			if err == nil && patch.Name != nil && oldDirName != *patch.Name {
-				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir)
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir.ReferencedBy, dir.DocName)
 			}
 		} else {
+			oldFileName := file.DocName
 			UpdateFileCozyMetadata(c, file, false)
 			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+			if err == nil && patch.Name != nil && oldFileName != *patch.Name {
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), file.ReferencedBy, file.DocName)
+			}
 		}
 	}
 	if err != nil {
@@ -794,11 +798,15 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			UpdateDirCozyMetadata(c, dir)
 			dir, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 			if errp == nil && patch.Name != nil && oldDirName != *patch.Name {
-				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir)
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir.ReferencedBy, dir.DocName)
 			}
 		} else if file != nil {
+			oldFileName := file.DocName
 			UpdateFileCozyMetadata(c, file, false)
-			_, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+			file, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+			if errp == nil && patch.Name != nil && oldFileName != *patch.Name {
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), file.ReferencedBy, file.DocName)
+			}
 		}
 		if errp != nil {
 			jsonapiError := wrapVfsErrorJSONAPI(errp)
