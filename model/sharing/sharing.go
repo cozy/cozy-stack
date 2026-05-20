@@ -342,7 +342,7 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 	interact, err := permission.GetForShareInteract(inst, s.ID())
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return s.CreateInteractPermissions(inst, member)
+			return s.createInteractPermissions(inst, member)
 		}
 		return "", err
 	}
@@ -364,7 +364,11 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 		}
 		if key == member.Instance || key == member.Email || key == indexKey {
 			if needUpdate {
-				if err := couchdb.UpdateDoc(inst, interact); err != nil {
+				_, err := permission.CreateShareInteractSet(inst, s.SID, nil, permission.Permission{
+					Permissions: set,
+					Metadata:    interact.Metadata,
+				})
+				if err != nil {
 					return "", err
 				}
 			}
@@ -385,19 +389,21 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 	if err != nil {
 		return "", err
 	}
-	if interact.Codes == nil {
-		interact.Codes = make(map[string]string)
-	}
-	interact.Codes[key] = code
-	if err := couchdb.UpdateDoc(inst, interact); err != nil {
+
+	updated, err := permission.CreateShareInteractSet(inst, s.SID, map[string]string{key: code}, permission.Permission{
+		Permissions: set,
+		Metadata:    interact.Metadata,
+	})
+	if err != nil {
 		return "", err
 	}
-	return code, nil
+	if stored, ok := updated.Codes[key]; ok {
+		return stored, nil
+	}
+	return "", fmt.Errorf("share-interact code for %s was not stored in sharing %s", key, s.SID)
 }
 
-// CreateInteractPermissions creates the permissions doc for reading and
-// writing a note inside this sharing.
-func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) (string, error) {
+func (s *Sharing) createInteractPermissions(inst *instance.Instance, m *Member) (string, error) {
 	key := m.Email
 	if key == "" {
 		key = m.Instance
@@ -417,9 +423,12 @@ func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) 
 		Metadata:    md,
 	}
 
-	_, err = permission.CreateShareInteractSet(inst, s.SID, codes, doc)
+	interact, err := permission.CreateShareInteractSet(inst, s.SID, codes, doc)
 	if err != nil {
 		return "", err
+	}
+	if stored, ok := interact.Codes[key]; ok {
+		return stored, nil
 	}
 	return code, nil
 }
