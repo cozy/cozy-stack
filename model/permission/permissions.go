@@ -392,7 +392,7 @@ func repairShareInteractPermissions(db prefixer.Prefixer, sharingID string, perm
 		p := &perms[i]
 		if p.ID() == canonicalID {
 			hasCanonical = true
-			// If the canonical doc is expired, update that doc ID but rebuild its content from non-expired docs.
+			// Keep the canonical doc revision and then overwrite the document with content rebuilt from non-expired docs.
 			merged.SetRev(p.Rev())
 		} else {
 			duplicates = append(duplicates, p)
