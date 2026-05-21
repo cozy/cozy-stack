@@ -87,11 +87,15 @@ func createRootDirectory(t *testing.T, client *httpexpect.Expect, name, token st
 // createFile creates a file with the given name in the specified parent directory
 // and returns the file ID.
 func createFile(t *testing.T, client *httpexpect.Expect, parentDirID, name, token string) string {
+	return createFileWithMime(t, client, parentDirID, name, token, "text/plain")
+}
+
+func createFileWithMime(t *testing.T, client *httpexpect.Expect, parentDirID, name, token, mime string) string {
 	t.Helper()
 	fileID := client.POST("/files/"+parentDirID).
 		WithQuery("Name", name).
 		WithQuery("Type", "file").
-		WithHeader("Content-Type", "text/plain").
+		WithHeader("Content-Type", mime).
 		WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 		WithHeader("Authorization", "Bearer "+token).
 		WithBytes([]byte("foo")).
@@ -2418,6 +2422,7 @@ func TestSharedDriveCreation(t *testing.T) {
 		attrs.Value("description").String().IsEqual("Drive created from file")
 		rule := attrs.Value("rules").Array().Value(0).Object()
 		rule.Value("title").String().IsEqual("SharedDriveFile.txt")
+		rule.Value("mime").String().IsEqual("text/plain")
 		rule.Value("values").Array().Value(0).String().IsEqual(fileID)
 
 		sharedFile, err := env.acme.VFS().FileByID(fileID)
@@ -2524,6 +2529,129 @@ func TestSharedDriveCreation(t *testing.T) {
 			Object()
 
 		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+		obj.Path("$.data.attributes.rules[0].mime").String().IsEqual("text/plain")
+	})
+
+	t.Run("LegacyDriveCreationKeepsExplicitFileRootTypeAndAddsMime", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFile(t, eA, "", "LegacyExplicitDriveFile.txt", env.acmeToken)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Legacy explicit file-root shared drive",
+						"drive": true,
+						"drive_root_type": "file",
+						"rules": [{
+							"title": "LegacyExplicitDriveFile.txt",
+							"doctype": "%s",
+							"values": ["%s"]
+						}]
+					}
+				}
+			}`, consts.Sharings, consts.Files, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+		obj.Path("$.data.attributes.rules[0].mime").String().IsEqual("text/plain")
+	})
+
+	t.Run("LegacyDriveCreationOverridesClientFileRootMime", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFileWithMime(t, eA, "", "LegacyBinaryDriveFile.bin", env.acmeToken, "application/octet-stream")
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Legacy binary file-root shared drive",
+						"drive": true,
+						"drive_root_type": "file",
+						"rules": [{
+							"title": "LegacyBinaryDriveFile.bin",
+							"doctype": "%s",
+							"mime": "text/plain",
+							"values": ["%s"]
+						}]
+					}
+				}
+			}`, consts.Sharings, consts.Files, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+		obj.Path("$.data.attributes.rules[0].mime").String().IsEqual("application/octet-stream")
+	})
+
+	t.Run("LegacyDriveCreationClearsDirectoryRuleMime", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		dirID := createRootDirectory(t, eA, "LegacyDirectoryDriveWithMime", env.acmeToken)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Legacy directory-root shared drive",
+						"drive": true,
+						"drive_root_type": "directory",
+						"rules": [{
+							"title": "LegacyDirectoryDriveWithMime",
+							"doctype": "%s",
+							"mime": "evil/foo",
+							"values": ["%s"]
+						}]
+					}
+				}
+			}`, consts.Sharings, consts.Files, dirID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("directory")
+		obj.Path("$.data.attributes.rules[0]").Object().NotContainsKey("mime")
+	})
+
+	t.Run("LegacyDriveCreationCanonicalizesExplicitRootType", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		fileID := createFile(t, eA, "", "LegacyCanonicalDriveFile.txt", env.acmeToken)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Legacy canonical file-root shared drive",
+						"drive": true,
+						"drive_root_type": "directory",
+						"rules": [{
+							"title": "LegacyCanonicalDriveFile.txt",
+							"doctype": "%s",
+							"values": ["%s"]
+						}]
+					}
+				}
+			}`, consts.Sharings, consts.Files, fileID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.drive_root_type").String().IsEqual("file")
+		obj.Path("$.data.attributes.rules[0].mime").String().IsEqual("text/plain")
 	})
 }
 

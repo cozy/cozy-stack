@@ -341,8 +341,12 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 			"cozyMetadata": map[string]interface{}{
 				"instance": s.Members[0].Instance,
 			},
-			"_type": consts.Files,
+			"_type":           consts.Files,
+			"drive_root_type": s.NormalizedDriveRootType(),
 		},
+	}
+	if rule := s.FirstFilesRule(); s.HasFileDriveRoot() && rule != nil && rule.Mime != "" {
+		fileDoc.Metadata["target"].(map[string]interface{})["mime"] = rule.Mime
 	}
 	fileDoc.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
