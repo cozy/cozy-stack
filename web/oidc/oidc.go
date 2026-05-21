@@ -456,21 +456,60 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 		logger.WithNamespace("oidc").Errorf("Missing sub")
 		return ErrAuthenticationFailed
 	}
+	oidcLog := ownerInst.Logger().WithNamespace("oidc")
+	oidcLog.Infof(
+		"OIDC sharing lookup: owner=%s sharing_id=%s oidc_context=%s allow_custom_instance=%t sub=%q userinfo_field=%q prefix=%q suffix=%q",
+		ownerInst.Domain, state.SharingID, state.OIDCContext, conf.AllowCustomInstance,
+		sub, conf.UserInfoField, conf.UserInfoPrefix, conf.UserInfoSuffix,
+	)
 	var memberInst *instance.Instance
 	if state.OIDCContext != "" && conf.AllowCustomInstance {
 		// Try direct lookup by OIDC subject first when OIDCContext is specified
+		oidcLog.Infof(
+			"OIDC sharing lookup by oidc_id: oidc_id=%q context=%s",
+			sub, state.OIDCContext,
+		)
 		memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+		if err != nil {
+			oidcLog.Warnf(
+				"OIDC sharing lookup by oidc_id failed: oidc_id=%q context=%s error=%s",
+				sub, state.OIDCContext, err,
+			)
+		}
 	}
 	if memberInst == nil {
 		// Fall back to domain extraction from user info
 		domain, err := extractDomain(conf, params)
 		if err == nil {
+			oidcLog.Infof("OIDC sharing lookup by domain: domain=%s", domain)
 			memberInst, err = lifecycle.GetInstance(domain)
+			if err != nil {
+				oidcLog.Infof(
+					"OIDC sharing lookup by domain failed: domain=%s error=%s",
+					domain, err,
+				)
+			}
 		} else if errors.Is(err, ErrAuthenticationFailed) && conf.AllowCustomInstance {
+			oidcLog.Infof(
+				"OIDC sharing lookup domain extraction failed, retrying oidc_id lookup: oidc_id=%q context=%s error=%s",
+				sub, state.OIDCContext, err,
+			)
 			memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+			if err != nil {
+				oidcLog.Infof(
+					"OIDC sharing lookup retry by oidc_id failed: oidc_id=%q context=%s error=%s",
+					sub, state.OIDCContext, err,
+				)
+			}
+		} else {
+			oidcLog.Infof("OIDC sharing lookup domain extraction failed: error=%s", err)
 		}
 	}
 	if err != nil || memberInst == nil {
+		oidcLog.Infof(
+			"OIDC sharing lookup failed: owner=%s sharing_id=%s oidc_context=%s sub=%q error=%v",
+			ownerInst.Domain, state.SharingID, state.OIDCContext, sub, err,
+		)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 	}
 
