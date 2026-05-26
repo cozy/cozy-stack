@@ -392,6 +392,36 @@ func TestCommonSettingsHelpers(t *testing.T) {
 	assert.Len(t, commonSettings, 2)
 }
 
+func TestGetPublicDomainSuffix(t *testing.T) {
+	oldConfig := config
+	t.Cleanup(func() { config = oldConfig })
+
+	config = &Config{
+		Contexts: map[string]interface{}{
+			DefaultInstanceContext: map[string]interface{}{
+				"public_domain_suffix": " STG.LIN-SAAS.COM. ",
+			},
+			"custom": map[string]interface{}{
+				"public_domain_suffix": "Prod.Lin-Saas.COM.",
+			},
+			"blank": map[string]interface{}{
+				"public_domain_suffix": "   ",
+			},
+		},
+	}
+
+	assert.Equal(t, "prod.lin-saas.com", GetPublicDomainSuffix("custom"))
+	assert.Equal(t, "stg.lin-saas.com", GetPublicDomainSuffix("blank"))
+	assert.Equal(t, "stg.lin-saas.com", GetPublicDomainSuffix("missing"))
+	assert.Equal(t, "stg.lin-saas.com", GetPublicDomainSuffix(""))
+
+	config = &Config{}
+	assert.Empty(t, GetPublicDomainSuffix("custom"))
+
+	config = nil
+	assert.Empty(t, GetPublicDomainSuffix("custom"))
+}
+
 func TestRabbitMQConfig(t *testing.T) {
 	// Create a temporary YAML file with RabbitMQ configuration
 	yamlContent := `

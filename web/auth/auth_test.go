@@ -2142,6 +2142,12 @@ func TestTokenExchange(t *testing.T) {
 			"oidc": makeTokenExchangeOIDCConfig(issuer, clientID, jwksURL),
 		},
 	}
+	conf.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{},
+		contextName: map[string]interface{}{
+			"public_domain_suffix": " STG.LIN-SAAS.COM. ",
+		},
+	}
 
 	setup := testutils.NewSetup(t, t.Name())
 
@@ -2151,6 +2157,22 @@ func TestTokenExchange(t *testing.T) {
 		OrgID:       "myorg123",
 		ContextName: contextName,
 		Email:       "token-exchange@example.com",
+	})
+	ownerSetup := testutils.NewSetup(t, t.Name()+"Owner")
+	ownerSetup.GetTestInstance(&lifecycle.Options{
+		Domain:      "theopoizatzatteocorpcc2acd.stg.lin-saas.com",
+		OrgDomain:   testInstance.OrgDomain,
+		OrgID:       testInstance.OrgID,
+		ContextName: contextName,
+		Email:       "owner@example.com",
+	})
+	otherOrgSetup := testutils.NewSetup(t, t.Name()+"OtherOrg")
+	otherOrgSetup.GetTestInstance(&lifecycle.Options{
+		Domain:      "otherowner.stg.lin-saas.com",
+		OrgDomain:   "other.example.com",
+		OrgID:       "otherorg123",
+		ContextName: contextName,
+		Email:       "other-owner@example.com",
 	})
 
 	ts := setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
@@ -2191,6 +2213,73 @@ func TestTokenExchange(t *testing.T) {
 			resp.Header("Access-Control-Allow-Methods").Equal(http.MethodPost)
 			resp.Header("Access-Control-Allow-Headers").Equal("content-type")
 		}
+	})
+
+	t.Run("AllowsAdminPanelPublicDomainSuffixOrigin", func(t *testing.T) {
+		origin := "https://theopoizatzatteocorpcc2acd-admin.stg.lin-saas.com"
+		resp := e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", origin).
+			WithHeader("Access-Control-Request-Headers", "content-type").
+			Expect().
+			Status(http.StatusNoContent)
+
+		resp.Header("Access-Control-Allow-Origin").Equal(origin)
+		resp.Header("Access-Control-Allow-Methods").Equal(http.MethodPost)
+		resp.Header("Access-Control-Allow-Headers").Equal("content-type")
+		resp.Header("Access-Control-Allow-Credentials").Equal("true")
+	})
+
+	t.Run("RejectsAdminPanelPublicDomainSuffixOriginFromDifferentOrg", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://otherowner-admin.stg.lin-saas.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsNonAdminPublicDomainSuffixOrigin", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://theopoizatzatteocorpcc2acd.stg.lin-saas.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsNestedAdminPanelPublicDomainSuffixOrigin", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://workspace.theopoizatzatteocorpcc2acd-admin.stg.lin-saas.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsHTTPAdminPanelPublicDomainSuffixOrigin", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "http://theopoizatzatteocorpcc2acd-admin.stg.lin-saas.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsAdminPanelPublicDomainSuffixOriginWhenSuffixUnset", func(t *testing.T) {
+		oldContexts := conf.Contexts
+		conf.Contexts = map[string]interface{}{
+			config.DefaultInstanceContext: map[string]interface{}{},
+			contextName:                   map[string]interface{}{},
+		}
+		defer func() { conf.Contexts = oldContexts }()
+
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://theopoizatzatteocorpcc2acd-admin.stg.lin-saas.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
 	})
 
 	t.Run("RejectsOtherOrigins", func(t *testing.T) {
