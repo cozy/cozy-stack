@@ -113,6 +113,33 @@ type Source struct {
 	Snippet string `json:"snippet,omitempty"`
 }
 
+type chatAssistant struct {
+	DocID         string                 `json:"_id,omitempty"`
+	DocRev        string                 `json:"_rev,omitempty"`
+	Relationships chatAssistantRelations `json:"relationships,omitempty"`
+}
+
+type chatAssistantRelations struct {
+	Provider struct {
+		Data struct {
+			// For LLM accounts, the assistant app uses the "relationships"
+			// (not "referenced_by") format, so the fields are "_id"/"_type".
+			ID       string `json:"_id"`
+			Type     string `json:"_type"`
+			Metadata struct {
+				ProviderID string `json:"providerId"`
+			} `json:"metadata"`
+		} `json:"data"`
+	} `json:"provider"`
+}
+
+func (a *chatAssistant) ID() string         { return a.DocID }
+func (a *chatAssistant) Rev() string        { return a.DocRev }
+func (a *chatAssistant) DocType() string    { return consts.ChatAssistants }
+func (a *chatAssistant) SetID(id string)    { a.DocID = id }
+func (a *chatAssistant) SetRev(rev string)  { a.DocRev = rev }
+func (a *chatAssistant) Clone() couchdb.Doc { c := *a; return &c }
+
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
 	var chat ChatConversation
 	err := couchdb.GetDoc(inst, consts.ChatConversations, payload.ChatConversationID, &chat)
@@ -253,10 +280,10 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 	return sources, nil
 }
 
-// buildLLMOverride returns the `metadata.llm_override“ map forwarded to
+// buildLLMOverride returns the `metadata.llm_override` map forwarded to
 // OpenRAG when the conversation is bound to an assistant that uses an
 // external provider (OpenAI, Mistral, …). It returns nil to leave the
-// stack's default RAG configuration in place. Either no assistant is
+// stack's default RAG configuration in place: either no assistant is
 // attached, the provider is the default "openrag", or the linked account
 // could not be resolved.
 func buildLLMOverride(inst *instance.Instance, chat *ChatConversation) map[string]interface{} {
@@ -270,49 +297,38 @@ func buildLLMOverride(inst *instance.Instance, chat *ChatConversation) map[strin
 		return nil
 	}
 
-	var assistantDoc couchdb.JSONDoc
-	if err := couchdb.GetDoc(inst, consts.ChatAssistants, assistantID, &assistantDoc); err != nil {
+	var assistant chatAssistant
+	if err := couchdb.GetDoc(inst, consts.ChatAssistants, assistantID, &assistant); err != nil {
 		return nil
 	}
-	relationships, _ := assistantDoc.M["relationships"].(map[string]interface{})
-	provider, _ := relationships["provider"].(map[string]interface{})
-	providerData, _ := provider["data"].(map[string]interface{})
-	if providerData == nil {
+	provider := assistant.Relationships.Provider.Data
+	if provider.ID == "" || provider.Metadata.ProviderID == "" || provider.Metadata.ProviderID == "openrag" {
 		return nil
 	}
-	if meta, ok := providerData["metadata"].(map[string]interface{}); ok {
-		providerID, _ := meta["providerId"].(string)
-		if providerID == "" || providerID == "openrag" {
-			return nil
+
+	var acc account.Account
+	if err := couchdb.GetDoc(inst, consts.Accounts, provider.ID, &acc); err != nil {
+		return nil
+	}
+	// The account's "login" field stores the LLM model name, e.g. "Mistral-Small-3.2-24B-Instruct-2506"
+	// While "password" stores the API key
+	var model, apiKey string
+	if acc.Basic != nil {
+		if acc.Basic.EncryptedCredentials != "" {
+			model, apiKey, _ = account.DecryptCredentials(acc.Basic.EncryptedCredentials)
+		} else {
+			model, apiKey = acc.Basic.Login, acc.Basic.Password
 		}
 	}
-	accountID, _ := providerData["_id"].(string)
-	if accountID == "" {
-		return nil
-	}
-
-	var accountDoc couchdb.JSONDoc
-	if err := couchdb.GetDoc(inst, consts.Accounts, accountID, &accountDoc); err != nil {
-		return nil
-	}
-	account.Decrypt(accountDoc)
-
 	override := map[string]interface{}{}
-	if auth, ok := accountDoc.M["auth"].(map[string]interface{}); ok {
-		// The account's "login" field stores the LLM model name (e.g.
-		// "gpt-4o"); "password" stores the API key. This repurposing
-		// matches the io.cozy.accounts schema used by the assistant app
-		if model, _ := auth["login"].(string); model != "" {
-			override["model"] = model
-		}
-		if apiKey, _ := auth["password"].(string); apiKey != "" {
-			override["api_key"] = apiKey
-		}
+	if model != "" {
+		override["model"] = model
 	}
-	if data, ok := accountDoc.M["data"].(map[string]interface{}); ok {
-		if baseURL, _ := data["baseUrl"].(string); baseURL != "" {
-			override["base_url"] = baseURL
-		}
+	if apiKey != "" {
+		override["api_key"] = apiKey
+	}
+	if baseURL, _ := acc.Data["baseUrl"].(string); baseURL != "" {
+		override["base_url"] = baseURL
 	}
 	if len(override) == 0 {
 		return nil
