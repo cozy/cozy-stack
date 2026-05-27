@@ -33,5 +33,6 @@ cozy-stack fix <command> [flags]
 * [cozy-stack fix password-defined](cozy-stack_fix_password-defined.md)	 - Set the password_defined setting
 * [cozy-stack fix redis](cozy-stack_fix_redis.md)	 - Rebuild scheduling data strucutures in redis
 * [cozy-stack fix service-triggers](cozy-stack_fix_service-triggers.md)	 - Clean the triggers for webapp services
+* [cozy-stack fix sharings-moved](cozy-stack_fix_sharings-moved.md)	 - Fix sharings after a domain migration
 * [cozy-stack fix thumbnails](cozy-stack_fix_thumbnails.md)	 - Rebuild thumbnails image for images files
 
