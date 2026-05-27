@@ -588,6 +588,31 @@ func GetPublicOIDCContext(contextName string) string {
 	return ""
 }
 
+// GetPublicDomainSuffix returns the public domain suffix from the specific context
+// or falls back to the default context if not set.
+func GetPublicDomainSuffix(contextName string) string {
+	if config == nil || config.Contexts == nil {
+		return ""
+	}
+
+	if contextName != "" {
+		if suffix := publicDomainSuffixFromContext(contextName); suffix != "" {
+			return suffix
+		}
+	}
+
+	return publicDomainSuffixFromContext(DefaultInstanceContext)
+}
+
+func publicDomainSuffixFromContext(contextName string) string {
+	if ctxData, ok := config.Contexts[contextName].(map[string]interface{}); ok {
+		if publicDomainSuffix, ok := ctxData["public_domain_suffix"].(string); ok {
+			return utils.NormalizeDomain(publicDomainSuffix)
+		}
+	}
+	return ""
+}
+
 // GetPublicOIDC returns the public Twake OIDC configuration from the configured context
 // If contextName is empty, it uses the default context
 func GetPublicOIDC(contextName string) (map[string]interface{}, bool) {

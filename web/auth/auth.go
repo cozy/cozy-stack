@@ -528,17 +528,76 @@ func tokenExchangeCORS(c echo.Context) bool {
 	return true
 }
 
-// Allow CORS from *.org_domain
+// Allow CORS from *.org_domain, and from the owner's SaaS admin panel.
 func tokenExchangeOriginAllowed(origin string, inst *instance.Instance) bool {
-	if inst == nil || inst.OrgDomain == "" {
+	if inst == nil {
 		return false
 	}
 	originHost := utils.ExtractInstanceHost(origin)
 	if originHost == "" {
 		return false
 	}
+
+	if tokenExchangeOrgDomainOriginAllowed(originHost, inst) {
+		return true
+	}
+
+	return tokenExchangeAdminPanelOriginAllowed(origin, originHost, inst)
+}
+
+func tokenExchangeOrgDomainOriginAllowed(originHost string, inst *instance.Instance) bool {
 	orgDomain := utils.NormalizeDomain(inst.OrgDomain)
+	if orgDomain == "" {
+		return false
+	}
 	return originHost == orgDomain || strings.HasSuffix(originHost, "."+orgDomain)
+}
+
+func tokenExchangeAdminPanelOriginAllowed(origin, originHost string, inst *instance.Instance) bool {
+	publicDomainSuffix := config.GetPublicDomainSuffix(inst.ContextName)
+	if publicDomainSuffix == "" {
+		return false
+	}
+
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return false
+	}
+
+	suffix := "." + publicDomainSuffix
+	if !strings.HasSuffix(originHost, suffix) {
+		return false
+	}
+
+	adminLabel := strings.TrimSuffix(originHost, suffix)
+	if strings.Contains(adminLabel, ".") || !strings.HasSuffix(adminLabel, "-admin") {
+		return false
+	}
+
+	ownerLabel := strings.TrimSuffix(adminLabel, "-admin")
+	if ownerLabel == "" {
+		return false
+	}
+
+	ownerInst, err := instance.Get(ownerLabel + suffix)
+	if err != nil {
+		return false
+	}
+
+	return tokenExchangeSameOrganization(inst, ownerInst)
+}
+
+func tokenExchangeSameOrganization(targetInst, originInst *instance.Instance) bool {
+	if targetInst == nil || originInst == nil || targetInst.OrgID == "" || originInst.OrgID == "" {
+		return false
+	}
+	if targetInst.OrgID != originInst.OrgID {
+		return false
+	}
+
+	targetOrgDomain := utils.NormalizeDomain(targetInst.OrgDomain)
+	originOrgDomain := utils.NormalizeDomain(originInst.OrgDomain)
+	return targetOrgDomain == "" || originOrgDomain == "" || targetOrgDomain == originOrgDomain
 }
 
 func tokenExchangePreflight(c echo.Context) error {
