@@ -22,7 +22,7 @@ docker rm $CONTAINER_NAME 2>/dev/null || true
 
 echo "Collecting instance hostnames..."
 HOSTS=""
-for domain in $(go run . instances ls 2>/dev/null | awk '{print $1}' | sed 's/:8080//'); do
+for domain in $(go run . instances ls 2>/dev/null | awk '{print $1}' | sed 's/:[0-9]*$//'); do
   HOSTS="$HOSTS --add-host=$domain:host-gateway"
 done
 
