@@ -1202,6 +1202,11 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 // PatchDescription saves a new description for a sharing.
 func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
 	s.Description = description
+	if s.Drive {
+		if rule := s.FirstFilesRule(); rule != nil {
+			rule.Title = description
+		}
+	}
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
@@ -1403,9 +1408,7 @@ func (s *Sharing) UpdateDescriptionSameStack(ownerInst *instance.Instance, recip
 		return err
 	}
 
-	// Update the description directly
-	recipientSharing.Description = description
-	return couchdb.UpdateDoc(recipientInst, recipientSharing)
+	return recipientSharing.PatchDescription(recipientInst, description)
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.

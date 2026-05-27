@@ -1067,6 +1067,11 @@ func TestSharings(t *testing.T) {
 	t.Run("PatchSharing", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 
+		var before sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(aliceInstance, consts.Sharings, sharingID, &before))
+		require.NotEmpty(t, before.Rules)
+		originalRuleTitle := before.Rules[0].Title
+
 		obj := eA.PATCH("/sharings/"+sharingID).
 			WithHeader("Authorization", "Bearer "+aliceAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -1084,6 +1089,11 @@ func TestSharings(t *testing.T) {
 
 		updated := obj.Value("data").Object().Value("attributes").Object().Value("description").String().NotEmpty().Raw()
 		assert.Equal(t, updated, "this is an updated description")
+
+		var s sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(aliceInstance, consts.Sharings, sharingID, &s))
+		require.NotEmpty(t, s.Rules)
+		assert.Equal(t, originalRuleTitle, s.Rules[0].Title)
 	})
 
 	t.Run("DiscoveryTemplateRendering", func(t *testing.T) {
