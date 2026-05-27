@@ -26,7 +26,7 @@ RUN ./scripts/build.sh dev
 
 
 # Multi-stage image: the main image
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # cozy-stack
 ENV COZY_STACK_HOST=cozy.localhost \
@@ -48,10 +48,10 @@ RUN set -eux; apt-get update \
     ghostscript \
     git \
   && curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor > /usr/share/keyrings/couchdb-archive-keyring.gpg \
-  && echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ bullseye main" > /etc/apt/sources.list.d/couchdb.list \
+  && echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ bookworm main" > /etc/apt/sources.list.d/couchdb.list \
   && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor > /usr/share/keyrings/nodesource.gpg \
-  && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-  && apt update \
+  && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+  && apt-get update \
   && echo "couchdb couchdb/mode select standalone" | debconf-set-selections \
   && echo "couchdb couchdb/mode seen true" | debconf-set-selections \
   && echo "couchdb couchdb/bindaddress string 0.0.0.0" | debconf-set-selections \
@@ -62,7 +62,7 @@ RUN set -eux; apt-get update \
   && echo "couchdb couchdb/adminpass_again seen true" | debconf-set-selections \
   && echo "couchdb couchdb/cookie string elmo" | debconf-set-selections \
   && echo "couchdb couchdb/cookie seen true" | debconf-set-selections \
-  && apt install -y --no-install-recommends couchdb=3.2.2* nodejs \
+  && apt install -y --no-install-recommends couchdb=3.3.3* nodejs \
   && rm -rf /var/lib/apt/lists/* \
   && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
   && node --version \
