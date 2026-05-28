@@ -717,7 +717,7 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 // an access token with a short validity to let it synchronize its last
 // changes.
 func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 1 {
+	if index <= 0 {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnlyFlag() {
@@ -867,7 +867,7 @@ func (s *Sharing) DowngradeToReadOnly(inst *instance.Instance, creds *APICredent
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 1 {
+	if index <= 0 {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnlyFlag() {
