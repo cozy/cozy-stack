@@ -223,11 +223,7 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 		return err
 	}
 
-	fullpath, err := olddoc.Path(c)
-	if err != nil {
-		return err
-	}
-	if strings.HasPrefix(fullpath, TrashDirName) {
+	if !olddoc.Trashed && newdoc.Trashed {
 		c.checkTrashedFileIsShared(newdoc)
 	}
 

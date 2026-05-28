@@ -3064,12 +3064,14 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			Object().
 			Path("$.data.attributes.trashed").Boolean().True()
 
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.betty, sharingID)
+			return err == nil && !s.Active
+		}, 5*time.Second, 50*time.Millisecond)
+
 		eB.POST("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
-			Expect().Status(200).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().
-			Path("$.data.attributes.trashed").Boolean().False()
+			Expect().Status(403)
 	})
 
 	t.Run("OwnerCanRenameFileRootViaFilesPatch", func(t *testing.T) {
@@ -3116,7 +3118,7 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 		}, 5*time.Second, 50*time.Millisecond)
 	})
 
-	t.Run("DestroyTrashedRootFile", func(t *testing.T) {
+	t.Run("DeletingRootFileRevokesRecipient", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		rootFileID := createFile(t, eA, "", "DestroyableRoot.txt", env.acmeToken)
@@ -3135,9 +3137,14 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(200)
 
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.betty, sharingID)
+			return err == nil && !s.Active
+		}, 5*time.Second, 50*time.Millisecond)
+
 		eB.DELETE("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
-			Expect().Status(204)
+			Expect().Status(403)
 	})
 
 	t.Run("RejectDirectoryOnlyRoutes", func(t *testing.T) {
@@ -4093,6 +4100,128 @@ func TestSharedDriveRevocation(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(403)
 	})
+}
+
+func TestDirectoryRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	sharingID, rootDirID, _ := createSharedDrive(
+		t,
+		DriveCreationMethodFromFolder,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		"Deleted Root Drive",
+		"Drive deleted by owner",
+		nil,
+	)
+
+	eOwnerSharing := newSharingExpect(t, env.tsA.URL)
+	eBettySharing := newSharingExpect(t, env.tsB.URL)
+	loginSharingRecipient(t, eBettySharing)
+	authorizeLink := prepareSharingAuthorizeLink(t, env.acme, "Betty", sharingID, eOwnerSharing, env.tsB.URL)
+	FakeOwnerInstanceForSharing(t, env.betty, env.tsA.URL, sharingID)
+	openSharingAuthorize(t, eBettySharing, authorizeLink, sharingID)
+	waitForDriveSharingReadyOnOwner(t, eOwnerSharing, env.acmeToken, sharingID)
+	waitForDriveSharingActiveOnRecipient(t, env.betty, sharingID)
+
+	recipientSharing, err := sharing.FindSharing(env.betty, sharingID)
+	require.NoError(t, err)
+	require.NotEmpty(t, recipientSharing.ShortcutID)
+	shortcutID := recipientSharing.ShortcutID
+	_, err = env.betty.VFS().FileByID(shortcutID)
+	require.NoError(t, err)
+
+	sharedDriveVisibleForBetty := func() bool {
+		obj := eB.GET("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		for _, item := range obj.Value("data").Array().Iter() {
+			if item.Object().Value("id").String().Raw() == sharingID {
+				return true
+			}
+		}
+		return false
+	}
+
+	require.True(t, sharedDriveVisibleForBetty(), "Betty should initially see the accepted shared drive")
+
+	eB.GET("/sharings/drives/"+sharingID+"/"+rootDirID).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(http.StatusOK)
+
+	eA.DELETE("/files/"+rootDirID).
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusOK)
+
+	require.Eventually(t, func() bool {
+		return !sharedDriveVisibleForBetty()
+	}, 5*time.Second, 100*time.Millisecond, "Betty should no longer see a shared drive after its owner deletes the root folder")
+
+	require.Eventually(t, func() bool {
+		_, err := env.betty.VFS().FileByID(shortcutID)
+		return os.IsNotExist(err)
+	}, 5*time.Second, 100*time.Millisecond, "Betty's shared-drive shortcut should be removed after the owner deletes the root folder")
+}
+
+func TestFileRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	rootFileID := createFile(t, eA, "", "Deleted Root File.txt", env.acmeToken)
+	sharingID, _ := createFileRootSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File drive deleted by owner",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+	waitForDriveSharingReadyOnOwner(t, eA, env.acmeToken, sharingID)
+	waitForDriveSharingActiveOnRecipient(t, env.betty, sharingID)
+
+	sharedDriveVisibleForBetty := func() bool {
+		obj := eB.GET("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		for _, item := range obj.Value("data").Array().Iter() {
+			if item.Object().Value("id").String().Raw() == sharingID {
+				return true
+			}
+		}
+		return false
+	}
+
+	require.True(t, sharedDriveVisibleForBetty(), "Betty should initially see the accepted file-root shared drive")
+
+	eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(http.StatusOK)
+
+	eA.DELETE("/files/"+rootFileID).
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusOK)
+
+	require.Eventually(t, func() bool {
+		return !sharedDriveVisibleForBetty()
+	}, 5*time.Second, 100*time.Millisecond, "Betty should no longer see a file-root shared drive after its owner deletes the root file")
 }
 
 // TestSharedDriveRecipientSelfRevocation tests that a recipient can revoke themselves
