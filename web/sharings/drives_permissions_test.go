@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -370,6 +371,28 @@ func createReadOnlyDriveForDave(
 	return sharingID, rootDirID
 }
 
+func waitForSharingMemberReadOnly(
+	t *testing.T,
+	inst *instance.Instance,
+	sharingID, email string,
+	readOnly bool,
+) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		s, err := sharing.FindSharing(inst, sharingID)
+		if err != nil {
+			return false
+		}
+		for _, member := range s.Members {
+			if member.Email == email {
+				return member.ReadOnly == readOnly
+			}
+		}
+		return false
+	}, 10*time.Second, 250*time.Millisecond)
+}
+
 func getSharedDriveInteractCode(
 	t *testing.T,
 	inst *instance.Instance,
@@ -458,6 +481,40 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 			),
 			http.StatusForbidden,
 		)
+	})
+
+	t.Run("ReadOnlyRecipientCanBeUpgradedToWrite", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-upgraded-write-link.txt", f.ownerAppToken)
+
+		waitForSharingMemberReadOnly(t, f.env.acme, sharingID, "dave@example.net", true)
+		waitForSharingMemberReadOnly(t, f.env.dave, sharingID, "dave@example.net", true)
+
+		f.eOwner.DELETE("/sharings/"+sharingID+"/recipients/1/readonly").
+			WithHeader("Authorization", "Bearer "+f.ownerAppToken).
+			Expect().Status(http.StatusNoContent)
+
+		waitForSharingMemberReadOnly(t, f.env.acme, sharingID, "dave@example.net", false)
+		waitForSharingMemberReadOnly(t, f.env.dave, sharingID, "dave@example.net", false)
+
+		permID, attrs := createSharedDrivePermission(
+			t,
+			eDave,
+			sharingID,
+			daveToken,
+			"upgraded-write-link",
+			"",
+			makeSharedDrivePermissionPayloadWithVerbs(
+				t, consts.Files, []string{fileID}, []string{"GET", "POST"}, nil,
+			),
+		)
+
+		attrs.Value("permissions").Object().
+			Value("files").Object().
+			Value("verbs").Array().
+			Contains("POST")
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
 	t.Run("FailOnFileOutsideSharedDrive", func(t *testing.T) {
