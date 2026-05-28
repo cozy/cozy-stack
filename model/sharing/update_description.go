@@ -8,7 +8,7 @@ import (
 )
 
 // UpdateSharingDescriptionIfNeeded checks if the given references contain
-// sharing references and triggers a job to update the sharing description.
+// sharing references and triggers a job to update the sharing metadata.
 func UpdateSharingDescriptionIfNeeded(inst *instance.Instance, referencedBy []couchdb.DocReference, newDescription string) {
 	// Check if this file/directory is referenced by any sharings
 	for _, ref := range referencedBy {

@@ -3031,14 +3031,16 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 		patched.Path("$.data.attributes.cozyMetadata.favorite").Boolean().True()
 		require.Eventually(t, func() bool {
 			ownerSharing, err := sharing.FindSharing(env.acme, sharingID)
-			if err != nil || ownerSharing.Description != "RenamedRoot.txt" {
+			if err != nil || ownerSharing.Description != "RenamedRoot.txt" ||
+				len(ownerSharing.Rules) == 0 || ownerSharing.Rules[0].Title != "RenamedRoot.txt" {
 				return false
 			}
 			recipientSharing, err := sharing.FindSharing(env.betty, sharingID)
 			if err != nil {
 				return false
 			}
-			return recipientSharing.Description == "RenamedRoot.txt"
+			return recipientSharing.Description == "RenamedRoot.txt" &&
+				len(recipientSharing.Rules) > 0 && recipientSharing.Rules[0].Title == "RenamedRoot.txt"
 		}, 5*time.Second, 50*time.Millisecond)
 
 		eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
@@ -3109,7 +3111,8 @@ func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			return s.Description == newDriveName
+			return s.Description == newDriveName &&
+				len(s.Rules) > 0 && s.Rules[0].Title == newDriveName
 		}, 5*time.Second, 50*time.Millisecond)
 	})
 
@@ -3669,11 +3672,58 @@ func TestSharedDriveMetadata(t *testing.T) {
 		renamed.Path("$.data.attributes.name").String().IsEqual(newDriveName)
 
 		require.Eventually(t, func() bool {
-			s, err := sharing.FindSharing(env.betty, env.firstSharingID)
+			ownerSharing, err := sharing.FindSharing(env.acme, env.firstSharingID)
 			if err != nil {
 				return false
 			}
-			return s.Description == newDriveName
+			if ownerSharing.Description != newDriveName ||
+				len(ownerSharing.Rules) == 0 || ownerSharing.Rules[0].Title != newDriveName {
+				return false
+			}
+			recipientSharing, err := sharing.FindSharing(env.betty, env.firstSharingID)
+			if err != nil {
+				return false
+			}
+			return recipientSharing.Description == newDriveName &&
+				len(recipientSharing.Rules) > 0 && recipientSharing.Rules[0].Title == newDriveName
+		}, 5*time.Second, 50*time.Millisecond)
+	})
+
+	t.Run("OwnerCanPatchDriveDescription", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		newDriveName := testify(t, "Renamed shared drive via sharing patch")
+
+		eA.PATCH("/sharings/"+env.firstSharingID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "` + consts.Sharings + `",
+					"attributes": {
+						"description": "` + newDriveName + `"
+					}
+				}
+			}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.description").String().IsEqual(newDriveName)
+
+		require.Eventually(t, func() bool {
+			ownerSharing, err := sharing.FindSharing(env.acme, env.firstSharingID)
+			if err != nil {
+				return false
+			}
+			if ownerSharing.Description != newDriveName ||
+				len(ownerSharing.Rules) == 0 || ownerSharing.Rules[0].Title != newDriveName {
+				return false
+			}
+			recipientSharing, err := sharing.FindSharing(env.betty, env.firstSharingID)
+			if err != nil {
+				return false
+			}
+			return recipientSharing.Description == newDriveName &&
+				len(recipientSharing.Rules) > 0 && recipientSharing.Rules[0].Title == newDriveName
 		}, 5*time.Second, 50*time.Millisecond)
 	})
 }

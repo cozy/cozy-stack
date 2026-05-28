@@ -429,6 +429,60 @@ func TestReplicator(t *testing.T) {
 			var updatedSharing sharing.Sharing
 			require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, replSharingID, &updatedSharing))
 			assert.Equal(t, newDescription, updatedSharing.Description)
+			require.NotEmpty(t, updatedSharing.Rules)
+			assert.Equal(t, "tests", updatedSharing.Rules[0].Title)
+		})
+
+		t.Run("WithDrive", func(t *testing.T) {
+			rootDir, err := vfs.NewDirDoc(replInstance.VFS(), "Old root name", consts.RootDirID, nil)
+			require.NoError(t, err)
+			require.NoError(t, replInstance.VFS().CreateDir(rootDir))
+			rootID := rootDir.ID()
+			driveSharing := sharing.Sharing{
+				Drive:       true,
+				Description: "Old root name",
+				Rules: []sharing.Rule{{
+					Title:   "Old root name",
+					DocType: consts.Files,
+					Values:  []string{rootID},
+					Add:     sharing.ActionRuleNone,
+					Update:  sharing.ActionRuleNone,
+					Remove:  sharing.ActionRuleNone,
+				}},
+			}
+			require.NoError(t, driveSharing.BeOwner(replInstance, ""))
+			driveSharing.Members = append(driveSharing.Members, sharing.Member{
+				Status:   sharing.MemberStatusReady,
+				Name:     "Drive recipient",
+				Email:    "drive-recipient@example.net",
+				Instance: "https://drive-recipient.example.net/",
+			})
+			driveSharing.Credentials = append(driveSharing.Credentials, sharing.Credentials{})
+			_, err = driveSharing.Create(replInstance)
+			require.NoError(t, err)
+
+			cli, err := sharing.CreateOAuthClient(replInstance, &driveSharing.Members[1])
+			require.NoError(t, err)
+			driveSharing.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+			token, err := sharing.CreateAccessToken(replInstance, cli, driveSharing.SID, permission.ALL)
+			require.NoError(t, err)
+			driveSharing.Credentials[0].AccessToken = token
+			require.NoError(t, couchdb.UpdateDoc(replInstance, &driveSharing))
+
+			newDescription := "New root name"
+			e.PUT("/sharings/"+driveSharing.SID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token.AccessToken).
+				WithJSON(map[string]string{
+					"description": newDescription,
+				}).
+				Expect().Status(204)
+
+			var updatedSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, driveSharing.SID, &updatedSharing))
+			assert.Equal(t, newDescription, updatedSharing.Description)
+			require.NotEmpty(t, updatedSharing.Rules)
+			assert.Equal(t, newDescription, updatedSharing.Rules[0].Title)
 		})
 
 		t.Run("WithSpecialCharacters", func(t *testing.T) {

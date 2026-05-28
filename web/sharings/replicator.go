@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -203,8 +202,7 @@ func UpdateSharingMetadata(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "description is too long (maximum 1000 characters)")
 	}
 
-	s.Description = description
-	if err := couchdb.UpdateDoc(inst, s); err != nil {
+	if err := s.PatchDescription(inst, description); err != nil {
 		return wrapErrors(err)
 	}
 
