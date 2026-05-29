@@ -4167,6 +4167,11 @@ func TestDirectoryRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Betty should no longer see a shared drive after its owner deletes the root folder")
 
 	require.Eventually(t, func() bool {
+		_, err := sharing.FindSharing(env.acme, sharingID)
+		return couchdb.IsNotFoundError(err)
+	}, 5*time.Second, 100*time.Millisecond, "Owner's sharing document should be deleted after deleting the shared-drive root folder")
+
+	require.Eventually(t, func() bool {
 		_, err := env.betty.VFS().FileByID(shortcutID)
 		return os.IsNotExist(err)
 	}, 5*time.Second, 100*time.Millisecond, "Betty's shared-drive shortcut should be removed after the owner deletes the root folder")
@@ -4222,6 +4227,11 @@ func TestFileRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !sharedDriveVisibleForBetty()
 	}, 5*time.Second, 100*time.Millisecond, "Betty should no longer see a file-root shared drive after its owner deletes the root file")
+
+	require.Eventually(t, func() bool {
+		_, err := sharing.FindSharing(env.acme, sharingID)
+		return couchdb.IsNotFoundError(err)
+	}, 5*time.Second, 100*time.Millisecond, "Owner's sharing document should be deleted after deleting the shared-drive root file")
 }
 
 // TestSharedDriveRecipientSelfRevocation tests that a recipient can revoke themselves
