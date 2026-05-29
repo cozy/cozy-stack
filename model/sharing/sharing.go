@@ -636,6 +636,9 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
+	if s.Drive && errm == nil {
+		return s.deleteRevokedDriveSharing(inst)
+	}
 	return errm
 }
 
@@ -892,7 +895,23 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 // NoMoreRecipient cleans up the sharing if there is no more active recipient
 func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 	if s.Drive {
-		return couchdb.UpdateDoc(inst, s)
+		if s.hasRemainingRecipients() {
+			return couchdb.UpdateDoc(inst, s)
+		}
+		if err := s.RemoveTriggers(inst); err != nil {
+			return err
+		}
+		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+		if err := s.RevokeInteractPermissions(inst); err != nil {
+			return err
+		}
+		s.Active = false
+		if err := couchdb.UpdateDoc(inst, s); err != nil {
+			return err
+		}
+		return s.deleteRevokedDriveSharing(inst)
 	}
 	for _, m := range s.Members {
 		if m.Status == MemberStatusReady {
@@ -907,6 +926,31 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 		return err
 	}
 	return RemoveSharedRefs(inst, s.SID)
+}
+
+func (s *Sharing) hasRemainingRecipients() bool {
+	for i, m := range s.Members {
+		if i > 0 && m.Status != MemberStatusRevoked {
+			return true
+		}
+	}
+	for _, g := range s.Groups {
+		if !g.Revoked {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Sharing) deleteRevokedDriveSharing(inst *instance.Instance) error {
+	if !s.Drive {
+		return nil
+	}
+	err := couchdb.DeleteDoc(inst, s)
+	if couchdb.IsNotFoundError(err) {
+		return nil
+	}
+	return err
 }
 
 // FindSharing retrieves a sharing document from its ID

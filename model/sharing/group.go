@@ -106,6 +106,16 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 	}
 
 	s.Groups[index].Revoked = true
+	if s.Drive {
+		if errm != nil {
+			if err := couchdb.UpdateDoc(inst, s); err != nil {
+				errm = multierror.Append(errm, err)
+			}
+			return errm
+		}
+		return s.NoMoreRecipient(inst)
+	}
+
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		errm = multierror.Append(errm, err)
 	}

@@ -4100,6 +4100,45 @@ func TestSharedDriveRevocation(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(403)
 	})
+
+	t.Run("RemoveRemainingRecipient", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+
+		eA.DELETE("/sharings/"+sharingID+"/recipients/2").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(204)
+	})
+
+	t.Run("OwnerSharingIsDeleted", func(t *testing.T) {
+		require.Eventually(t, func() bool {
+			_, err := sharing.FindSharing(env.acme, sharingID)
+			return couchdb.IsNotFoundError(err)
+		}, 5*time.Second, 100*time.Millisecond, "Owner's drive sharing document should be deleted after the last recipient is revoked")
+	})
+
+	t.Run("RevokeAllRecipientsDeletesOwnerSharing", func(t *testing.T) {
+		allSharingID, _, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Revoke All Recipients Drive",
+			"Drive for testing full revocation",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, allSharingID)
+
+		eA, _, _ := env.createClients(t)
+		eA.DELETE("/sharings/"+allSharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(204)
+
+		require.Eventually(t, func() bool {
+			_, err := sharing.FindSharing(env.acme, allSharingID)
+			return couchdb.IsNotFoundError(err)
+		}, 5*time.Second, 100*time.Millisecond, "Owner's drive sharing document should be deleted after revoking all recipients")
+	})
 }
 
 func TestDirectoryRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
