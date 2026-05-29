@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -38,6 +39,12 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 	log.Infof("revokeTrashed called for sharing %s", sharingID)
 	if s.Owner {
 		err = s.Revoke(inst)
+		if err == nil && s.Drive {
+			err = couchdb.DeleteDoc(inst, s)
+			if couchdb.IsNotFoundError(err) {
+				err = nil
+			}
+		}
 	} else {
 		err = s.RevokeRecipientBySelf(inst, SharingDirAlreadyTrashed)
 	}
