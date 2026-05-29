@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -1367,26 +1368,28 @@ func shouldReplicateDescriptionChange(i int, m Member) bool {
 	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
 }
 
-// IsSameStack checks if the recipient instance is on the same stack as the owner instance
-func IsSameStack(ownerInst *instance.Instance, recipientURL string) bool {
+// IsSameStack reports whether the instance at recipientURL is served by the
+// current cozy-stack process. It does so by attempting to look up the instance
+// in the local database, which is the most reliable signal.
+func IsSameStack(_ *instance.Instance, recipientURL string) bool {
 	u, err := url.Parse(recipientURL)
 	if err != nil {
 		return false
 	}
+	host := u.Hostname() // strip port if any
+	_, err = lifecycle.GetInstance(host)
+	return err == nil
+}
 
-	// Extract port from both domains for comparison
-	var ownerPort, recipientPort string
-	ownerParts := strings.SplitN(ownerInst.Domain, ":", 2)
-	if len(ownerParts) > 1 {
-		ownerPort = ownerParts[1]
+// LocalAddr returns the address (host:port) to use when connecting to the
+// same-stack peer over the loopback interface.
+func LocalAddr() string {
+	cfg := config.GetConfig()
+	port := cfg.Port
+	if port == 0 {
+		port = 8080
 	}
-	recipientParts := strings.SplitN(u.Host, ":", 2)
-	if len(recipientParts) > 1 {
-		recipientPort = recipientParts[1]
-	}
-
-	// Same stack if ports match (both instances running on same port)
-	return ownerPort == recipientPort
+	return fmt.Sprintf("127.0.0.1:%d", port)
 }
 
 // UpdateDescriptionSameStack directly updates the sharing description for recipients on the same stack

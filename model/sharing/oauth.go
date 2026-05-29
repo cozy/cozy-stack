@@ -141,6 +141,14 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		Queries: u.Query(),
 		Body:    bytes.NewReader(body),
 	}
+	// When the recipient is on the same stack, route the request through
+	// loopback (127.0.0.1) to avoid an unnecessary round-trip over the public
+	// network. The Host header keeps the correct domain so the stack can route
+	// to the right instance.
+	if IsSameStack(inst, u.String()) {
+		opts.Addr = LocalAddr()
+		opts.Client = safehttp.LoopbackClient
+	}
 	res, err := request.Req(&opts)
 	if res != nil && res.StatusCode == http.StatusConflict {
 		return ErrAlreadyAccepted
@@ -489,7 +497,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
-	res, err := request.Req(&request.Options{
+	answerOpts := &request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
@@ -499,7 +507,14 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 			echo.HeaderContentType: jsonapi.ContentType,
 		},
 		Body: bytes.NewReader(body),
-	})
+	}
+	// When the sharer is on the same stack, route through loopback to avoid
+	// an unnecessary round-trip over the public network.
+	if IsSameStack(inst, u.String()) {
+		answerOpts.Addr = LocalAddr()
+		answerOpts.Client = safehttp.LoopbackClient
+	}
+	res, err := request.Req(answerOpts)
 	if err != nil {
 		return err
 	}

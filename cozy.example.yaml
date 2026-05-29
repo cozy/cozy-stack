@@ -541,6 +541,15 @@ contexts:
       trusted_domains:
         - example.com
         - mycompany.twake.app
+      # List of trusted private CIDR ranges for sharing federation on a private
+      # network (e.g. stacks that are not reachable over the public internet).
+      # Connections to addresses within these ranges bypass the SSRF filter so
+      # that the sharing transport can reach peers on the configured private
+      # network. All other SSRF protections remain active.
+      # Example: allow an internal 10.x.x.x network
+      trusted_peer_networks:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
     # Antivirus configuration for scanning uploaded files using ClamAV
     antivirus:
       # Enable or disable antivirus scanning

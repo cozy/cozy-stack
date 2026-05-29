@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/pdf"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -323,6 +324,12 @@ type SharingConfig struct {
 	AutoAcceptTrusted         bool     `mapstructure:"auto_accept_trusted"`
 	AutoAcceptTrustedContacts bool     `mapstructure:"auto_accept_trusted_contacts"`
 	TrustedDomains            []string `mapstructure:"trusted_domains"`
+	// TrustedPeerNetworks is a list of CIDR ranges (e.g. "10.0.0.0/8") for
+	// private networks where sharing peers (other cozy stacks) are hosted.
+	// Connections to addresses within these ranges bypass the SSRF filter so
+	// that federation on a private network is possible. All other SSRF
+	// protections remain active.
+	TrustedPeerNetworks []string `mapstructure:"trusted_peer_networks"`
 }
 
 // GetSharingConfig returns the sharing configuration for a given context.
@@ -1151,6 +1158,12 @@ func UseViper(v *viper.Viper) error {
 		config.RemoteAllowCustomPort = true
 	}
 
+	// Collect trusted peer networks from all contexts and configure safehttp.
+	// This allows federation on private networks while keeping SSRF protection.
+	if err := configureTrustedPeerNetworks(v); err != nil {
+		return err
+	}
+
 	loggerOpts := logger.Options{
 		Level: v.GetString("log.level"),
 		Redis: loggerRedis,
@@ -1172,6 +1185,44 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	return nil
+}
+
+// configureTrustedPeerNetworks collects trusted_peer_networks from all contexts
+// and configures safehttp to allow connections to those private CIDR ranges.
+func configureTrustedPeerNetworks(v *viper.Viper) error {
+	seen := make(map[string]struct{})
+	var cidrs []string
+
+	contexts := v.GetStringMap("contexts")
+	for _, ctxRaw := range contexts {
+		ctxData, ok := ctxRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		sharingRaw, ok := ctxData["sharing"]
+		if !ok {
+			continue
+		}
+		sharingData, ok := sharingRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		var cfg SharingConfig
+		if err := mapstructure.Decode(sharingData, &cfg); err != nil {
+			continue
+		}
+		for _, cidr := range cfg.TrustedPeerNetworks {
+			if cidr == "" {
+				continue
+			}
+			if _, exists := seen[cidr]; !exists {
+				seen[cidr] = struct{}{}
+				cidrs = append(cidrs, cidr)
+			}
+		}
+	}
+
+	return safehttp.SetAllowedPrivateNetworks(cidrs)
 }
 
 func makeCouch(v *viper.Viper) (CouchDB, error) {

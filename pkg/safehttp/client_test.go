@@ -23,3 +23,30 @@ func TestDefaultClient(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not a safe port")
 }
+
+func TestSetAllowedPrivateNetworks(t *testing.T) {
+	build.BuildMode = build.ModeProd
+	t.Cleanup(func() {
+		allowedPrivateNets = nil
+	})
+
+	// Invalid CIDR should return an error.
+	err := SetAllowedPrivateNetworks([]string{"not-a-cidr"})
+	require.Error(t, err)
+
+	// Private address blocked without allowlist.
+	allowedPrivateNets = nil
+	err = safeControl("tcp4", "10.0.0.1:443", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not a public IP address")
+
+	// Private address allowed when its network is in the allowlist.
+	require.NoError(t, SetAllowedPrivateNetworks([]string{"10.0.0.0/8"}))
+	err = safeControl("tcp4", "10.0.0.1:443", nil)
+	assert.NoError(t, err)
+
+	// An address outside the allowlist is still rejected.
+	err = safeControl("tcp4", "192.168.1.1:443", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "is not a public IP address")
+}
