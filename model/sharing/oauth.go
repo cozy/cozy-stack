@@ -145,7 +145,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	// loopback (127.0.0.1) to avoid an unnecessary round-trip over the public
 	// network. The Host header keeps the correct domain so the stack can route
 	// to the right instance.
-	if IsSameStack(inst, u.String()) {
+	if IsSameStack(u.String()) {
 		opts.Addr = LocalAddr()
 		opts.Client = safehttp.LoopbackClient
 	}
@@ -510,7 +510,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	}
 	// When the sharer is on the same stack, route through loopback to avoid
 	// an unnecessary round-trip over the public network.
-	if IsSameStack(inst, u.String()) {
+	if IsSameStack(u.String()) {
 		answerOpts.Addr = LocalAddr()
 		answerOpts.Client = safehttp.LoopbackClient
 	}

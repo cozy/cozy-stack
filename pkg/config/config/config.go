@@ -1194,7 +1194,7 @@ func configureTrustedPeerNetworks(v *viper.Viper) error {
 	var cidrs []string
 
 	contexts := v.GetStringMap("contexts")
-	for _, ctxRaw := range contexts {
+	for ctxName, ctxRaw := range contexts {
 		ctxData, ok := ctxRaw.(map[string]interface{})
 		if !ok {
 			continue
@@ -1209,6 +1209,7 @@ func configureTrustedPeerNetworks(v *viper.Viper) error {
 		}
 		var cfg SharingConfig
 		if err := mapstructure.Decode(sharingData, &cfg); err != nil {
+			log.Warnf("Could not decode sharing config for context %q: %s", ctxName, err)
 			continue
 		}
 		for _, cidr := range cfg.TrustedPeerNetworks {

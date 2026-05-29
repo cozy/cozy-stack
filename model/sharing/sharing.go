@@ -1308,7 +1308,7 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 		}
 
 		// Optimization: use direct database update for recipients on the same stack
-		if IsSameStack(inst, m.Instance) {
+		if IsSameStack(m.Instance) {
 			err = s.UpdateDescriptionSameStack(inst, m.Instance, s.Description)
 			if err != nil {
 				inst.Logger().WithNamespace("sharing").
@@ -1371,7 +1371,7 @@ func shouldReplicateDescriptionChange(i int, m Member) bool {
 // IsSameStack reports whether the instance at recipientURL is served by the
 // current cozy-stack process. It does so by attempting to look up the instance
 // in the local database, which is the most reliable signal.
-func IsSameStack(_ *instance.Instance, recipientURL string) bool {
+func IsSameStack(recipientURL string) bool {
 	u, err := url.Parse(recipientURL)
 	if err != nil {
 		return false
@@ -1381,13 +1381,16 @@ func IsSameStack(_ *instance.Instance, recipientURL string) bool {
 	return err == nil
 }
 
+// DefaultPort is the default HTTP port for a cozy-stack server.
+const DefaultPort = 8080
+
 // LocalAddr returns the address (host:port) to use when connecting to the
 // same-stack peer over the loopback interface.
 func LocalAddr() string {
 	cfg := config.GetConfig()
 	port := cfg.Port
 	if port == 0 {
-		port = 8080
+		port = DefaultPort
 	}
 	return fmt.Sprintf("127.0.0.1:%d", port)
 }
