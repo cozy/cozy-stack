@@ -1398,6 +1398,14 @@ func createTestViper() *viper.Viper {
 func UseTestFile(t *testing.T) {
 	t.Helper()
 
+	if err := LoadTestFile(); err != nil {
+		t.Fatalf("fatal error test config file: %s", err)
+	}
+}
+
+// LoadTestFile injects the standard test configuration without requiring
+// testing.T. It is useful from TestMain implementations.
+func LoadTestFile() error {
 	build.BuildMode = build.ModeProd
 	v := createTestViper()
 
@@ -1405,13 +1413,11 @@ func UseTestFile(t *testing.T) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			v = createTestViper()
 		} else {
-			t.Fatalf("fatal error test config file: %s", err)
+			return err
 		}
 	}
 
-	if err := UseViper(v); err != nil {
-		t.Fatalf("fatal error test config file: %s", err)
-	}
+	return UseViper(v)
 }
 
 // FindConfigFile search in the Paths directories for the file with the given

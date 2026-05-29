@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http/httptest"
 	"net/url"
 	"path"
@@ -85,6 +86,24 @@ func NeedCouchdb(t *testing.T) {
 	if _, err := couchdb.CheckStatus(context.Background()); err != nil {
 		t.Fatal("This test need couchdb to run.")
 	}
+}
+
+// RunTestMainWithCouchDB loads the standard test configuration and initializes
+// global CouchDB views when CouchDB is available.
+func RunTestMainWithCouchDB(m *testing.M) int {
+	if err := config.LoadTestFile(); err != nil {
+		log.Printf("test setup: could not load test config: %s", err)
+		return 1
+	}
+
+	ctx := context.Background()
+	if _, err := couchdb.CheckStatus(ctx); err == nil {
+		if err := couchdb.InitGlobalDB(ctx); err != nil {
+			log.Printf("test setup: could not initialize global CouchDB: %s", err)
+		}
+	}
+
+	return m.Run()
 }
 
 // TODO can be used as a reminder to do something in the future. The test that
