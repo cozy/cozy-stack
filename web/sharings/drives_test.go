@@ -779,7 +779,7 @@ func submitSharingAuthorize(
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("/?sharing=" + sharingID)
+		Contains("#/shareddrive/" + sharingID + "/")
 }
 
 func openSharingAuthorize(
@@ -802,7 +802,7 @@ func openSharingAuthorize(
 		Expect().
 		Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("sharing=" + sharingID)
+		Contains("#/shareddrive/" + sharingID + "/")
 }
 
 func waitForSharingOnRecipient(t *testing.T, recipientInstance *instance.Instance, sharingID string) *sharing.Sharing {
@@ -1802,6 +1802,22 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 	waitForAutoAcceptJobForSharing(t, env.recipientInstance, sharingID)
 	waitForDriveSharingReadyOnOwner(t, env.eOwner, env.ownerAppToken, sharingID)
 	waitForDriveSharingActiveOnRecipient(t, env.recipientInstance, sharingID)
+
+	loginSharingRecipient(t, env.eRecipient)
+	recipientSharing, err := sharing.FindSharing(env.recipientInstance, sharingID)
+	require.NoError(t, err)
+	require.NotEmpty(t, recipientSharing.Credentials)
+	state := recipientSharing.Credentials[0].State
+	require.NotEmpty(t, state)
+
+	env.eRecipient.GET("/auth/authorize/sharing").
+		WithQuery("sharing_id", sharingID).
+		WithQuery("state", state).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().
+		Status(http.StatusSeeOther).
+		Header("Location").
+		Contains("#/shareddrive/" + sharingID + "/")
 }
 
 func TestSendAnswerIsIdempotentAfterStaleConflict(t *testing.T) {
@@ -1887,6 +1903,43 @@ func TestDriveAutoAcceptAfterDiscoveryAuthorizeDoesNotConflict(t *testing.T) {
 	openSharingAuthorize(t, env.eRecipient, authorizeLink, sharingID)
 	waitForDriveSharingReadyOnOwner(t, env.eOwner, env.ownerAppToken, sharingID)
 	waitForDriveSharingActiveOnRecipient(t, env.recipientInstance, sharingID)
+}
+
+func TestFileRootSharedDriveAuthorizeRedirect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+	rootFileID := createFile(t, eA, "", "SharedDriveRootFile.txt", env.acmeToken)
+	sharingID, _ := createFileRootSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File-root authorize redirect",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net"}},
+	)
+
+	loginSharingRecipient(t, eB)
+	authorizeLink := prepareSharingAuthorizeLink(t, env.acme, "Betty", sharingID, eA, env.tsB.URL)
+	FakeOwnerInstanceForSharing(t, env.betty, env.tsA.URL, sharingID)
+
+	authorizeURL, err := url.Parse(authorizeLink)
+	require.NoError(t, err)
+	state := authorizeURL.Query().Get("state")
+	require.NotEmpty(t, state)
+
+	eB.GET(authorizeURL.Path).
+		WithQuery("sharing_id", sharingID).
+		WithQuery("state", state).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().
+		Status(http.StatusSeeOther).
+		Header("Location").
+		Contains("#/shareddrive/" + sharingID + "/file/" + rootFileID)
 }
 
 func TestSharedDriveAcceptance(t *testing.T) {
