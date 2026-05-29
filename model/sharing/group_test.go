@@ -232,6 +232,137 @@ func TestGroups(t *testing.T) {
 		assert.Equal(t, s.Members[3].Groups, []int{1})
 		assert.Equal(t, s.Members[3].Status, MemberStatusPendingInvitation)
 	})
+
+	t.Run("RemoveLastDriveGroupMemberKeepsSharing", func(t *testing.T) {
+		now := time.Now()
+		team := createGroup(t, inst, "Drive Team")
+		alice := createContactInGroups(t, inst, "DriveAlice", []string{team.ID()})
+
+		s := &Sharing{
+			Active:      true,
+			Owner:       true,
+			Drive:       true,
+			Description: "Just testing drive groups",
+			Members: []Member{
+				{Status: MemberStatusOwner, Name: "Alice", Email: "alice@cozy.tools"},
+			},
+			Rules: []Rule{
+				{
+					Title:   "Just testing drive groups",
+					DocType: consts.Files,
+					Values:  []string{uuidv7()},
+				},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		require.NoError(t, couchdb.CreateDoc(inst, s))
+		sid := s.SID
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+		require.Len(t, s.Members, 2)
+		require.Equal(t, s.Members[1].Name, "DriveAlice")
+		assert.True(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, []int{0}, s.Members[1].Groups)
+
+		msg := job.ShareGroupMessage{
+			ContactID:     alice.ID(),
+			GroupsRemoved: []string{team.ID()},
+		}
+		require.NoError(t, UpdateGroups(inst, msg))
+
+		s = &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, s))
+
+		require.Len(t, s.Members, 2)
+		assert.True(t, s.Active)
+		assert.Equal(t, MemberStatusRevoked, s.Members[1].Status)
+		assert.Empty(t, s.Members[1].Groups)
+		require.Len(t, s.Groups, 1)
+		assert.False(t, s.Groups[0].Revoked)
+	})
+
+	t.Run("RevokeLastDriveGroupDeletesSharing", func(t *testing.T) {
+		team := createGroup(t, inst, "Drive Group")
+		_ = createContactInGroups(t, inst, "DriveGroupAlice", []string{team.ID()})
+		s := createDriveSharingForGroupTest(t, inst, "Drive group revoke")
+		sid := s.SID
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+		require.Len(t, s.Members, 2)
+		require.Len(t, s.Groups, 1)
+		require.NoError(t, s.RevokeGroup(inst, 0))
+
+		deleted := &Sharing{}
+		err := couchdb.GetDoc(inst, consts.Sharings, sid, deleted)
+		require.Error(t, err)
+		assert.True(t, couchdb.IsNotFoundError(err), "expected deleted sharing, got %v", err)
+	})
+
+	t.Run("RevokeEmptyLastDriveGroupDeletesSharing", func(t *testing.T) {
+		team := createGroup(t, inst, "Empty Drive Group")
+		s := createDriveSharingForGroupTest(t, inst, "Empty drive group revoke")
+		sid := s.SID
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+		require.Len(t, s.Members, 1)
+		require.Len(t, s.Groups, 1)
+		require.NoError(t, s.RevokeGroup(inst, 0))
+
+		deleted := &Sharing{}
+		err := couchdb.GetDoc(inst, consts.Sharings, sid, deleted)
+		require.Error(t, err)
+		assert.True(t, couchdb.IsNotFoundError(err), "expected deleted sharing, got %v", err)
+	})
+
+	t.Run("RevokeDriveGroupKeepsSharingWhenAnotherGroupRemains", func(t *testing.T) {
+		team := createGroup(t, inst, "First Empty Drive Group")
+		otherTeam := createGroup(t, inst, "Second Empty Drive Group")
+		s := createDriveSharingForGroupTest(t, inst, "Remaining drive group")
+		sid := s.SID
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+		require.NoError(t, s.AddGroup(inst, otherTeam.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+		require.Len(t, s.Members, 1)
+		require.Len(t, s.Groups, 2)
+		require.NoError(t, s.RevokeGroup(inst, 0))
+
+		stored := &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, stored))
+		assert.True(t, stored.Active)
+		require.Len(t, stored.Groups, 2)
+		assert.True(t, stored.Groups[0].Revoked)
+		assert.False(t, stored.Groups[1].Revoked)
+	})
+}
+
+func createDriveSharingForGroupTest(t *testing.T, inst *instance.Instance, description string) *Sharing {
+	t.Helper()
+	now := time.Now()
+	s := &Sharing{
+		Active:      true,
+		Owner:       true,
+		Drive:       true,
+		Description: description,
+		Members: []Member{
+			{Status: MemberStatusOwner, Name: "Alice", Email: "alice@cozy.tools"},
+		},
+		Rules: []Rule{
+			{
+				Title:   description,
+				DocType: consts.Files,
+				Values:  []string{uuidv7()},
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, s))
+	return s
 }
 
 func createGroup(t *testing.T, inst *instance.Instance, name string) *contact.Group {
