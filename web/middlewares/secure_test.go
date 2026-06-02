@@ -223,6 +223,7 @@ func TestSecure(t *testing.T) {
 
 		apiLoginDomain := "api-login-myorg123.cozy.example.com"
 		orgInstanceDomain := "myorg123.cozy.example.com"
+		orgInstanceWSDomain := "wss://myorg123.cozy.example.com"
 
 		// Verify that connect-src contains the api-login domain
 		connectSrcIndex := strings.Index(csp, "connect-src ")
@@ -238,6 +239,8 @@ func TestSecure(t *testing.T) {
 			"connect-src should contain %s. Found: %s", apiLoginDomain, connectSrcContent)
 		assert.Contains(t, connectSrcContent, orgInstanceDomain,
 			"connect-src should contain %s. Found: %s", orgInstanceDomain, connectSrcContent)
+		assert.Contains(t, connectSrcContent, orgInstanceWSDomain,
+			"connect-src should contain %s. Found: %s", orgInstanceWSDomain, connectSrcContent)
 
 		// Verify that other directives do NOT contain the api-login domain
 		otherDirectives := []string{
@@ -266,6 +269,8 @@ func TestSecure(t *testing.T) {
 						"Directive %s should NOT contain %s. Found: %s", directivePattern, apiLoginDomain, directiveContent)
 					assert.NotContains(t, directiveContent, orgInstanceDomain,
 						"Directive %s should NOT contain %s. Found: %s", directivePattern, orgInstanceDomain, directiveContent)
+					assert.NotContains(t, directiveContent, orgInstanceWSDomain,
+						"Directive %s should NOT contain %s. Found: %s", directivePattern, orgInstanceWSDomain, directiveContent)
 				}
 			}
 		}
@@ -302,10 +307,11 @@ func TestSecure(t *testing.T) {
 
 		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
 		expectedDomain := "myorg123.example.com"
+		expectedWSDomain := "wss://myorg123.example.com"
 
 		count := strings.Count(csp, expectedDomain)
-		assert.Equal(t, 1, count,
-			"%s should appear exactly once (in connect-src), but found %d times. CSP: %s",
+		assert.Equal(t, 2, count,
+			"%s should appear exactly twice (bare and wss:// prefix in connect-src), but found %d times. CSP: %s",
 			expectedDomain, count, csp)
 
 		connectSrcIndex := strings.Index(csp, "connect-src ")
@@ -319,5 +325,7 @@ func TestSecure(t *testing.T) {
 		connectSrcContent := csp[connectSrcIndex : connectSrcIndex+connectSrcEnd]
 		assert.Contains(t, connectSrcContent, expectedDomain,
 			"connect-src should contain %s. Found: %s", expectedDomain, connectSrcContent)
+		assert.Contains(t, connectSrcContent, expectedWSDomain,
+			"connect-src should contain %s. Found: %s", expectedWSDomain, connectSrcContent)
 	})
 }
