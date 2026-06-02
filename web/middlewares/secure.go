@@ -312,11 +312,15 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 	if header == "connect-src" && b.instance != nil && isSafeDomain(b.instance.OrgID) {
 		_, domain, found := strings.Cut(b.instance.Domain, ".")
 		if found && isSafeDomain(domain) {
-			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domain)
-			headers = append(headers, b.instance.OrgID+"."+domain)
+			orgDomain := b.instance.OrgID + "." + domain
+			headers = append(headers, "api-login-"+orgDomain)
+			headers = append(headers, orgDomain)
+			headers = append(headers, "wss://"+orgDomain)
 		}
 		if isSafeDomain(b.instance.OrgDomain) {
-			headers = append(headers, b.instance.OrgID+"."+b.instance.OrgDomain)
+			orgAltDomain := b.instance.OrgID + "." + b.instance.OrgDomain
+			headers = append(headers, orgAltDomain)
+			headers = append(headers, "wss://"+orgAltDomain)
 		}
 	}
 	if len(headers) == 0 {
