@@ -323,6 +323,16 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 			headers = append(headers, "wss://"+orgAltDomain)
 		}
 	}
+	// Add org domain to img-src to load sharing recipient avatars.
+	if header == "img-src" && b.instance != nil && isSafeDomain(b.instance.OrgID) {
+		_, domain, found := strings.Cut(b.instance.Domain, ".")
+		if found && isSafeDomain(domain) {
+			headers = append(headers, b.instance.OrgID+"."+domain)
+		}
+		if isSafeDomain(b.instance.OrgDomain) {
+			headers = append(headers, b.instance.OrgID+"."+b.instance.OrgDomain)
+		}
+	}
 	if len(headers) == 0 {
 		return ""
 	}
