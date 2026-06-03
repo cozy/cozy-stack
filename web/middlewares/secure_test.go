@@ -248,7 +248,6 @@ func TestSecure(t *testing.T) {
 			"script-src",
 			"frame-src",
 			"font-src",
-			"img-src",
 			"manifest-src",
 			"media-src",
 			"object-src",
@@ -274,6 +273,23 @@ func TestSecure(t *testing.T) {
 				}
 			}
 		}
+
+		// Verify that img-src contains the org instance domain
+		imgSrcIndex := strings.Index(csp, "img-src ")
+		assert.NotEqual(t, -1, imgSrcIndex,
+			"img-src should be present in CSP. Full CSP: %s", csp)
+
+		imgSrcEnd := strings.Index(csp[imgSrcIndex:], ";")
+		assert.NotEqual(t, -1, imgSrcEnd,
+			"img-src should end with semicolon")
+
+		imgSrcContent := csp[imgSrcIndex : imgSrcIndex+imgSrcEnd]
+		assert.Contains(t, imgSrcContent, orgInstanceDomain,
+			"img-src should contain %s. Found: %s", orgInstanceDomain, imgSrcContent)
+		assert.NotContains(t, imgSrcContent, apiLoginDomain,
+			"img-src should NOT contain %s. Found: %s", apiLoginDomain, imgSrcContent)
+		assert.NotContains(t, imgSrcContent, orgInstanceWSDomain,
+			"img-src should NOT contain %s. Found: %s", orgInstanceWSDomain, imgSrcContent)
 	})
 
 	t.Run("SecureMiddlewareCSPWithOrgIDAndOrgDomainConnectSrc", func(t *testing.T) {
@@ -310,8 +326,8 @@ func TestSecure(t *testing.T) {
 		expectedWSDomain := "wss://myorg123.example.com"
 
 		count := strings.Count(csp, expectedDomain)
-		assert.Equal(t, 2, count,
-			"%s should appear exactly twice (bare and wss:// prefix in connect-src), but found %d times. CSP: %s",
+		assert.Equal(t, 3, count,
+			"%s should appear exactly three times (bare and wss:// prefix in connect-src, bare in img-src), but found %d times. CSP: %s",
 			expectedDomain, count, csp)
 
 		connectSrcIndex := strings.Index(csp, "connect-src ")
@@ -327,5 +343,18 @@ func TestSecure(t *testing.T) {
 			"connect-src should contain %s. Found: %s", expectedDomain, connectSrcContent)
 		assert.Contains(t, connectSrcContent, expectedWSDomain,
 			"connect-src should contain %s. Found: %s", expectedWSDomain, connectSrcContent)
+
+		// Verify that img-src also contains the org domain
+		imgSrcIndex := strings.Index(csp, "img-src ")
+		assert.NotEqual(t, -1, imgSrcIndex,
+			"img-src should be present in CSP. Full CSP: %s", csp)
+
+		imgSrcEnd := strings.Index(csp[imgSrcIndex:], ";")
+		assert.NotEqual(t, -1, imgSrcEnd,
+			"img-src should end with semicolon")
+
+		imgSrcContent := csp[imgSrcIndex : imgSrcIndex+imgSrcEnd]
+		assert.Contains(t, imgSrcContent, expectedDomain,
+			"img-src should contain %s. Found: %s", expectedDomain, imgSrcContent)
 	})
 }
