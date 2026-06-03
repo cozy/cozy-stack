@@ -4141,7 +4141,7 @@ func TestSharedDriveRevocation(t *testing.T) {
 	})
 }
 
-func TestPendingSharedDriveRecipientRemovalClearsNewsCounter(t *testing.T) {
+func TestOpeningPendingSharedDriveShortcutClearsNewsCounter(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -4186,22 +4186,7 @@ func TestPendingSharedDriveRecipientRemovalClearsNewsCounter(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, recipientSharing.ShortcutID)
 	seenShortcutID := recipientSharing.ShortcutID
-	require.NotEqual(t, newShortcutID, seenShortcutID)
-
-	eB.GET("/sharings/news").
-		WithHeader("Authorization", "Bearer "+env.bettyToken).
-		Expect().Status(http.StatusOK).
-		JSON().Object().
-		Path("$.meta.count").Number().IsEqual(1)
-
-	eA.DELETE("/sharings/"+sharingID+"/recipients/1").
-		WithHeader("Authorization", "Bearer "+env.acmeToken).
-		Expect().Status(http.StatusNoContent)
-
-	require.Eventually(t, func() bool {
-		count, err := sharing.CountNewShortcuts(env.betty)
-		return err == nil && count == 0
-	}, 5*time.Second, 100*time.Millisecond, "Betty's sharing counter should not include a revoked pending drive")
+	require.Equal(t, newShortcutID, seenShortcutID)
 
 	eB.GET("/sharings/news").
 		WithHeader("Authorization", "Bearer "+env.bettyToken).
@@ -4210,11 +4195,21 @@ func TestPendingSharedDriveRecipientRemovalClearsNewsCounter(t *testing.T) {
 		Path("$.meta.count").Number().IsEqual(0)
 
 	require.Eventually(t, func() bool {
-		_, err := env.betty.VFS().FileByID(newShortcutID)
-		return os.IsNotExist(err)
-	}, 5*time.Second, 100*time.Millisecond, "Betty's pending shared-drive shortcut should be removed after revocation")
+		count, err := sharing.CountNewShortcuts(env.betty)
+		return err == nil && count == 0
+	}, 5*time.Second, 100*time.Millisecond, "Betty's sharing counter should not include the opened pending drive")
+
 	require.Eventually(t, func() bool {
-		_, err := env.betty.VFS().FileByID(seenShortcutID)
+		_, err := env.betty.VFS().FileByID(newShortcutID)
+		return err == nil
+	}, 5*time.Second, 100*time.Millisecond, "Betty's opened shared-drive shortcut should still exist before revocation")
+
+	eA.DELETE("/sharings/"+sharingID+"/recipients/1").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusNoContent)
+
+	require.Eventually(t, func() bool {
+		_, err := env.betty.VFS().FileByID(newShortcutID)
 		return os.IsNotExist(err)
 	}, 5*time.Second, 100*time.Millisecond, "Betty's opened shared-drive shortcut should be removed after revocation")
 }
