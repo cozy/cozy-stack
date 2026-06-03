@@ -177,15 +177,6 @@ func (s *Sharing) DriveTargetURL(inst *instance.Instance) *url.URL {
 	return u
 }
 
-// AuthorizeSharingURL returns the recipient-side URL that opens the sharing
-// authorization flow.
-func (s *Sharing) AuthorizeSharingURL(inst *instance.Instance, state string) string {
-	return inst.PageURL("/auth/authorize/sharing", url.Values{
-		"sharing_id": {s.SID},
-		"state":      {state},
-	})
-}
-
 // GetFileDriveRoot returns the root file of a file-root shared drive.
 func (s *Sharing) GetFileDriveRoot(inst *instance.Instance) (*vfs.FileDoc, error) {
 	rootID, err := s.DriveRootID()

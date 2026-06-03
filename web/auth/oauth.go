@@ -562,10 +562,10 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 			}
 		}
 		u := instance.SubDomain(consts.DriveSlug)
-		u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
 		if s.Drive {
 			u = s.DriveTargetURL(instance)
 		} else {
+			u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
 			u.Fragment = "/folder/" + consts.SharedWithMeDirID
 		}
 		return c.Redirect(http.StatusSeeOther, u.String())

@@ -384,6 +384,15 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 	return nil
 }
 
+// AuthorizeSharingURL returns the recipient-side URL that opens the sharing
+// authorization flow.
+func (s *Sharing) AuthorizeSharingURL(inst *instance.Instance, state string) string {
+	return inst.PageURL("/auth/authorize/sharing", url.Values{
+		"sharing_id": {s.SID},
+		"state":      {state},
+	})
+}
+
 func (s *Sharing) driveShortcutURL(inst *instance.Instance, seen bool) string {
 	if !seen && len(s.Credentials) > 0 && s.Credentials[0].State != "" {
 		return s.AuthorizeSharingURL(inst, s.Credentials[0].State)
