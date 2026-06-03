@@ -346,7 +346,10 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		},
 	}
 	if rule := s.FirstFilesRule(); s.HasFileDriveRoot() && rule != nil && rule.Mime != "" {
-		fileDoc.Metadata["target"].(map[string]interface{})["mime"] = rule.Mime
+		_, class := vfs.ExtractMimeAndClass(rule.Mime)
+		target := fileDoc.Metadata["target"].(map[string]interface{})
+		target["mime"] = rule.Mime
+		target["class"] = class
 	}
 	fileDoc.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
