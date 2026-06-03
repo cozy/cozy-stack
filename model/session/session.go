@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -302,9 +301,9 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		MaxAge:   maxAge,
 		Path:     "/",
 		Domain:   CookieDomain(inst),
-		Secure:   !build.IsDevRelease(),
+		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	}, nil
 }
 

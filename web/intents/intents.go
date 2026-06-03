@@ -56,6 +56,8 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 		u.Path = ""
 		i.doc.Client = u.String()
 	}
+	// Set here the URL of your local tmail
+	i.doc.Client = "http://localhost:2023"
 	res, err := json.Marshal(i.doc)
 	i.doc.Client = was
 	return res, err
