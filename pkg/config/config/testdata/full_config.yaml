@@ -115,6 +115,12 @@ clouderies:
       url: https://manager-url
       token: manager-token
 
+safe_http:
+  trusted_private_networks:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
 rabbitmq:
   enabled: true
   nodes:

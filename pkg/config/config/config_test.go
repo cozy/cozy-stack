@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/gomail"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -302,6 +303,9 @@ func TestConfigUnmarshal(t *testing.T) {
 			"connect": "https://connect-url",
 		},
 	}, cfg.CSPPerContext)
+
+	// SafeHTTP
+	assert.Equal(t, []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}, cfg.SafeHTTPTrustedNetworks)
 }
 
 func TestUseViper(t *testing.T) {
@@ -512,4 +516,36 @@ rabbitmq:
 	assert.Equal(t, []string{"settings.admin.*"}, queue2b.Bindings)
 	assert.Equal(t, 8, queue2b.Prefetch)
 	assert.Equal(t, 2, queue2b.DeliveryLimit)
+}
+
+func TestSafeHTTPConfig(t *testing.T) {
+	t.Cleanup(func() { _ = safehttp.SetTrustedPrivateNetworks(nil) })
+
+	t.Run("valid CIDRs map through UseViper", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("safe_http.trusted_private_networks", []string{"10.0.0.0/8", "172.16.0.0/12"})
+		require.NoError(t, UseViper(cfg))
+		assert.Equal(t, []string{"10.0.0.0/8", "172.16.0.0/12"}, GetConfig().SafeHTTPTrustedNetworks)
+	})
+
+	t.Run("invalid CIDR makes UseViper fail", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("safe_http.trusted_private_networks", []string{"not-a-cidr"})
+		err := UseViper(cfg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid safe_http.trusted_private_networks config")
+	})
+
+	t.Run("empty config keeps strict defaults", func(t *testing.T) {
+		cfg := viper.New()
+		require.NoError(t, UseViper(cfg))
+		assert.Empty(t, GetConfig().SafeHTTPTrustedNetworks)
+	})
+
+	t.Run("missing key keeps strict defaults", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("host", "localhost")
+		require.NoError(t, UseViper(cfg))
+		assert.Empty(t, GetConfig().SafeHTTPTrustedNetworks)
+	})
 }

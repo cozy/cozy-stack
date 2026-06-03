@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/pdf"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -150,6 +151,10 @@ type Config struct {
 	Clouderies     map[string]ClouderyConfig
 
 	RabbitMQ RabbitMQ
+
+	// SafeHTTPTrustedNetworks is a list of private CIDRs that safehttp
+	// callers are allowed to reach. For closed-network deployments only.
+	SafeHTTPTrustedNetworks []string
 
 	RemoteAllowCustomPort bool
 
@@ -1136,6 +1141,11 @@ func UseViper(v *viper.Viper) error {
 	err = v.UnmarshalKey("rabbitmq", &config.RabbitMQ)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "rabbitmq": %w`, err)
+	}
+
+	config.SafeHTTPTrustedNetworks = v.GetStringSlice("safe_http.trusted_private_networks")
+	if err = safehttp.SetTrustedPrivateNetworks(config.SafeHTTPTrustedNetworks); err != nil {
+		return fmt.Errorf("invalid safe_http.trusted_private_networks config: %w", err)
 	}
 
 	// For compatibility
