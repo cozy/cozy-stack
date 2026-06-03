@@ -58,7 +58,7 @@ type onlyOffice struct {
 			ForceSave bool `json:"forcesave"`
 			GoBack    bool `json:"goback"`
 		} `json:"customization"`
-	} `json:"editor"`
+	} `json:"editorConfig"`
 }
 
 func (o *apiOfficeURL) ID() string                             { return o.FileID }
