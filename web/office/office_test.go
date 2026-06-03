@@ -71,7 +71,7 @@ func TestOffice(t *testing.T) {
 		oo.Value("url").String().NotEmpty()
 		oo.ValueEqual("documentType", "word")
 
-		editor := oo.Value("editor").Object()
+		editor := oo.Value("editorConfig").Object()
 		editor.ValueEqual("mode", "edit")
 		editor.Value("callbackUrl").String().HasSuffix("/office/callback")
 
