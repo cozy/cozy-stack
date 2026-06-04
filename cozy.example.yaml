@@ -592,6 +592,18 @@ contexts:
       auto_accept_trusted_contacts: false
       trusted_domains: []
 
+# WARNING: Closed-network deployments only.
+# Allows safehttp callers to reach private CIDRs, bypassing SSRF protections
+# for those addresses (including non-standard ports).
+# This affects sharing, move/import/export, WebDAV, BI, common settings,
+# Bitwarden icon fetching, and all other safehttp-backed outbound calls.
+# Default behavior (empty list) keeps all private addresses blocked.
+# safe_http:
+#   trusted_private_networks:
+#     - 10.0.0.0/8
+#     - 172.16.0.0/12
+#     - 192.168.0.0/16
+
 rabbitmq:
   enabled: true
   nodes:
