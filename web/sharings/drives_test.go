@@ -4471,6 +4471,16 @@ func TestSharedDriveGroupDynamicMembership(t *testing.T) {
 	// Now update the owner's URL in Alice's sharing document
 	FakeOwnerInstanceForSharing(t, aliceInstance, tsOwner.URL, sharingID)
 
+	// The auto-accept job may have already been enqueued and run with the
+	// previous (domain-based) URL, which fails with a DNS error in tests
+	// since the owner's domain does not resolve. Re-enqueue the auto-accept
+	// job with the updated URL so that the sharing is actually accepted.
+	var aliceSharing sharing.Sharing
+	require.NoError(t, couchdb.GetDoc(aliceInstance, consts.Sharings, sharingID, &aliceSharing))
+	if len(aliceSharing.Credentials) > 0 && aliceSharing.Credentials[0].State != "" {
+		require.NoError(t, sharing.EnqueueAutoAccept(aliceInstance, sharingID, aliceSharing.Credentials[0].State))
+	}
+
 	// Step 7: Wait for Alice's sharing to be auto-accepted
 	require.Eventually(t, func() bool {
 		var s sharing.Sharing
