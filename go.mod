@@ -22,7 +22,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.2
-	github.com/google/go-querystring v1.1.0
+	github.com/google/go-querystring v1.2.0
 	github.com/google/gops v0.3.29
 	github.com/gorilla/websocket v1.5.1
 	github.com/h2non/filetype v1.1.3
