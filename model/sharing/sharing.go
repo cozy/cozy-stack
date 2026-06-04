@@ -1188,21 +1188,76 @@ func (s *Sharing) GetSharecodeFromShortcut(inst *instance.Instance) (string, err
 }
 
 func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
-	if s.ShortcutID == "" {
+	fs := inst.VFS()
+	// remove a shortcut by id, as it before
+	parentID, deletedByID, err := destroyShortcutByID(fs, s.ShortcutID)
+	if err != nil {
 		return ""
+	}
+	shouldClearShortcutID := deletedByID || s.ShortcutID != ""
+
+	// remove shortcut reference from sharing
+	referencedParentID, deletedByRef, err := destroyReferencedShortcutFiles(inst, fs, s.SID)
+	if err == nil && parentID == "" {
+		parentID = referencedParentID
+	}
+	if err == nil && deletedByRef {
+		shouldClearShortcutID = true
+	}
+
+	if shouldClearShortcutID {
+		s.ShortcutID = ""
+		_ = couchdb.UpdateDoc(inst, s)
+	}
+	return parentID
+}
+
+func destroyShortcutByID(fs vfs.VFS, shortcutID string) (string, bool, error) {
+	if shortcutID == "" {
+		return "", false, nil
+	}
+	file, err := fs.FileByID(shortcutID)
+	if err != nil {
+		return "", false, nil
+	}
+	if err := fs.DestroyFile(file); err != nil {
+		return "", false, err
+	}
+	return file.DirID, true, nil
+}
+
+func destroyReferencedShortcutFiles(inst *instance.Instance, fs vfs.VFS, sharingID string) (string, bool, error) {
+	key := []string{consts.Sharings, sharingID}
+	req := &couchdb.ViewRequest{
+		StartKey: key,
+		EndKey:   []string{key[0], key[1], couchdb.MaxString},
+	}
+	var res couchdb.ViewResponse
+	if err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res); err != nil {
+		return "", false, err
 	}
 
 	var parentID string
-	fs := inst.VFS()
-	if file, err := fs.FileByID(s.ShortcutID); err == nil {
-		parentID = file.DirID
-		if err := fs.DestroyFile(file); err != nil {
-			return ""
+	var deleted bool
+	for _, row := range res.Rows {
+		file, err := fs.FileByID(row.ID)
+		if err != nil || !isShortcutFile(file) {
+			continue
 		}
+		if err := fs.DestroyFile(file); err != nil {
+			return "", false, err
+		}
+		if parentID == "" {
+			parentID = file.DirID
+		}
+		deleted = true
 	}
-	s.ShortcutID = ""
-	_ = couchdb.UpdateDoc(inst, s)
-	return parentID
+	return parentID, deleted, nil
+}
+
+func isShortcutFile(file *vfs.FileDoc) bool {
+	return file.Type == consts.FileType &&
+		(file.Mime == consts.ShortcutMimeType || file.Class == "shortcut")
 }
 
 // GetPreviewURL asks the owner's Cozy the URL for previewing the sharing.
