@@ -75,6 +75,8 @@ The script automatically:
 - Starts OnlyOffice with proper `--add-host` mappings
 - Waits for OnlyOffice to be ready
 
+For why the script configures JWT the way it does, see [OnlyOffice dev server JWT setup](./onlyoffice-dev-server-jwt-setup.md).
+
 ### Option 2: Manual Docker Command
 
 **For macOS and Linux (port mapping):**
