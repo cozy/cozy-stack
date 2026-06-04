@@ -121,6 +121,7 @@ func TestFiles(t *testing.T) {
 		assert.Equal(t, consts.Files, target["_type"])
 		assert.Equal(t, DriveRootTypeFile, target["drive_root_type"])
 		assert.Equal(t, "text/plain", target["mime"])
+		assert.Equal(t, "text", target["class"])
 	})
 
 	t.Run("SharingDir", func(t *testing.T) {
