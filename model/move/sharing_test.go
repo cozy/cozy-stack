@@ -37,11 +37,6 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()
 
-	// Clean up sharings database
-	_ = couchdb.DeleteDB(inst, consts.Sharings)
-	err := couchdb.CreateDB(inst, consts.Sharings)
-	require.NoError(t, err)
-
 	newInstance := inst.PageURL("", nil)
 	oldDomain := "old-domain.mycozy.cloud"
 
@@ -49,6 +44,7 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	inst.OldDomain = oldDomain
 
 	t.Run("UpdateOwnerMemberInstance", func(t *testing.T) {
+		var err error
 		// Create a sharing where we are the owner with old instance URL
 		s := &sharing.Sharing{
 			SID:   uuidv7(),
@@ -85,6 +81,7 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	})
 
 	t.Run("UpdateRecipientMemberInstance", func(t *testing.T) {
+		var err error
 		// Create a sharing where we are a recipient with old instance URL
 		s := &sharing.Sharing{
 			SID:   uuidv7(),
@@ -126,6 +123,7 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	})
 
 	t.Run("SkipWhenNoOldDomain", func(t *testing.T) {
+		var err error
 		// Clear OldDomain to test skip behavior
 		inst.OldDomain = ""
 
@@ -159,6 +157,7 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	})
 
 	t.Run("SkipAlreadyUpdatedSharing", func(t *testing.T) {
+		var err error
 		// Create a sharing where the instance URL is already correct
 		s := &sharing.Sharing{
 			SID:   uuidv7(),
@@ -187,6 +186,7 @@ func TestUpdateSelfMemberInstance(t *testing.T) {
 	})
 
 	t.Run("NoFalsePositiveSubstringMatch", func(t *testing.T) {
+		var err error
 		// Test that a member with a domain containing OldDomain as substring
 		// is NOT matched (e.g., alice-old-domain.mycozy.cloud should not match old-domain.mycozy.cloud)
 		s := &sharing.Sharing{
