@@ -357,6 +357,58 @@ func (s *Sharing) AddReferenceForSharing(inst *instance.Instance, rule *Rule) er
 	return fs.UpdateFileDoc(olddoc, file)
 }
 
+// RemoveReferenceForSharing removes the reference to the sharing from its root
+// file or folder. It is a no-op when the root is already gone.
+func (s *Sharing) RemoveReferenceForSharing(inst *instance.Instance, rule *Rule) error {
+	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		return nil
+	}
+
+	indexer := vfs.NewCouchdbIndexer(inst)
+	parts := strings.Split(rule.Values[0], "/")
+	dir, file, err := indexer.DirOrFileByID(parts[len(parts)-1])
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) || couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		inst.Logger().WithNamespace("sharing").
+			Warnf("RemoveReferenceForSharing failed to find root: %s", err)
+		return err
+	}
+	if dir == nil && file == nil {
+		return nil
+	}
+
+	ref := couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	}
+
+	if dir != nil {
+		newdoc := dir.Clone().(*vfs.DirDoc)
+		before := len(newdoc.ReferencedBy)
+		newdoc.RemoveReferencedBy(ref)
+		if len(newdoc.ReferencedBy) == before {
+			return nil
+		}
+		if newdoc.CozyMetadata != nil {
+			newdoc.CozyMetadata.UpdatedAt = time.Now()
+		}
+		return indexer.UpdateDirDoc(dir, newdoc)
+	}
+
+	newdoc := file.Clone().(*vfs.FileDoc)
+	before := len(newdoc.ReferencedBy)
+	newdoc.RemoveReferencedBy(ref)
+	if len(newdoc.ReferencedBy) == before {
+		return nil
+	}
+	if newdoc.CozyMetadata != nil {
+		newdoc.CozyMetadata.UpdatedAt = time.Now()
+	}
+	return indexer.UpdateFileDoc(file, newdoc)
+}
+
 // ValidateDriveRoot validates that a file or folder can be used to create a
 // shared drive.
 func ValidateDriveRoot(inst *instance.Instance, rootID string) (*vfs.DirDoc, *vfs.FileDoc, error) {

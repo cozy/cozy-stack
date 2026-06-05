@@ -600,6 +600,17 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 // Revoke remove the credentials for all members, contact them, removes the
 // triggers and set the active flag to false.
 func (s *Sharing) Revoke(inst *instance.Instance) error {
+	return s.revoke(inst, revokeOptions{removeRootReference: true})
+}
+
+// revokeOptions keeps the revoke steps explicit for special callers. When the
+// shared root is already being trashed, the VFS update removes referenced_by,
+// so revoke must not update the root document again.
+type revokeOptions struct {
+	removeRootReference bool
+}
+
+func (s *Sharing) revoke(inst *instance.Instance, opts revokeOptions) error {
 	var errm error
 
 	if !s.Owner {
@@ -618,6 +629,11 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	}
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
+	}
+	if opts.removeRootReference {
+		if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
+			return err
+		}
 	}
 	if s.PreviewPath != "" {
 		if err := s.RevokePreviewPermissions(inst); err != nil {
@@ -904,6 +920,9 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
 			return err
 		}
+		if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
+			return err
+		}
 		if err := s.RevokeInteractPermissions(inst); err != nil {
 			return err
 		}
@@ -919,6 +938,9 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 		}
 	}
 	if err := s.RemoveTriggers(inst); err != nil {
+		return err
+	}
+	if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
 		return err
 	}
 	s.Active = false
