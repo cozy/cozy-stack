@@ -75,6 +75,10 @@ func TestOffice(t *testing.T) {
 		editor.ValueEqual("mode", "edit")
 		editor.Value("callbackUrl").String().HasSuffix("/office/callback")
 
+		legacyEditor := oo.Value("editor").Object()
+		legacyEditor.ValueEqual("mode", "edit")
+		legacyEditor.Value("callbackUrl").String().HasSuffix("/office/callback")
+
 		document := oo.Value("document").Object()
 		key = document.Value("key").String().NotEmpty().Raw()
 	})
