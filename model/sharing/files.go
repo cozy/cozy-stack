@@ -273,10 +273,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 	}
 	parts := strings.Split(rule.Values[0], "/")
 	dir.DocID = parts[len(parts)-1]
-	dir.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	dir.AddReferencedBy(s.DocReference())
 	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	basename := dir.DocName
 	for i := 2; i < 20; i++ {
@@ -286,10 +283,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		if couchdb.IsConflictError(err) || errors.Is(err, os.ErrExist) {
 			doc, err := fs.DirByID(dir.DocID)
 			if err == nil {
-				doc.AddReferencedBy(couchdb.DocReference{
-					ID:   s.SID,
-					Type: consts.Sharings,
-				})
+				doc.AddReferencedBy(s.DocReference())
 				_ = couchdb.UpdateDoc(inst, doc)
 				return doc, nil
 			}
@@ -319,15 +313,12 @@ func (s *Sharing) AddReferenceForSharing(inst *instance.Instance, rule *Rule) er
 
 	if dir != nil {
 		for _, ref := range dir.ReferencedBy {
-			if ref.Type == consts.Sharings && ref.ID == s.SID {
+			if ref == s.DocReference() {
 				return nil
 			}
 		}
 		olddoc := dir.Clone().(*vfs.DirDoc)
-		dir.AddReferencedBy(couchdb.DocReference{
-			ID:   s.SID,
-			Type: consts.Sharings,
-		})
+		dir.AddReferencedBy(s.DocReference())
 		if dir.CozyMetadata == nil {
 			dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		} else {
@@ -340,15 +331,12 @@ func (s *Sharing) AddReferenceForSharing(inst *instance.Instance, rule *Rule) er
 		return nil
 	}
 	for _, ref := range file.ReferencedBy {
-		if ref.Type == consts.Sharings && ref.ID == s.SID {
+		if ref == s.DocReference() {
 			return nil
 		}
 	}
 	olddoc := file.Clone().(*vfs.FileDoc)
-	file.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	file.AddReferencedBy(s.DocReference())
 	if file.CozyMetadata == nil {
 		file.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	} else {
@@ -379,10 +367,7 @@ func (s *Sharing) RemoveReferenceForSharing(inst *instance.Instance, rule *Rule)
 		return nil
 	}
 
-	ref := couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	}
+	ref := s.DocReference()
 
 	if dir != nil {
 		newdoc := dir.Clone().(*vfs.DirDoc)
@@ -595,10 +580,7 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 		return err
 	}
 	olddoc := dir.Clone().(*vfs.DirDoc)
-	dir.RemoveReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	dir.RemoveReferencedBy(s.DocReference())
 	if dir.CozyMetadata == nil {
 		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	} else {

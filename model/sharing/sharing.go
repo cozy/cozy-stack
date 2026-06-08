@@ -96,6 +96,14 @@ func (s *Sharing) Rev() string { return s.SRev }
 // DocType returns the sharing document type
 func (s *Sharing) DocType() string { return consts.Sharings }
 
+// DocReference returns the CouchDB reference for the sharing.
+func (s *Sharing) DocReference() couchdb.DocReference {
+	return couchdb.DocReference{
+		ID:   s.SID,
+		Type: s.DocType(),
+	}
+}
+
 // SetID changes the sharing qualified identifier
 func (s *Sharing) SetID(id string) { s.SID = id }
 
