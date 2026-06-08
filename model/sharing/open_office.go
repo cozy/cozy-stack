@@ -28,37 +28,51 @@ type apiOfficeURL struct {
 }
 
 type onlyOffice struct {
-	URL   string `json:"url,omitempty"`
-	Token string `json:"token,omitempty"`
-	Type  string `json:"documentType"`
-	Doc   struct {
-		Filetype string `json:"filetype,omitempty"`
-		Key      string `json:"key"`
-		Title    string `json:"title,omitempty"`
-		URL      string `json:"url"`
-		Info     struct {
-			Owner    string `json:"owner,omitempty"`
-			Uploaded string `json:"uploaded,omitempty"`
-		} `json:"info"`
-	} `json:"document"`
-	Editor struct {
-		Callback string `json:"callbackUrl"`
-		Lang     string `json:"lang,omitempty"`
-		Mode     string `json:"mode"`
-		Custom   struct {
-			CompactHeader bool `json:"compactHeader"`
-			Customer      struct {
-				Address string `json:"address"`
-				Logo    string `json:"logo"`
-				Mail    string `json:"mail"`
-				Name    string `json:"name"`
-				WWW     string `json:"www"`
-			} `json:"customer"`
-			Feedback  bool `json:"feedback"`
-			ForceSave bool `json:"forcesave"`
-			GoBack    bool `json:"goback"`
-		} `json:"customization"`
-	} `json:"editorConfig"`
+	URL          string           `json:"url,omitempty"`
+	Token        string           `json:"token,omitempty"`
+	Type         string           `json:"documentType"`
+	Doc          onlyOfficeDoc    `json:"document"`
+	EditorConfig onlyOfficeEditor `json:"editorConfig"`
+	Editor       onlyOfficeEditor `json:"editor"`
+}
+
+type onlyOfficeDoc struct {
+	Filetype string `json:"filetype,omitempty"`
+	Key      string `json:"key"`
+	Title    string `json:"title,omitempty"`
+	URL      string `json:"url"`
+	Info     struct {
+		Owner    string `json:"owner,omitempty"`
+		Uploaded string `json:"uploaded,omitempty"`
+	} `json:"info"`
+}
+
+type onlyOfficeEditor struct {
+	Callback string `json:"callbackUrl"`
+	Lang     string `json:"lang,omitempty"`
+	Mode     string `json:"mode"`
+	Custom   struct {
+		CompactHeader bool `json:"compactHeader"`
+		Customer      struct {
+			Address string `json:"address"`
+			Logo    string `json:"logo"`
+			Mail    string `json:"mail"`
+			Name    string `json:"name"`
+			WWW     string `json:"www"`
+		} `json:"customer"`
+		Feedback  bool `json:"feedback"`
+		ForceSave bool `json:"forcesave"`
+		GoBack    bool `json:"goback"`
+	} `json:"customization"`
+}
+
+func (e *onlyOfficeEditor) sanitizeClaims() {
+	e.Lang = ""
+	e.Custom.Customer.Address = ""
+	e.Custom.Customer.Logo = ""
+	e.Custom.Customer.Mail = ""
+	e.Custom.Customer.Name = ""
+	e.Custom.Customer.WWW = ""
 }
 
 func (o *apiOfficeURL) ID() string                             { return o.FileID }
@@ -83,12 +97,8 @@ func (o *apiOfficeURL) sign(cfg *config.Office) (string, error) {
 	claims.Doc.Title = ""
 	claims.Doc.Info.Owner = ""
 	claims.Doc.Info.Uploaded = ""
-	claims.Editor.Lang = ""
-	claims.Editor.Custom.Customer.Address = ""
-	claims.Editor.Custom.Customer.Logo = ""
-	claims.Editor.Custom.Customer.Mail = ""
-	claims.Editor.Custom.Customer.Name = ""
-	claims.Editor.Custom.Customer.WWW = ""
+	claims.EditorConfig.sanitizeClaims()
+	claims.Editor.sanitizeClaims()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
 	return token.SignedString([]byte(cfg.InboxSecret))
 }
@@ -212,18 +222,21 @@ func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOf
 	doc.OO.Doc.URL = download
 	doc.OO.Doc.Info.Owner = publicName
 	doc.OO.Doc.Info.Uploaded = uploadedDate(o.File)
-	doc.OO.Editor.Callback = o.Inst.PageURL("/office/callback", nil)
-	doc.OO.Editor.Lang = o.Inst.Locale
-	doc.OO.Editor.Mode = mode
-	doc.OO.Editor.Custom.CompactHeader = true
-	doc.OO.Editor.Custom.Customer.Address = "\"Le Surena\" Face au 5 Quai Marcel Dassault 92150 Suresnes"
-	doc.OO.Editor.Custom.Customer.Logo = o.Inst.FromURL(&url.URL{Path: "/assets/icon-192.png"})
-	doc.OO.Editor.Custom.Customer.Mail = o.Inst.SupportEmailAddress()
-	doc.OO.Editor.Custom.Customer.Name = "Twake Workplace"
-	doc.OO.Editor.Custom.Customer.WWW = "cozy.io"
-	doc.OO.Editor.Custom.Feedback = false
-	doc.OO.Editor.Custom.ForceSave = true
-	doc.OO.Editor.Custom.GoBack = false
+	editor := onlyOfficeEditor{}
+	editor.Callback = o.Inst.PageURL("/office/callback", nil)
+	editor.Lang = o.Inst.Locale
+	editor.Mode = mode
+	editor.Custom.CompactHeader = true
+	editor.Custom.Customer.Address = "\"Le Surena\" Face au 5 Quai Marcel Dassault 92150 Suresnes"
+	editor.Custom.Customer.Logo = o.Inst.FromURL(&url.URL{Path: "/assets/icon-192.png"})
+	editor.Custom.Customer.Mail = o.Inst.SupportEmailAddress()
+	editor.Custom.Customer.Name = "Twake Workplace"
+	editor.Custom.Customer.WWW = "cozy.io"
+	editor.Custom.Feedback = false
+	editor.Custom.ForceSave = true
+	editor.Custom.GoBack = false
+	doc.OO.EditorConfig = editor
+	doc.OO.Editor = editor
 
 	token, err := doc.sign(cfg)
 	if err != nil {
