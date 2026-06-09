@@ -351,10 +351,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		target["mime"] = rule.Mime
 		target["class"] = class
 	}
-	fileDoc.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	fileDoc.AddReferencedBy(s.DocReference())
 
 	fileDoc, err = s.createOrUpdateShortcut(inst, fileDoc, body)
 	if err != nil {
@@ -426,10 +423,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 			"mime":  s.Rules[0].Mime,
 		},
 	}
-	fileDoc.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	fileDoc.AddReferencedBy(s.DocReference())
 
 	fileDoc, err = s.createOrUpdateShortcut(inst, fileDoc, body)
 	if err != nil {

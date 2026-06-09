@@ -38,7 +38,7 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 	log := inst.Logger().WithNamespace("sharing")
 	log.Infof("revokeTrashed called for sharing %s", sharingID)
 	if s.Owner {
-		err = s.Revoke(inst)
+		err = s.revoke(inst, revokeOptions{removeRootReference: false})
 		if err == nil && s.Drive {
 			err = couchdb.DeleteDoc(inst, s)
 			if couchdb.IsNotFoundError(err) {

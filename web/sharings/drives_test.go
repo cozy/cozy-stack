@@ -373,6 +373,28 @@ func createFileRootSharedDrive(
 	return
 }
 
+func requireNoDirSharingReference(t *testing.T, inst *instance.Instance, dirID, sharingID string) {
+	t.Helper()
+
+	dir, err := inst.VFS().DirByID(dirID)
+	require.NoError(t, err)
+	require.NotContains(t, dir.ReferencedBy, couchdb.DocReference{
+		ID:   sharingID,
+		Type: consts.Sharings,
+	})
+}
+
+func requireNoFileSharingReference(t *testing.T, inst *instance.Instance, fileID, sharingID string) {
+	t.Helper()
+
+	file, err := inst.VFS().FileByID(fileID)
+	require.NoError(t, err)
+	require.NotContains(t, file.ReferencedBy, couchdb.DocReference{
+		ID:   sharingID,
+		Type: consts.Sharings,
+	})
+}
+
 func makeAddRecipientsPayload(t *testing.T, sharingID, relationshipName string, contactIDs ...string) []byte {
 	t.Helper()
 
@@ -4116,8 +4138,30 @@ func TestSharedDriveRevocation(t *testing.T) {
 		}, 5*time.Second, 100*time.Millisecond, "Owner's drive sharing document should be deleted after the last recipient is revoked")
 	})
 
+	t.Run("OwnerRootReferenceIsRemoved", func(t *testing.T) {
+		requireNoDirSharingReference(t, env.acme, rootDirID, sharingID)
+	})
+
+	t.Run("OwnerRootCanBeSharedAgain", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+
+		eA.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Recreated drive after recipient revocation",
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, rootDirID))).
+			Expect().Status(http.StatusCreated)
+	})
+
 	t.Run("RevokeAllRecipientsDeletesOwnerSharing", func(t *testing.T) {
-		allSharingID, _, _ := createSharedDrive(
+		allSharingID, allRootDirID, _ := createSharedDrive(
 			t,
 			DriveCreationMethodLegacy,
 			env.acme,
@@ -4138,7 +4182,55 @@ func TestSharedDriveRevocation(t *testing.T) {
 			_, err := sharing.FindSharing(env.acme, allSharingID)
 			return couchdb.IsNotFoundError(err)
 		}, 5*time.Second, 100*time.Millisecond, "Owner's drive sharing document should be deleted after revoking all recipients")
+
+		requireNoDirSharingReference(t, env.acme, allRootDirID, allSharingID)
 	})
+}
+
+func TestFileRootSharedDriveLastRecipientRemovalCleansReference(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, _, _ := env.createClients(t)
+
+	rootFileID := createFile(t, eA, "", "FileRootRevocationReference.txt", env.acmeToken)
+	sharingID, _ := createFileRootSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File root drive for reference cleanup",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+	eA.DELETE("/sharings/"+sharingID+"/recipients/1").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusNoContent)
+
+	require.Eventually(t, func() bool {
+		_, err := sharing.FindSharing(env.acme, sharingID)
+		return couchdb.IsNotFoundError(err)
+	}, 5*time.Second, 100*time.Millisecond, "Owner's file-root drive sharing document should be deleted after the last recipient is revoked")
+
+	requireNoFileSharingReference(t, env.acme, rootFileID, sharingID)
+
+	eA.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(fmt.Sprintf(`{
+			"data": {
+				"type": "%s",
+				"attributes": {
+					"description": "Recreated file root drive after recipient revocation",
+					"file_id": "%s"
+				}
+			}
+		}`, consts.Sharings, rootFileID))).
+		Expect().Status(http.StatusCreated)
 }
 
 func TestOpeningPendingSharedDriveShortcutClearsNewsCounter(t *testing.T) {

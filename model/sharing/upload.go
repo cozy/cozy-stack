@@ -699,11 +699,7 @@ func (s *Sharing) UploadNewFile(
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex, Binary: true}
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
 	if addReferencedBy {
-		ref := couchdb.DocReference{
-			ID:   s.SID,
-			Type: consts.Sharings,
-		}
-		newdoc.ReferencedBy = append(newdoc.ReferencedBy, ref)
+		newdoc.ReferencedBy = append(newdoc.ReferencedBy, s.DocReference())
 	}
 
 	err = create(fs, newdoc, nil)
