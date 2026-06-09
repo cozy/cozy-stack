@@ -128,13 +128,15 @@ func setupSharedDrivesEnvWithOwnerOptions(t *testing.T, ownerOptions *lifecycle.
 
 func forceCrossStack(t *testing.T, baseURL string) func() {
 	t.Helper()
-	prevSameStack := sharings.OnSameStackCheck
+	prevLocal := sharings.LocalInstanceFromURL
 	prevClient := sharings.NewRemoteClient
 	u, _ := url.Parse(baseURL)
-	sharings.OnSameStackCheck = func(_, _ *instance.Instance) bool { return false }
+	sharings.LocalInstanceFromURL = func(rawURL string) *instance.Instance {
+		return nil
+	}
 	sharings.NewRemoteClient = mockAcmeClient(u)
 	return func() {
-		sharings.OnSameStackCheck = prevSameStack
+		sharings.LocalInstanceFromURL = prevLocal
 		sharings.NewRemoteClient = prevClient
 	}
 }
@@ -1008,6 +1010,24 @@ func TestSharedDrivesMove(t *testing.T) {
 		_ = postMoveExpectStatus(t, eB, env.bettyToken, `{
 			  "source": {"file_id": "`+fileID+`"},
 			  "dest": {"dir_id": "`+env.productDirID+`"}
+		}`, 400)
+	})
+
+	t.Run("BadRequest_InvalidSourceInstanceURL", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+		fileID := createFile(t, eB, "", "file-bad-src-url.txt", env.bettyToken)
+		_ = postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {"instance": "not-a-url", "file_id": "`+fileID+`", "sharing_id": "`+env.firstSharingID+`"},
+			  "dest": {"dir_id": "`+env.productDirID+`"}
+		}`, 400)
+	})
+
+	t.Run("BadRequest_InvalidDestInstanceURL", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+		fileID := createFile(t, eB, "", "file-bad-dst-url.txt", env.bettyToken)
+		_ = postMoveExpectStatus(t, eB, env.bettyToken, `{
+			  "source": {"file_id": "`+fileID+`"},
+			  "dest": {"instance": "://broken", "dir_id": "`+env.productDirID+`", "sharing_id": "`+env.firstSharingID+`"}
 		}`, 400)
 	})
 

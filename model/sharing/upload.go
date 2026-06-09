@@ -15,7 +15,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -349,8 +348,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		return ErrInternalServerError
 	}
 
-	dstInstance, err := lifecycle.GetInstance(m.InstanceHost())
-	if err == nil && onSameStack(inst, dstInstance) {
+	if dstInstance := LocalInstanceFromHost(m.InstanceHost()); dstInstance != nil && uploadStoreIsShared() {
 		err := s.optimizedUploadFile(inst, dstInstance, m, fileDoc, file, resBody)
 		if err != nil {
 			inst.Logger().WithNamespace("upload").
@@ -389,19 +387,6 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	res2.Body.Close()
 	return nil
-}
-
-func onSameStack(src, dst *instance.Instance) bool {
-	var srcPort, dstPort string
-	parts := strings.SplitN(src.Domain, ":", 2)
-	if len(parts) > 1 {
-		srcPort = parts[1]
-	}
-	parts = strings.SplitN(dst.Domain, ":", 2)
-	if len(parts) > 1 {
-		dstPort = parts[1]
-	}
-	return srcPort == dstPort
 }
 
 func (s *Sharing) optimizedUploadFile(

@@ -32,6 +32,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
@@ -1405,20 +1406,19 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 			continue
 		}
 
-		// Optimization: use direct database update for recipients on the same stack
-		if IsSameStack(inst, m.Instance) {
-			err = s.UpdateDescriptionSameStack(inst, m.Instance, s.Description)
-			if err != nil {
-				inst.Logger().WithNamespace("sharing").
-					Warnf("Can't update description directly for same-stack recipient %s: %s", m.Instance, err)
-				errors = append(errors, fmt.Errorf("failed to update same-stack recipient %s: %w", m.Instance, err))
+		if recipientInst := LocalInstanceFromURL(m.Instance); recipientInst != nil {
+			recipientSharing, localErr := FindSharing(recipientInst, s.SID)
+			if localErr == nil {
+				localErr = recipientSharing.PatchDescription(recipientInst, s.Description)
+			}
+			if localErr == nil {
+				successCount++
 				continue
 			}
-			successCount++
-			continue
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Same-stack update failed for %s, falling through to HTTP: %s", m.Instance, localErr)
 		}
 
-		// Fall back to HTTP request for cross-stack recipients
 		opts := &request.Options{
 			Method: http.MethodPut,
 			Scheme: u.Scheme,
@@ -1466,48 +1466,35 @@ func shouldReplicateDescriptionChange(i int, m Member) bool {
 	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
 }
 
-// IsSameStack checks if the recipient instance is on the same stack as the owner instance
-func IsSameStack(ownerInst *instance.Instance, recipientURL string) bool {
-	u, err := url.Parse(recipientURL)
-	if err != nil {
-		return false
+// LocalInstanceFromURL returns the local instance for the given URL, or nil.
+func LocalInstanceFromURL(rawURL string) *instance.Instance {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return nil
 	}
-
-	// Extract port from both domains for comparison
-	var ownerPort, recipientPort string
-	ownerParts := strings.SplitN(ownerInst.Domain, ":", 2)
-	if len(ownerParts) > 1 {
-		ownerPort = ownerParts[1]
-	}
-	recipientParts := strings.SplitN(u.Host, ":", 2)
-	if len(recipientParts) > 1 {
-		recipientPort = recipientParts[1]
-	}
-
-	// Same stack if ports match (both instances running on same port)
-	return ownerPort == recipientPort
+	return LocalInstanceFromHost(u.Host)
 }
 
-// UpdateDescriptionSameStack directly updates the sharing description for recipients on the same stack
-func (s *Sharing) UpdateDescriptionSameStack(ownerInst *instance.Instance, recipientURL string, description string) error {
-	u, err := url.Parse(recipientURL)
-	if err != nil {
-		return err
+// LocalInstanceFromHost returns the local instance for the given host, or nil.
+// The host may include a port (e.g. "example.com:8080"). The exact host is
+// tried first, then a normalized host without port is tried as a fallback.
+func LocalInstanceFromHost(host string) *instance.Instance {
+	if host == "" {
+		return nil
+	}
+	if inst, err := lifecycle.GetInstance(host); err == nil {
+		return inst
 	}
 
-	// Get the recipient instance directly from the same stack
-	recipientInst, err := lifecycle.GetInstance(u.Host)
-	if err != nil {
-		return err
+	domain := utils.ExtractInstanceHost(host)
+	if domain == "" || domain == host {
+		return nil
 	}
-
-	// Find the sharing document on the recipient's instance
-	recipientSharing, err := FindSharing(recipientInst, s.SID)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
-		return err
+		return nil
 	}
-
-	return recipientSharing.PatchDescription(recipientInst, description)
+	return inst
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.
