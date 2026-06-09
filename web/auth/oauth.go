@@ -538,8 +538,14 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 	}
 
 	s, err := sharing.FindSharing(instance, params.sharingID)
-	if err != nil || s.Owner || s.Active || len(s.Members) < 2 {
+	if err != nil || s.Owner || len(s.Members) < 2 || (s.Active && !s.Drive) {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
+	}
+
+	if s.Drive && s.Active {
+		// Invitation emails and shortcuts can still point here after auto-accept.
+		// In that case, this route is used as an "open sharing" link.
+		return c.Redirect(http.StatusSeeOther, s.DriveTargetURL(instance).String())
 	}
 
 	if s.Drive || strings.ToLower(c.QueryParam("shortcut")) == "true" {
@@ -556,10 +562,10 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 			}
 		}
 		u := instance.SubDomain(consts.DriveSlug)
-		u.RawQuery = "sharing=" + s.SID
 		if s.Drive {
-			u.Fragment = "/folder/" + consts.SharedDrivesDirID
+			u = s.DriveTargetURL(instance)
 		} else {
+			u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
 			u.Fragment = "/folder/" + consts.SharedWithMeDirID
 		}
 		return c.Redirect(http.StatusSeeOther, u.String())

@@ -165,6 +165,27 @@ func (s *Sharing) DriveRootID() (string, error) {
 	return rule.Values[0], nil
 }
 
+// DriveTargetURL returns the Drive URL that opens the shared drive root.
+func (s *Sharing) DriveTargetURL(inst *instance.Instance) *url.URL {
+	u := inst.SubDomain(consts.DriveSlug)
+	u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
+
+	rootID, err := s.DriveRootID()
+	if err != nil {
+		u.Fragment = "/folder/" + consts.SharedDrivesDirID
+		return u
+	}
+
+	sharingID := url.PathEscape(s.SID)
+	rootID = url.PathEscape(rootID)
+	if s.HasFileDriveRoot() {
+		u.Fragment = "/shareddrive/" + sharingID + "/file/" + rootID
+	} else {
+		u.Fragment = "/shareddrive/" + sharingID + "/" + rootID
+	}
+	return u
+}
+
 // GetFileDriveRoot returns the root file of a file-root shared drive.
 func (s *Sharing) GetFileDriveRoot(inst *instance.Instance) (*vfs.FileDoc, error) {
 	rootID, err := s.DriveRootID()
@@ -1091,6 +1112,10 @@ func findIntentForRedirect(inst *instance.Instance, webapp *app.WebappManifest, 
 // RedirectAfterAuthorizeURL returns the URL for the redirection after a user
 // has authorized a sharing.
 func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
+	if s.Drive {
+		return s.DriveTargetURL(inst)
+	}
+
 	doctype := s.Rules[0].DocType
 	webapp, _ := app.GetWebappBySlug(inst, s.AppSlug)
 

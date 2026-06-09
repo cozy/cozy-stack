@@ -307,9 +307,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 	}
 
 	filename := cleanFilename(s.Rules[0].Title) + ".url"
-	u := inst.SubDomain(consts.DriveSlug)
-	u.Fragment = "/folder/" + dir.ID()
-	driveURL := u.String()
+	driveURL := s.driveShortcutURL(inst, seen)
 	body := shortcut.Generate(driveURL)
 	cm := vfs.NewCozyMetadata(s.Members[0].Instance)
 	fileDoc, err := vfs.NewFileDoc(
@@ -367,6 +365,22 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return s.SendShortcutNotification(inst, fileDoc, driveURL)
 	}
 	return nil
+}
+
+// AuthorizeSharingURL returns the recipient-side URL that opens the sharing
+// authorization flow.
+func (s *Sharing) AuthorizeSharingURL(inst *instance.Instance, state string) string {
+	return inst.PageURL("/auth/authorize/sharing", url.Values{
+		"sharing_id": {s.SID},
+		"state":      {state},
+	})
+}
+
+func (s *Sharing) driveShortcutURL(inst *instance.Instance, seen bool) string {
+	if !seen && len(s.Credentials) > 0 && s.Credentials[0].State != "" {
+		return s.AuthorizeSharingURL(inst, s.Credentials[0].State)
+	}
+	return s.DriveTargetURL(inst).String()
 }
 
 var illegalChars = []string{"<", ">", ":", `"`, "/", "\\", "|", "?", "*"}
@@ -520,7 +534,9 @@ func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) 
 
 	v := url.Values{}
 	v.Add("shortcut", "true")
-	v.Add("url", link)
+	if !s.Drive {
+		v.Add("url", link)
+	}
 	u.RawQuery = v.Encode()
 	return m.CreateSharingRequest(inst, s, creds, u)
 }
