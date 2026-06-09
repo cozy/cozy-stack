@@ -393,6 +393,11 @@ const (
 	// sharings by example, as a token is created just after the client
 	// creation.
 	NotPending CreateOptions = iota + 1
+	// SoftwareIDPrevalidated tells Create to skip the registry probe in
+	// CheckSoftwareID. The caller is responsible for proving that the
+	// registry://<slug> SoftwareID is trusted (e.g. by reading the locally
+	// installed manifest).
+	SoftwareIDPrevalidated
 )
 
 func hasOptions(needle CreateOptions, haystack []CreateOptions) bool {
@@ -456,8 +461,10 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	if err := c.checkMandatoryFields(i); err != nil {
 		return err
 	}
-	if err := c.CheckSoftwareID(i); err != nil {
-		return err
+	if !hasOptions(SoftwareIDPrevalidated, opts) {
+		if err := c.CheckSoftwareID(i); err != nil {
+			return err
+		}
 	}
 
 	if err := c.ensureClientNameUnicity(i); err != nil {

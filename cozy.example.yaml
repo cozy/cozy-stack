@@ -385,6 +385,29 @@ deprecated_apps:
 authorized_hosts_for_confirm_auth:
   - sometool.example.org
 
+# Authentication can be configured per context. The keys under "authentication"
+# are context names.
+authentication:
+  beta:
+    disable_password_authentication: false
+    oidc:
+      client_id: aClientID
+      client_secret: s3cret3
+      scope: openid profile
+      redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
+      authorize_url: https://identity-provider/path/to/authorize
+      token_url: https://identity-provider/path/to/token
+      userinfo_url: https://identity-provider/path/to/userinfo
+      userinfo_instance_field: cozy_number
+      id_token_jwk_url: https://identity-provider/path/to/jwk
+      allow_app_token_exchange: true
+      app_token_exchange:
+        # OIDC id_token audience.
+        twake-mail-web:
+          # Must be a Cozy linked application software_id. The local OAuth
+          # scope is derived from this linked app manifest.
+          software_id: registry://mail
+
 notifications:
   # Activate development APIs (iOS only)
   development: false
@@ -506,29 +529,6 @@ contexts:
     # permissions have changed
     additional_platform_apps:
       - superapp
-    # Authentication can be configured per context. This example shows an OIDC
-    # provider that allows a trusted frontend application to exchange its OIDC
-    # id_token for a local Cozy OAuth client/token bound to a linked application.
-    authentication:
-     the-context-name:
-       disable_password_authentication: false
-       oidc:
-         client_id: aClientID
-         client_secret: s3cret3
-         scope: openid profile
-         redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
-         authorize_url: https://identity-provider/path/to/authorize
-         token_url: https://identity-provider/path/to/token
-         userinfo_url: https://identity-provider/path/to/userinfo
-         userinfo_instance_field: cozy_number
-         id_token_jwk_url: https://identity-provider/path/to/jwk
-         allow_app_token_exchange: true
-         app_token_exchange:
-           # OIDC id_token audience.
-           twake-mail-web:
-             # Must be a Cozy linked application software_id. The local OAuth
-             # scope is derived from this linked app manifest.
-             software_id: registry://mail
     # Provides custom logo used in some cozy app (e.g. Home footer)
     # Use type key if you want defined a logo as main
     logos:
