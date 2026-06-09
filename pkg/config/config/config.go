@@ -426,6 +426,19 @@ type DeprecatedApp struct {
 	StoreURLs map[string]string `mapstructure:"store_urls"`
 }
 
+// OIDCAppTokenExchangeConfig contains OIDC application token exchange settings.
+type OIDCAppTokenExchangeConfig struct {
+	Enabled bool
+	Apps    map[string]OIDCAppTokenExchangeAppConfig
+}
+
+// OIDCAppTokenExchangeAppConfig contains the linked application allowed for an
+// OIDC token audience.
+type OIDCAppTokenExchangeAppConfig struct {
+	Audience   string
+	SoftwareID string `mapstructure:"software_id"`
+}
+
 // Worker contains the configuration fields for a specific worker type.
 type Worker struct {
 	WorkerType   string
@@ -585,6 +598,47 @@ func GetOIDCContextByDomain(domain string) (string, error) {
 		match = contextName
 	}
 	return match, nil
+}
+
+// GetOIDCAppTokenExchange returns the trusted linked applications allowed to
+// exchange OIDC ID tokens for local OAuth tokens in the given context.
+func GetOIDCAppTokenExchange(contextName string) (OIDCAppTokenExchangeConfig, error) {
+	var cfg OIDCAppTokenExchangeConfig
+	oidc, ok := GetOIDC(contextName)
+	if !ok {
+		return cfg, nil
+	}
+
+	enabled, _ := oidc["allow_app_token_exchange"].(bool)
+	cfg.Enabled = enabled
+	if !enabled {
+		return cfg, nil
+	}
+
+	rawApps, ok := oidc["app_token_exchange"]
+	if !ok {
+		cfg.Apps = map[string]OIDCAppTokenExchangeAppConfig{}
+		return cfg, nil
+	}
+
+	apps := make(map[string]OIDCAppTokenExchangeAppConfig)
+	if err := mapstructure.Decode(rawApps, &apps); err != nil {
+		return cfg, fmt.Errorf("invalid app token exchange configuration: %w", err)
+	}
+
+	for audience, appConfig := range apps {
+		appConfig.Audience = audience
+		appConfig.SoftwareID = strings.TrimSpace(appConfig.SoftwareID)
+		if appConfig.SoftwareID == "" {
+			return cfg, fmt.Errorf("software_id is required for app token exchange audience %q", audience)
+		}
+		if !strings.HasPrefix(appConfig.SoftwareID, "registry://") || strings.TrimPrefix(appConfig.SoftwareID, "registry://") == "" {
+			return cfg, fmt.Errorf("software_id for app token exchange audience %q must be a linked app", audience)
+		}
+		apps[audience] = appConfig
+	}
+	cfg.Apps = apps
+	return cfg, nil
 }
 
 // GetFranceConnect returns the FranceConnect config for the given context

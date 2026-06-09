@@ -242,15 +242,21 @@ func TestConfigUnmarshal(t *testing.T) {
 		"example_oidc": map[string]interface{}{
 			"disable_password_authentication": true,
 			"oidc": map[string]interface{}{
-				"client_id":               "some-id",
-				"client_secret":           "some-secret",
-				"scope":                   "openid",
-				"redirect_uri":            "https://some-redirect-uri",
-				"authorize_url":           "https://some-authorize-url",
-				"token_url":               "https://some-token-url",
-				"userinfo_url":            "https://some-user-info-url",
-				"logout_url":              "https://some-logout-url",
-				"userinfo_instance_field": "instance-field",
+				"client_id":                "some-id",
+				"client_secret":            "some-secret",
+				"scope":                    "openid",
+				"redirect_uri":             "https://some-redirect-uri",
+				"authorize_url":            "https://some-authorize-url",
+				"token_url":                "https://some-token-url",
+				"userinfo_url":             "https://some-user-info-url",
+				"logout_url":               "https://some-logout-url",
+				"userinfo_instance_field":  "instance-field",
+				"allow_app_token_exchange": true,
+				"app_token_exchange": map[string]interface{}{
+					"twake-mail-web": map[string]interface{}{
+						"software_id": "registry://mail",
+					},
+				},
 			},
 		},
 	}, cfg.Authentication)
@@ -373,6 +379,77 @@ func TestUseViper(t *testing.T) {
 	cfg.Set("couchdb.url", "http://db:1234")
 	assert.NoError(t, UseViper(cfg))
 	assert.Equal(t, "http://db:1234/", CouchCluster(prefixer.GlobalCouchCluster).URL.String())
+}
+
+func TestGetOIDCAppTokenExchange(t *testing.T) {
+	t.Run("loads configured linked apps", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{
+							"software_id": " registry://mail ",
+						},
+					},
+				},
+			},
+		}
+
+		cfg, err := GetOIDCAppTokenExchange("mail-context")
+		require.NoError(t, err)
+		require.True(t, cfg.Enabled)
+		require.Contains(t, cfg.Apps, "twake-mail-web")
+		assert.Equal(t, "twake-mail-web", cfg.Apps["twake-mail-web"].Audience)
+		assert.Equal(t, "registry://mail", cfg.Apps["twake-mail-web"].SoftwareID)
+	})
+
+	t.Run("disabled when missing", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{}
+
+		cfg, err := GetOIDCAppTokenExchange("missing-context")
+		require.NoError(t, err)
+		assert.False(t, cfg.Enabled)
+		assert.Nil(t, cfg.Apps)
+	})
+
+	t.Run("requires software id", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		_, err := GetOIDCAppTokenExchange("mail-context")
+		require.EqualError(t, err, `software_id is required for app token exchange audience "twake-mail-web"`)
+	})
+
+	t.Run("requires linked app software id", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{
+							"software_id": "mail",
+						},
+					},
+				},
+			},
+		}
+
+		_, err := GetOIDCAppTokenExchange("mail-context")
+		require.EqualError(t, err, `software_id for app token exchange audience "twake-mail-web" must be a linked app`)
+	})
 }
 
 func TestSetup(t *testing.T) {

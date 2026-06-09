@@ -193,6 +193,10 @@ authentication:
       userinfo_url: https://some-user-info-url
       logout_url: https://some-logout-url
       userinfo_instance_field: instance-field
+      allow_app_token_exchange: true
+      app_token_exchange:
+        twake-mail-web:
+          software_id: registry://mail
 
 # Public OIDC context name - references the authentication context to use for public Twake accounts
 public_oidc_context: twake_public
