@@ -4214,6 +4214,82 @@ func TestOpeningPendingSharedDriveShortcutClearsNewsCounter(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Betty's opened shared-drive shortcut should be removed after revocation")
 }
 
+func TestBackgroundRealtimeConnectionKeepsSharingNew(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+	sharingID := createDirectRecipientDriveSharing(
+		t,
+		env.acme,
+		eA,
+		env.acmeToken,
+		"Betty Background",
+		"betty@example.net",
+		env.tsB.URL,
+		"Background Realtime Drive",
+		"Drive watched by a background indexer",
+	)
+
+	recipientSharing := waitForSharingOnRecipient(t, env.betty, sharingID)
+	require.NotEmpty(t, recipientSharing.ShortcutID)
+	shortcutID := recipientSharing.ShortcutID
+
+	loginSharingRecipient(t, eB)
+	FakeOwnerInstanceForSharing(t, env.betty, env.tsA.URL, sharingID)
+	require.NotEmpty(t, recipientSharing.Credentials)
+	require.NotEmpty(t, recipientSharing.Credentials[0].State)
+	authorizeLink := fmt.Sprintf(
+		"%s/auth/authorize/sharing?sharing_id=%s&state=%s",
+		env.tsB.URL,
+		sharingID,
+		url.QueryEscape(recipientSharing.Credentials[0].State),
+	)
+	openSharingAuthorize(t, eB, authorizeLink, sharingID)
+
+	// Put the shortcut back in the "new" state, like after an auto-accepted
+	// sharing where the user has not looked at the drive yet.
+	setShortcutSharingStatus(t, env.betty, shortcutID, "new")
+
+	ws := eB.GET("/sharings/drives/"+sharingID+"/realtime").
+		WithQuery("background", "true").
+		WithWebsocketUpgrade().
+		Expect().Status(http.StatusSwitchingProtocols).
+		Websocket()
+	ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+	time.Sleep(300 * time.Millisecond)
+	ws.Disconnect()
+
+	count, err := sharing.CountNewShortcuts(env.betty)
+	require.NoError(t, err)
+	require.Equal(t, 1, count, "a background realtime connection should not mark the sharing as seen")
+
+	ws = eB.GET("/sharings/drives/" + sharingID + "/realtime").
+		WithWebsocketUpgrade().
+		Expect().Status(http.StatusSwitchingProtocols).
+		Websocket()
+	defer ws.Disconnect()
+	ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+
+	require.Eventually(t, func() bool {
+		count, err := sharing.CountNewShortcuts(env.betty)
+		return err == nil && count == 0
+	}, 5*time.Second, 100*time.Millisecond, "a foreground realtime connection should mark the sharing as seen")
+}
+
+func setShortcutSharingStatus(t *testing.T, inst *instance.Instance, shortcutID, status string) {
+	t.Helper()
+	file, err := inst.VFS().FileByID(shortcutID)
+	require.NoError(t, err)
+	old := file.Clone().(*vfs.FileDoc)
+	meta, ok := file.Metadata["sharing"].(map[string]interface{})
+	require.True(t, ok, "shortcut should carry sharing metadata")
+	meta["status"] = status
+	require.NoError(t, inst.VFS().UpdateFileDoc(old, file))
+}
+
 func TestDirectoryRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
