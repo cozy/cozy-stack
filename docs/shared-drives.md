@@ -1073,6 +1073,12 @@ Recipients are transparently proxied to the owner's instance.
 Get the changes inside a shared drive in real-time from a websocket.
 Identical to [`GET /realtime`](realtime.md), except subscribing to the shared drive is automatically done.
 
+On the recipient side, connecting marks the sharing as seen (its shortcut
+leaves the `new` status counted by `GET /sharings/news`). Background
+consumers that watch a drive without the user looking at it, like the
+dataproxy indexer, must pass the query parameter `background=true` to keep
+the sharing unseen.
+
 This route is currently available only for directory-root shared drives.
 For file-root shared drives, the websocket stream emits only events whose
 target is the root file of the drive. Unrelated file events are filtered out.
