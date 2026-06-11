@@ -31,6 +31,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	weboidc "github.com/cozy/cozy-stack/web/oidc"
 	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
@@ -802,6 +803,14 @@ func discoveryStateForMember(s *sharing.Sharing, currentState string, m *sharing
 	return credentials.State, nil
 }
 
+func oidcContextForMemberEmail(email string) (string, error) {
+	at := strings.LastIndex(email, "@")
+	if at < 0 || at == len(email)-1 {
+		return "", nil
+	}
+	return config.GetOIDCContextByDomain(email[at+1:])
+}
+
 // GetDiscovery displays a form where a recipient can give the address of their
 // cozy instance
 func GetDiscovery(c echo.Context) error {
@@ -845,6 +854,15 @@ func GetDiscovery(c echo.Context) error {
 			if err == nil {
 				return c.Redirect(http.StatusFound, redirectURL)
 			}
+		}
+	}
+
+	if m.Instance == "" && m.Email != "" {
+		contextName, err := oidcContextForMemberEmail(m.Email)
+		if err != nil {
+			inst.Logger().WithNamespace("oidc").Warnf("Cannot resolve sharing OIDC context from email %q: %s", m.Email, err)
+		} else if contextName != "" {
+			return weboidc.RedirectSharingWithContext(c, inst, contextName, sharingID, state, m.Email)
 		}
 	}
 
