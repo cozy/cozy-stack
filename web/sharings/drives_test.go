@@ -2819,6 +2819,21 @@ func TestOrgDriveFlag(t *testing.T) {
 		recipientOrgDrive, err := getOrgDriveFlag(env.tsB.URL, env.bettyToken)
 		return err == nil && recipientOrgDrive
 	}, 10*time.Second, 200*time.Millisecond, "recipient sharing should preserve org_drive")
+
+	eOwner.DELETE("/sharings/"+sharingID+"/recipients").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusNoContent)
+
+	var revoked sharing.Sharing
+	require.Eventually(t, func() bool {
+		if err := couchdb.GetDoc(env.acme, consts.Sharings, sharingID, &revoked); err != nil {
+			return false
+		}
+		return revoked.OrgDrive && !revoked.Active
+	}, 5*time.Second, 100*time.Millisecond, "owner org-drive sharing should be kept inactive after revocation")
+	require.Len(t, revoked.Members, 2)
+	assert.Equal(t, sharing.MemberStatusRevoked, revoked.Members[1].Status)
+	requireNoDirSharingReference(t, env.acme, folderID, sharingID)
 }
 
 func TestSharedDriveTrashAttribution(t *testing.T) {

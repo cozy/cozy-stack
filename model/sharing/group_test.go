@@ -301,6 +301,29 @@ func TestGroups(t *testing.T) {
 		assert.True(t, couchdb.IsNotFoundError(err), "expected deleted sharing, got %v", err)
 	})
 
+	t.Run("RevokeLastOrgDriveGroupKeepsInactiveSharing", func(t *testing.T) {
+		team := createGroup(t, inst, "Org Drive Group")
+		_ = createContactInGroups(t, inst, "OrgDriveGroupAlice", []string{team.ID()})
+		s := createDriveSharingForGroupTest(t, inst, "Org drive group revoke")
+		s.OrgDrive = true
+		sid := s.SID
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+		require.Len(t, s.Members, 2)
+		require.Len(t, s.Groups, 1)
+		require.NoError(t, s.RevokeGroup(inst, 0))
+
+		stored := &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, stored))
+		assert.False(t, stored.Active)
+		assert.True(t, stored.OrgDrive)
+		require.Len(t, stored.Members, 2)
+		assert.Equal(t, MemberStatusRevoked, stored.Members[1].Status)
+		require.Len(t, stored.Groups, 1)
+		assert.True(t, stored.Groups[0].Revoked)
+	})
+
 	t.Run("RevokeEmptyLastDriveGroupDeletesSharing", func(t *testing.T) {
 		team := createGroup(t, inst, "Empty Drive Group")
 		s := createDriveSharingForGroupTest(t, inst, "Empty drive group revoke")
