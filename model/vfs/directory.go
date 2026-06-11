@@ -300,7 +300,7 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	}
 
 	trashDirID := consts.TrashDirID
-	restorePath := path.Dir(oldpath)
+	restorePath := path.Dir(oldpath) + "/"
 
 	var newdoc *DirDoc
 	err = tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
