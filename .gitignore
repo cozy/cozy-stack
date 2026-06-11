@@ -30,3 +30,4 @@ tmp
 /debian/tmp/
 /.gocache
 /.idea
+.opencode
