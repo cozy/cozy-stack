@@ -779,6 +779,31 @@ func submitSharingDiscovery(
 	return redirectHeader.NotEmpty().Raw()
 }
 
+func assertSharedDriveRedirectLocation(t *testing.T, location, sharingID string) {
+	t.Helper()
+
+	u, err := url.Parse(location)
+	require.NoError(t, err)
+
+	folderPrefix := "/shareddrive/" + sharingID + "/"
+	filePrefix := "/sharings/shareddrive/" + sharingID + "/file/"
+	switch {
+	case strings.HasPrefix(u.Fragment, folderPrefix):
+		require.NotEmpty(t, strings.TrimPrefix(u.Fragment, folderPrefix), "folder redirect should include a root folder id")
+	case strings.HasPrefix(u.Fragment, filePrefix):
+		require.NotEmpty(t, strings.TrimPrefix(u.Fragment, filePrefix), "file redirect should include a root file id")
+	default:
+		require.Failf(
+			t,
+			"unexpected shared drive redirect",
+			"expected Location %q fragment to start with %q or %q",
+			location,
+			folderPrefix,
+			filePrefix,
+		)
+	}
+}
+
 func submitSharingAuthorize(
 	t *testing.T,
 	eRecipient *httpexpect.Expect,
@@ -793,7 +818,7 @@ func submitSharingAuthorize(
 	state := authorizeURL.Query().Get("state")
 	require.NotEmpty(t, state)
 
-	eRecipient.POST(authorizeURL.Path).
+	location := eRecipient.POST(authorizeURL.Path).
 		WithFormField("sharing_id", sharingID).
 		WithFormField("state", state).
 		WithFormField("csrf_token", csrfToken).
@@ -801,7 +826,8 @@ func submitSharingAuthorize(
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("#/shareddrive/" + sharingID + "/")
+		Raw()
+	assertSharedDriveRedirectLocation(t, location, sharingID)
 }
 
 func openSharingAuthorize(
@@ -817,14 +843,15 @@ func openSharingAuthorize(
 	state := authorizeURL.Query().Get("state")
 	require.NotEmpty(t, state)
 
-	eRecipient.GET(authorizeURL.Path).
+	location := eRecipient.GET(authorizeURL.Path).
 		WithQuery("sharing_id", sharingID).
 		WithQuery("state", state).
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().
 		Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("#/shareddrive/" + sharingID + "/")
+		Raw()
+	assertSharedDriveRedirectLocation(t, location, sharingID)
 }
 
 func waitForSharingOnRecipient(t *testing.T, recipientInstance *instance.Instance, sharingID string) *sharing.Sharing {
@@ -1832,14 +1859,15 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 	state := recipientSharing.Credentials[0].State
 	require.NotEmpty(t, state)
 
-	env.eRecipient.GET("/auth/authorize/sharing").
+	location := env.eRecipient.GET("/auth/authorize/sharing").
 		WithQuery("sharing_id", sharingID).
 		WithQuery("state", state).
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().
 		Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("#/shareddrive/" + sharingID + "/")
+		Raw()
+	assertSharedDriveRedirectLocation(t, location, sharingID)
 }
 
 func TestSendAnswerIsIdempotentAfterStaleConflict(t *testing.T) {
