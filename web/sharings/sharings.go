@@ -8,6 +8,7 @@ package sharings
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,11 +31,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	weboidc "github.com/cozy/cozy-stack/web/oidc"
 	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
+
+var errMissingOIDCContextForOrgDomain = errors.New("organization domain instance has no context")
 
 // CreateSharing initializes a new sharing (on the sharer)
 func CreateSharing(c echo.Context) error {
@@ -803,12 +807,38 @@ func discoveryStateForMember(s *sharing.Sharing, currentState string, m *sharing
 	return credentials.State, nil
 }
 
-func oidcContextForMemberEmail(email string) (string, error) {
+func domainFromEmail(email string) string {
 	at := strings.LastIndex(email, "@")
 	if at < 0 || at == len(email)-1 {
+		return ""
+	}
+	return utils.NormalizeDomain(email[at+1:])
+}
+
+func oidcContextForOrgDomain(orgDomain string) (string, error) {
+	instances, err := instance.ListByOrgDomain(orgDomain)
+	if err != nil {
+		return "", err
+	}
+	if len(instances) == 0 {
 		return "", nil
 	}
-	return config.GetOIDCContextByDomain(email[at+1:])
+	contextName := instances[0].ContextName
+	if contextName == "" {
+		return "", fmt.Errorf("%w: %s", errMissingOIDCContextForOrgDomain, instances[0].Domain)
+	}
+	return contextName, nil
+}
+
+func oidcContextForMemberEmail(email string) (string, error) {
+	domain := domainFromEmail(email)
+	if domain == "" {
+		return "", nil
+	}
+	if contextName, err := oidcContextForOrgDomain(domain); err != nil || contextName != "" {
+		return contextName, err
+	}
+	return config.GetOIDCContextByDomain(domain)
 }
 
 // GetDiscovery displays a form where a recipient can give the address of their
