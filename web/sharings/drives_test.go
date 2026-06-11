@@ -1961,7 +1961,7 @@ func TestFileRootSharedDriveAuthorizeRedirect(t *testing.T) {
 		Expect().
 		Status(http.StatusSeeOther).
 		Header("Location").
-		Contains("#/shareddrive/" + sharingID + "/file/" + rootFileID)
+		Contains("#/sharings/shareddrive/" + sharingID + "/file/" + rootFileID)
 }
 
 func TestSharedDriveAcceptance(t *testing.T) {

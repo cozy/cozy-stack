@@ -168,7 +168,6 @@ func (s *Sharing) DriveRootID() (string, error) {
 // DriveTargetURL returns the Drive URL that opens the shared drive root.
 func (s *Sharing) DriveTargetURL(inst *instance.Instance) *url.URL {
 	u := inst.SubDomain(consts.DriveSlug)
-	u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
 
 	rootID, err := s.DriveRootID()
 	if err != nil {
@@ -179,7 +178,7 @@ func (s *Sharing) DriveTargetURL(inst *instance.Instance) *url.URL {
 	sharingID := url.PathEscape(s.SID)
 	rootID = url.PathEscape(rootID)
 	if s.HasFileDriveRoot() {
-		u.Fragment = "/shareddrive/" + sharingID + "/file/" + rootID
+		u.Fragment = "/sharings/shareddrive/" + sharingID + "/file/" + rootID
 	} else {
 		u.Fragment = "/shareddrive/" + sharingID + "/" + rootID
 	}
