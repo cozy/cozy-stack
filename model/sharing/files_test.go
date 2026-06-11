@@ -28,7 +28,7 @@ func TestDriveURLHelpers(t *testing.T) {
 		}
 
 		u := s.DriveTargetURL(inst)
-		assert.Equal(t, "sharing=sharing-id", u.RawQuery)
+		assert.Empty(t, u.RawQuery)
 		assert.Equal(t, "/shareddrive/sharing-id/folder-id", u.Fragment)
 	})
 
@@ -41,8 +41,8 @@ func TestDriveURLHelpers(t *testing.T) {
 		}
 
 		u := s.DriveTargetURL(inst)
-		assert.Equal(t, "sharing=sharing-id", u.RawQuery)
-		assert.Equal(t, "/shareddrive/sharing-id/file/file-id", u.Fragment)
+		assert.Empty(t, u.RawQuery)
+		assert.Equal(t, "/sharings/shareddrive/sharing-id/file/file-id", u.Fragment)
 	})
 
 	t.Run("FallbackTarget", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestDriveURLHelpers(t *testing.T) {
 		}
 
 		u := s.DriveTargetURL(inst)
-		assert.Equal(t, "sharing=sharing-id", u.RawQuery)
+		assert.Empty(t, u.RawQuery)
 		assert.Equal(t, "/folder/"+consts.SharedDrivesDirID, u.Fragment)
 	})
 
@@ -82,6 +82,7 @@ func TestDriveURLHelpers(t *testing.T) {
 
 		seenURL, err := url.Parse(s.driveShortcutURL(inst, true))
 		require.NoError(t, err)
+		assert.Empty(t, seenURL.RawQuery)
 		assert.Equal(t, "/shareddrive/sharing-id/folder-id", seenURL.Fragment)
 	})
 }
