@@ -541,6 +541,9 @@ func tokenExchangeOriginAllowed(origin string, inst *instance.Instance) bool {
 	if tokenExchangeOrgDomainOriginAllowed(originHost, inst) {
 		return true
 	}
+	if tokenExchangeAppOriginAllowed(origin, originHost, inst) {
+		return true
+	}
 
 	return tokenExchangeAdminPanelOriginAllowed(origin, originHost, inst)
 }
@@ -551,6 +554,21 @@ func tokenExchangeOrgDomainOriginAllowed(originHost string, inst *instance.Insta
 		return false
 	}
 	return originHost == orgDomain || strings.HasSuffix(originHost, "."+orgDomain)
+}
+
+func tokenExchangeAppOriginAllowed(origin, originHost string, inst *instance.Instance) bool {
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return false
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return false
+	}
+
+	instanceHost, appSlug, _ := config.SplitCozyHost(originHost)
+	return appSlug != "" &&
+		inst.HasDomain(instanceHost) &&
+		tokenExchangeAppSlugAllowed(inst.ContextName, appSlug)
 }
 
 func tokenExchangeAdminPanelOriginAllowed(origin, originHost string, inst *instance.Instance) bool {
@@ -634,12 +652,20 @@ func tokenExchange(c echo.Context) error {
 	}
 	reqBody.IDToken = strings.TrimSpace(reqBody.IDToken)
 	reqBody.Scope = strings.TrimSpace(reqBody.Scope)
+	reqBody.ExchangeType = strings.TrimSpace(reqBody.ExchangeType)
 	if reqBody.IDToken == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the id_token parameter is mandatory",
 		})
 	}
-	if reqBody.Scope == "" {
+	exchangeType, err := tokenExchangeRequestExchangeType(reqBody.ExchangeType)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	reqBody.ExchangeType = exchangeType
+	if exchangeType == tokenExchangeTypeAdmin && reqBody.Scope == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the scope parameter is mandatory",
 		})
