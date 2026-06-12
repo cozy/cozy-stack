@@ -308,6 +308,66 @@ func TestConfigUnmarshal(t *testing.T) {
 	assert.Equal(t, []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}, cfg.SafeHTTPTrustedNetworks)
 }
 
+func TestGetOIDCContextByDomain(t *testing.T) {
+	oldConfig := config
+	t.Cleanup(func() {
+		config = oldConfig
+	})
+
+	config = &Config{
+		Authentication: map[string]interface{}{
+			"acme": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "acme.fr.",
+				},
+			},
+			"beta": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "beta.example",
+				},
+			},
+		},
+	}
+
+	contextName, err := GetOIDCContextByDomain(" ACME.FR ")
+	require.NoError(t, err)
+	assert.Equal(t, "acme", contextName)
+
+	contextName, err = GetOIDCContextByDomain("beta.example")
+	require.NoError(t, err)
+	assert.Equal(t, "beta", contextName)
+
+	contextName, err = GetOIDCContextByDomain("unknown.example")
+	require.NoError(t, err)
+	assert.Empty(t, contextName)
+}
+
+func TestGetOIDCContextByDomainConflict(t *testing.T) {
+	oldConfig := config
+	t.Cleanup(func() {
+		config = oldConfig
+	})
+
+	config = &Config{
+		Authentication: map[string]interface{}{
+			"first": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "example.com",
+				},
+			},
+			"second": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "example.com",
+				},
+			},
+		},
+	}
+
+	contextName, err := GetOIDCContextByDomain("example.com")
+	assert.ErrorIs(t, err, ErrOIDCDomainConflict)
+	assert.Empty(t, contextName)
+}
+
 func TestUseViper(t *testing.T) {
 	cfg := viper.New()
 	cfg.Set("couchdb.url", "http://db:1234")

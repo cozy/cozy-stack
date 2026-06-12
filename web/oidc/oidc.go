@@ -124,8 +124,14 @@ func StartFranceConnect(c echo.Context) error {
 // Sharing is the route to use the SSO to accept a sharing.
 func Sharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	return RedirectSharingWithContext(c, inst, inst.ContextName, c.QueryParam("sharingID"), c.QueryParam("state"), "")
+}
+
+// RedirectSharingWithContext starts the sharing OIDC flow with the given context.
+// If loginHint is empty, the usual instance login hint is used.
+func RedirectSharingWithContext(c echo.Context, inst *instance.Instance, contextName, sharingID, sharingState, loginHint string) error {
 	conf, err := oidcprovider.LoadConfig(
-		inst.ContextName,
+		contextName,
 		oidcprovider.RequireClientID,
 		oidcprovider.RequireScope,
 		oidcprovider.RequireRedirectURI,
@@ -135,7 +141,10 @@ func Sharing(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeSharingStartURL(inst, c.QueryParam("sharingID"), c.QueryParam("state"), conf, inst.ContextName)
+	if loginHint == "" {
+		loginHint = getLoginHint(inst)
+	}
+	u, err := makeSharingStartURLWithLoginHint(inst, sharingID, sharingState, conf, contextName, loginHint)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -1217,6 +1226,10 @@ func makeStartURL(inst *instance.Instance, domain, redirect, confirm, oidcContex
 }
 
 func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string, conf *Config, contextName string) (string, error) {
+	return makeSharingStartURLWithLoginHint(inst, sharingID, sharingState, conf, contextName, getLoginHint(inst))
+}
+
+func makeSharingStartURLWithLoginHint(inst *instance.Instance, sharingID, sharingState string, conf *Config, contextName, loginHint string) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
@@ -1232,7 +1245,6 @@ func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
-	loginHint := getLoginHint(inst)
 	if loginHint != "" {
 		vv.Add("login_hint", loginHint)
 	}

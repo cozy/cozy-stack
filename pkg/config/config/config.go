@@ -553,6 +553,40 @@ func GetOIDC(contextName string) (map[string]interface{}, bool) {
 	return config, ok
 }
 
+// ErrOIDCDomainConflict is returned when a domain is configured on more than
+// one OIDC context.
+var ErrOIDCDomainConflict = errors.New("multiple OIDC contexts match domain")
+
+// GetOIDCContextByDomain returns the OIDC context configured for a normalized
+// email domain.
+func GetOIDCContextByDomain(domain string) (string, error) {
+	domain = utils.NormalizeDomain(domain)
+	if domain == "" || config.Authentication == nil {
+		return "", nil
+	}
+
+	var match string
+	for contextName, rawAuth := range config.Authentication {
+		auth, ok := rawAuth.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		oidc, ok := auth["oidc"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		configuredDomain, ok := oidc["domain"].(string)
+		if !ok || utils.NormalizeDomain(configuredDomain) != domain {
+			continue
+		}
+		if match != "" && match != contextName {
+			return "", ErrOIDCDomainConflict
+		}
+		match = contextName
+	}
+	return match, nil
+}
+
 // GetFranceConnect returns the FranceConnect config for the given context
 // (with a boolean to say if FranceConnect is enabled).
 func GetFranceConnect(contextName string) (map[string]interface{}, bool) {

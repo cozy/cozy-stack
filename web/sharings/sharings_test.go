@@ -3,6 +3,7 @@ package sharings_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -1421,6 +1422,143 @@ func TestSharings(t *testing.T) {
 		aliceInstance.ContextName = originalContext
 		require.NoError(t, instance.Update(aliceInstance))
 		clearPublicOIDCContext(config.DefaultInstanceContext)
+	})
+
+	t.Run("DiscoveryAutomaticallyRedirectsToCompanyOIDCContext", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		companyContextName := "company-domain-oidc"
+		conf.Authentication[companyContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"domain":        "example.net",
+				"client_id":     "company-client-id",
+				"client_secret": "company-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.company.example/authorize",
+			},
+		}
+		t.Cleanup(func() {
+			delete(conf.Authentication, companyContextName)
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "company-domain")
+
+		location := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusSeeOther).
+			Header("Location").NotEmpty().Raw()
+
+		redirectURL, err := url.Parse(location)
+		require.NoError(t, err)
+		assert.Equal(t, "https", redirectURL.Scheme)
+		assert.Equal(t, "idp.company.example", redirectURL.Host)
+		assert.Equal(t, "/authorize", redirectURL.Path)
+
+		query := redirectURL.Query()
+		assert.Equal(t, "code", query.Get("response_type"))
+		assert.Equal(t, "openid profile email", query.Get("scope"))
+		assert.Equal(t, "company-client-id", query.Get("client_id"))
+		assert.Equal(t, "https://oauthcallback.example.net/oidc/redirect", query.Get("redirect_uri"))
+		assert.Equal(t, "bob@example.net", query.Get("login_hint"))
+		assert.NotEmpty(t, query.Get("state"))
+		assert.NotEmpty(t, query.Get("nonce"))
+	})
+
+	t.Run("DiscoveryAutomaticallyRedirectsToOrgDomainOIDCContext", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		orgContextName := "company-org-oidc"
+		conf.Authentication[orgContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "org-client-id",
+				"client_secret": "org-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.org.example/authorize",
+			},
+		}
+
+		originalOrgDomain := bobInstance.OrgDomain
+		originalContext := bobInstance.ContextName
+		bobInstance.OrgDomain = "example.net"
+		bobInstance.ContextName = orgContextName
+		require.NoError(t, instance.Update(bobInstance))
+		t.Cleanup(func() {
+			delete(conf.Authentication, orgContextName)
+			bobInstance.OrgDomain = originalOrgDomain
+			bobInstance.ContextName = originalContext
+			require.NoError(t, instance.Update(bobInstance))
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "org-domain")
+
+		location := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusSeeOther).
+			Header("Location").NotEmpty().Raw()
+
+		redirectURL, err := url.Parse(location)
+		require.NoError(t, err)
+		assert.Equal(t, "https", redirectURL.Scheme)
+		assert.Equal(t, "idp.org.example", redirectURL.Host)
+		assert.Equal(t, "/authorize", redirectURL.Path)
+
+		query := redirectURL.Query()
+		assert.Equal(t, "code", query.Get("response_type"))
+		assert.Equal(t, "openid profile email", query.Get("scope"))
+		assert.Equal(t, "org-client-id", query.Get("client_id"))
+		assert.Equal(t, "https://oauthcallback.example.net/oidc/redirect", query.Get("redirect_uri"))
+		assert.Equal(t, "bob@example.net", query.Get("login_hint"))
+		assert.NotEmpty(t, query.Get("state"))
+		assert.NotEmpty(t, query.Get("nonce"))
+	})
+
+	t.Run("DiscoveryFallsBackWhenOrgDomainContextIsEmpty", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		fallbackContextName := "company-domain-fallback-oidc"
+		conf.Authentication[fallbackContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"domain":        "example.net",
+				"client_id":     "fallback-client-id",
+				"client_secret": "fallback-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.fallback.example/authorize",
+			},
+		}
+
+		originalOrgDomain := bobInstance.OrgDomain
+		originalContext := bobInstance.ContextName
+		bobInstance.OrgDomain = "example.net"
+		bobInstance.ContextName = ""
+		require.NoError(t, instance.Update(bobInstance))
+		t.Cleanup(func() {
+			delete(conf.Authentication, fallbackContextName)
+			bobInstance.OrgDomain = originalOrgDomain
+			bobInstance.ContextName = originalContext
+			require.NoError(t, instance.Update(bobInstance))
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "org-domain-empty-context")
+
+		eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusOK).
+			Body().NotContains("idp.fallback.example")
 	})
 }
 
