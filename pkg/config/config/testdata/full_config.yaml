@@ -277,6 +277,7 @@ contexts:
             type: secondary
     sharing:
       auto_accept_trusted: true
+      allow_writers_to_manage_links: true
       trusted_domains:
         - linagora.com
     antivirus:

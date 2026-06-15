@@ -328,6 +328,7 @@ type SharingConfig struct {
 	AutoAcceptTrusted         bool     `mapstructure:"auto_accept_trusted"`
 	AutoAcceptTrustedContacts bool     `mapstructure:"auto_accept_trusted_contacts"`
 	TrustedDomains            []string `mapstructure:"trusted_domains"`
+	AllowWritersToManageLinks bool     `mapstructure:"allow_writers_to_manage_links"`
 }
 
 // GetSharingConfig returns the sharing configuration for a given context.
@@ -339,6 +340,7 @@ func GetSharingConfig(contextName string) SharingConfig {
 		AutoAcceptTrusted:         false,
 		AutoAcceptTrustedContacts: false,
 		TrustedDomains:            []string{},
+		AllowWritersToManageLinks: false,
 	}
 
 	if config == nil || config.Contexts == nil {
