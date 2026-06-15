@@ -1140,7 +1140,7 @@ msgid "Notification Sharing Title Note"
 msgstr "une note"
 
 msgid "Notification Sharing Type Shared Drive"
-msgstr "le drive partagé"
+msgstr "le dossier"
 
 msgid "Notification Sharing Type Organization"
 msgstr "le dossier partagé de mots de passe"
