@@ -38,10 +38,6 @@ func RevokeRecipient(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
 	index, err := strconv.Atoi(c.Param("index"))
 	if err != nil {
 		return jsonapi.InvalidParameter("index", err)
@@ -49,11 +45,39 @@ func RevokeRecipient(c echo.Context) error {
 	if index == 0 || index >= len(s.Members) {
 		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
 	}
-	if err = s.RevokeRecipient(inst, index); err != nil {
+	if err = authorizeRevokeRecipient(c, s); err != nil {
+		return err
+	}
+	if s.Owner {
+		if err = s.RevokeRecipient(inst, index); err != nil {
+			return wrapErrors(err)
+		}
+		go s.NotifyRecipients(inst, nil)
+		return c.NoContent(http.StatusNoContent)
+	}
+	if !s.Drive {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err = s.DelegateRevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
 	}
-	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
+}
+
+func authorizeRevokeRecipient(c echo.Context, s *sharing.Sharing) error {
+	if _, err := checkCreatePermissions(c, s); err == nil {
+		return nil
+	}
+	if !s.Owner || !s.Drive {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err := hasSharingWritePermissions(c); err != nil {
+		return err
+	}
+	if _, err := requestMember(c, s); err != nil {
+		return wrapErrors(err)
+	}
+	return nil
 }
 
 // RevokeGroup is used by the owner to revoke a group

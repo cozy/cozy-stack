@@ -356,6 +356,9 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 	if err != nil {
 		return err
 	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
+	}
 	c := &s.Credentials[0]
 	if c.AccessToken == nil {
 		return ErrInvalidSharing
@@ -986,6 +989,48 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		return err
 	}
 	res.Body.Close()
+	return nil
+}
+
+// DelegateRevokeRecipient is used by a recipient to ask the sharer to revoke
+// another member of the sharing.
+func (s *Sharing) DelegateRevokeRecipient(inst *instance.Instance, index int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/recipients/%d", s.SID, index),
+		Headers: request.Headers{
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+		},
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	originalRes, originalErr := res, err
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
+	}
+	if err != nil {
+		if originalRes != nil && originalRes.StatusCode == http.StatusForbidden {
+			return preserveDelegatedRequestError(originalRes.StatusCode, originalErr)
+		}
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		return ErrInternalServerError
+	}
 	return nil
 }
 
