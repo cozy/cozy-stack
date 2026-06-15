@@ -2162,6 +2162,70 @@ func TestSharedDriveDelegatedRecipientAddition(t *testing.T) {
 	})
 }
 
+func TestSharedDriveDelegatedRecipientRemoval(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eBetty, eDave := env.createClients(t)
+
+	t.Run("WriteRecipientCanRemoveAnotherRecipient", func(t *testing.T) {
+		sharingID, rootDirID, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Delegated Recipient Removal Drive",
+			"Drive for delegated recipient removal tests",
+			nil,
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, sharingID)
+		FakeOwnerInstanceForSharing(t, env.betty, env.acme.PageURL("", nil), sharingID)
+		fileID := createFile(t, eA, rootDirID, "DelegatedRemoval.txt", env.acmeToken)
+
+		eDave.GET("/sharings/drives/"+sharingID+"/"+fileID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(http.StatusOK)
+
+		eBetty.DELETE("/sharings/"+sharingID+"/recipients/2").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(http.StatusNoContent)
+
+		removed := findSharingMemberByEmail(t, env.acme, sharingID, "dave@example.net")
+		require.Equal(t, sharing.MemberStatusRevoked, removed.Status)
+
+		eDave.GET("/sharings/drives/"+sharingID+"/"+fileID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(http.StatusForbidden)
+	})
+
+	t.Run("ReadOnlyRecipientCannotRemoveAnotherRecipient", func(t *testing.T) {
+		sharingID, _, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Delegated Recipient Removal Read Only Drive",
+			"Drive for read-only delegated recipient removal tests",
+			nil,
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, sharingID)
+		FakeOwnerInstanceForSharing(t, env.dave, env.acme.PageURL("", nil), sharingID)
+
+		eDave.DELETE("/sharings/"+sharingID+"/recipients/1").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(http.StatusForbidden)
+
+		betty := findSharingMemberByEmail(t, env.acme, sharingID, "betty@example.net")
+		require.Equal(t, sharing.MemberStatusReady, betty.Status)
+	})
+}
+
 func TestSharedDriveAccess(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
