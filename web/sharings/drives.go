@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -932,6 +933,7 @@ func CheckSharedDrivePermissionMutationAuthorization(
 	callerDomain string,
 	identityResolved bool,
 	callerReadOnly bool,
+	allowWritersToManageLinks bool,
 ) error {
 	// Public share tokens are never allowed to mutate permissions.
 	if actorPerm != nil &&
@@ -951,8 +953,13 @@ func CheckSharedDrivePermissionMutationAuthorization(
 		creatorDomain := existingPerm.Metadata.UpdatedByApps[0].Instance
 		isCreator = creatorDomain == callerDomain
 	}
+	isSharedDriveWriter := allowWritersToManageLinks &&
+		actorPerm != nil &&
+		actorPerm.Type == permission.TypeShareInteract &&
+		identityResolved &&
+		!callerReadOnly
 
-	if !isOwner && !isCreator {
+	if !isOwner && !isCreator && !isSharedDriveWriter {
 		if actorPerm != nil && actorPerm.Type == permission.TypeShareInteract && !identityResolved {
 			return jsonapi.Forbidden(errors.New("cannot verify caller identity for this shared-drive token"))
 		}
@@ -1046,6 +1053,7 @@ func prepareSharedDrivePermissionMutation(
 		ctx.callerDomain,
 		ctx.identityResolved,
 		ctx.callerReadOnly,
+		config.GetSharingConfig(inst.ContextName).AllowWritersToManageLinks,
 	); err != nil {
 		return nil, err
 	}
