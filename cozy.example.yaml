@@ -564,6 +564,9 @@ contexts:
       trusted_domains:
         - example.com
         - mycompany.twake.app
+      # Allow shared drive members with write access to update or revoke
+      # share-by-link permissions created by other members (default: false)
+      allow_writers_to_manage_links: false
     # Antivirus configuration for scanning uploaded files using ClamAV
     antivirus:
       # Enable or disable antivirus scanning

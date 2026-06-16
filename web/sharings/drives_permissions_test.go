@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/require"
@@ -207,6 +208,39 @@ func makeSharedDrivePatchPayload(t *testing.T, attrs map[string]interface{}) []b
 			"type":       consts.Permissions,
 			"attributes": attrs,
 		},
+	})
+}
+
+func allowWritersToManageLinksForTest(t *testing.T) {
+	t.Helper()
+
+	cfg := config.GetConfig()
+	prevContexts := cfg.Contexts
+	contexts := make(map[string]interface{}, len(prevContexts)+1)
+	for k, v := range prevContexts {
+		contexts[k] = v
+	}
+
+	defaultContext := map[string]interface{}{}
+	if raw, ok := contexts[config.DefaultInstanceContext].(map[string]interface{}); ok {
+		for k, v := range raw {
+			defaultContext[k] = v
+		}
+	}
+
+	sharingConfig := map[string]interface{}{}
+	if raw, ok := defaultContext["sharing"].(map[string]interface{}); ok {
+		for k, v := range raw {
+			sharingConfig[k] = v
+		}
+	}
+	sharingConfig["allow_writers_to_manage_links"] = true
+	defaultContext["sharing"] = sharingConfig
+	contexts[config.DefaultInstanceContext] = defaultContext
+	cfg.Contexts = contexts
+
+	t.Cleanup(func() {
+		cfg.Contexts = prevContexts
 	})
 }
 
@@ -789,6 +823,64 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 		)
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
+	})
+
+	t.Run("WriterCannotPatchPermissionCreatedByOwnerWithoutConfig", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "owner-patch-link", "", payload,
+		)
+
+		patchSharedDrivePermissionExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			permID,
+			bettyToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{"password": "secret"}),
+			http.StatusForbidden,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("WriterCanPatchPermissionCreatedByOwnerWithConfig", func(t *testing.T) {
+		allowWritersToManageLinksForTest(t)
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "owner-patch-enabled-link", "", payload,
+		)
+
+		patchedObj := patchSharedDrivePermissionExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			permID,
+			bettyToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{
+				"password":   "secret",
+				"expires_at": "2030-01-01T00:00:00Z",
+				"permissions": map[string]interface{}{
+					"files": map[string]interface{}{
+						"type":   consts.Files,
+						"verbs":  []string{"GET", "POST"},
+						"values": []string{f.fileID},
+					},
+				},
+			}),
+			http.StatusOK,
+		)
+		attrs := patchedObj.Value("data").Object().Value("attributes").Object()
+		attrs.Value("password").Boolean().IsTrue()
+		attrs.Value("expires_at").String().IsEqual("2030-01-01T00:00:00Z")
+		attrs.Value("permissions").Object().
+			Value("files").Object().
+			Value("verbs").Array().
+			Contains("POST")
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
 	t.Run("PublicShareTokenCannotPatchPermission", func(t *testing.T) {
@@ -1439,7 +1531,7 @@ func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 
-	t.Run("NonCreatorCannotRevokePermission", func(t *testing.T) {
+	t.Run("WriterCannotRevokePermissionWithoutConfig", func(t *testing.T) {
 		eBetty, bettyToken := f.newBettyClient(t)
 		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
 		permID, _ := createSharedDrivePermission(
@@ -1448,6 +1540,17 @@ func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusForbidden)
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("WriterCanRevokePermissionCreatedByOwnerWithConfig", func(t *testing.T) {
+		allowWritersToManageLinksForTest(t)
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "owner-revoke-enabled-link", "", payload,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 
 	t.Run("ReadOnlyRecipientCanRevokeOwnPermission", func(t *testing.T) {

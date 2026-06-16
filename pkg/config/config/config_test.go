@@ -130,6 +130,7 @@ func TestConfigUnmarshal(t *testing.T) {
 	myContextSharing := GetSharingConfig("my-context")
 	assert.Equal(t, true, myContextSharing.AutoAcceptTrusted)
 	assert.Equal(t, []string{"linagora.com"}, myContextSharing.TrustedDomains)
+	assert.Equal(t, true, myContextSharing.AllowWritersToManageLinks)
 
 	// Test GetAntivirusConfig for my-context (includes duration parsing)
 	myContextAntivirus := GetAntivirusConfig("my-context")
@@ -149,10 +150,12 @@ func TestConfigUnmarshal(t *testing.T) {
 	// Test GetSharingConfig for default context
 	defaultSharing := GetSharingConfig("default")
 	assert.Equal(t, true, defaultSharing.AutoAcceptTrusted)
+	assert.Equal(t, false, defaultSharing.AllowWritersToManageLinks)
 
 	// Test GetSharingConfig for non-existent context falls back to default
 	fallbackSharing := GetSharingConfig("non-existent")
 	assert.Equal(t, true, fallbackSharing.AutoAcceptTrusted)
+	assert.Equal(t, false, fallbackSharing.AllowWritersToManageLinks)
 
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
@@ -169,8 +172,9 @@ func TestConfigUnmarshal(t *testing.T) {
 				map[string]interface{}{"home_hidden_apps": []interface{}{"foobar"}},
 			},
 			"sharing": map[string]interface{}{
-				"auto_accept_trusted": true,
-				"trusted_domains":     []interface{}{"linagora.com"},
+				"auto_accept_trusted":           true,
+				"allow_writers_to_manage_links": true,
+				"trusted_domains":               []interface{}{"linagora.com"},
 			},
 			"antivirus": map[string]interface{}{
 				"enabled":       true,
