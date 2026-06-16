@@ -31,8 +31,9 @@ func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "share-autoaccept",
 		Concurrency:  runtime.NumCPU(),
-		MaxExecCount: 2,
+		MaxExecCount: 4,
 		Reserved:     true,
+		RetryDelay:   250 * time.Millisecond,
 		Timeout:      30 * time.Second,
 		WorkerFunc:   WorkerAutoAccept,
 	})

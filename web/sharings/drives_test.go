@@ -866,6 +866,25 @@ func waitForSharingOnRecipient(t *testing.T, recipientInstance *instance.Instanc
 	return recipientSharing
 }
 
+func waitForSharingOnRecipientWithOwnerURL(t *testing.T, recipientInstance *instance.Instance, sharingID string, ownerURL string) *sharing.Sharing {
+	t.Helper()
+
+	var recipientSharing *sharing.Sharing
+	require.Eventually(t, func() bool {
+		s, err := sharing.FindSharing(recipientInstance, sharingID)
+		if err != nil || len(s.Members) == 0 {
+			return false
+		}
+		s.Members[0].Instance = ownerURL
+		if err := couchdb.UpdateDoc(recipientInstance, s); err != nil {
+			return false
+		}
+		recipientSharing = s
+		return true
+	}, 10*time.Second, 25*time.Millisecond, "Drive sharing request not created on recipient side")
+	return recipientSharing
+}
+
 func hasAutoAcceptJobForSharing(recipientInstance *instance.Instance, sharingID string) bool {
 	req := couchdb.AllDocsRequest{}
 	var jobs []job.Job
@@ -1847,7 +1866,7 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 		"Auto-accept test drive",
 	)
 
-	FakeOwnerInstanceForSharing(t, env.recipientInstance, env.ownerURL, sharingID)
+	waitForSharingOnRecipientWithOwnerURL(t, env.recipientInstance, sharingID, env.ownerURL)
 	waitForAutoAcceptJobForSharing(t, env.recipientInstance, sharingID)
 	waitForDriveSharingReadyOnOwner(t, env.eOwner, env.ownerAppToken, sharingID)
 	waitForDriveSharingActiveOnRecipient(t, env.recipientInstance, sharingID)
@@ -4798,15 +4817,8 @@ func TestSharedDriveGroupDynamicMembership(t *testing.T) {
 
 	// Step 6: Wait for the sharing to exist on Alice's instance, then set up the owner's URL
 	eAlice := httpexpect.Default(t, tsAlice.URL)
-	require.Eventually(t, func() bool {
-		resp := eAlice.GET("/sharings/"+sharingID).
-			WithHeader("Authorization", "Bearer "+aliceAppToken).
-			Expect()
-		return resp.Raw().StatusCode == 200
-	}, 10*time.Second, 500*time.Millisecond, "Alice's sharing should exist")
-
-	// Now update the owner's URL in Alice's sharing document
-	FakeOwnerInstanceForSharing(t, aliceInstance, tsOwner.URL, sharingID)
+	waitForSharingOnRecipientWithOwnerURL(t, aliceInstance, sharingID, tsOwner.URL)
+	waitForAutoAcceptJobForSharing(t, aliceInstance, sharingID)
 
 	// Step 7: Wait for Alice's sharing to be auto-accepted
 	require.Eventually(t, func() bool {
@@ -4845,15 +4857,8 @@ func TestSharedDriveGroupDynamicMembership(t *testing.T) {
 
 	// Step 13: Wait for the sharing to exist on Bob's instance, then set up the owner's URL
 	eBob := httpexpect.Default(t, tsBob.URL)
-	require.Eventually(t, func() bool {
-		resp := eBob.GET("/sharings/"+sharingID).
-			WithHeader("Authorization", "Bearer "+bobAppToken).
-			Expect()
-		return resp.Raw().StatusCode == 200
-	}, 10*time.Second, 500*time.Millisecond, "Bob's sharing should exist")
-
-	// Now update the owner's URL in Bob's sharing document
-	FakeOwnerInstanceForSharing(t, bobInstance, tsOwner.URL, sharingID)
+	waitForSharingOnRecipientWithOwnerURL(t, bobInstance, sharingID, tsOwner.URL)
+	waitForAutoAcceptJobForSharing(t, bobInstance, sharingID)
 
 	// Step 14: Verify Bob can access the shared drive after auto-accept
 	// Wait for the sharing to be auto-accepted on Bob's side
