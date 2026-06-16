@@ -502,7 +502,18 @@ func ResetDB(db prefixer.Prefixer, doctype string) error {
 	if err != nil && !IsNoDatabaseError(err) {
 		return err
 	}
-	return CreateDB(db, doctype)
+	// CouchDB 3.x removes the on-disk file asynchronously after a successful
+	// DELETE; an immediate CreateDB can race that cleanup and fail with
+	// file_exists. Retry briefly while CouchDB still reports the file.
+	const maxAttempts = 5
+	for i := 0; i < maxAttempts; i++ {
+		err = CreateDB(db, doctype)
+		if err == nil || !IsFileExists(err) {
+			return err
+		}
+		time.Sleep(time.Duration(50*(i+1)) * time.Millisecond)
+	}
+	return err
 }
 
 // DeleteDoc deletes a struct implementing the couchb.Doc interface
