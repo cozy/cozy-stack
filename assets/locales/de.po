@@ -724,6 +724,9 @@ msgstr "Eine neue Freigabe ist in deinem Twake verfügbar"
 msgid "Notification Sharing Description"
 msgstr "%slädt dich ein zum %sder %s%s"
 
+msgid "Notification Sharing Type Shared Drive"
+msgstr "Verzeichnis"
+
 msgid "Notification Sharing Type Document"
 msgstr "Dokument"
 

@@ -1093,6 +1093,9 @@ msgstr "%s đã chia sẻ %s với bạn"
 msgid "Notification Sharing Description"
 msgstr "%s mời bạn %s %s **%s**"
 
+msgid "Notification Sharing Type Shared Drive"
+msgstr "thư mục"
+
 msgid "Notification Sharing Type Organization"
 msgstr "thư mục mật khẩu"
 
