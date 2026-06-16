@@ -272,13 +272,16 @@ func TestApps(t *testing.T) {
 		u, err := url.Parse(intent.Services[0].Href)
 		require.NoError(t, err)
 
-		e.GET(u.Path).
+		csp := e.GET(u.Path).
 			WithHost(slug+"."+testInstance.Domain).
 			WithQueryString(u.RawQuery).
 			WithCookie("cozysessid", cozysessID).
 			Expect().Status(200).
-			Header(echo.HeaderContentSecurityPolicy).
-			Contains("frame-ancestors 'self' https://test-app.cozywithapps.example.net/;")
+			Header(echo.HeaderContentSecurityPolicy)
+		csp.Contains("script-src")
+		csp.Contains("'wasm-unsafe-eval'")
+		csp.Contains("worker-src 'self' blob:;")
+		csp.Contains("frame-ancestors 'self' https://test-app.cozywithapps.example.net/;")
 	})
 
 	t.Run("FaviconWithContext", func(t *testing.T) {
