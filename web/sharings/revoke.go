@@ -74,7 +74,10 @@ func RevokeRecipient(c echo.Context) error {
 
 func authorizeRevokeRecipient(c echo.Context, s *sharing.Sharing) error {
 	if _, err := checkCreatePermissions(c, s); err == nil {
-		return nil
+		if s.Owner || s.Drive {
+			return nil
+		}
+		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	if !s.Owner || !s.Drive {
 		return echo.NewHTTPError(http.StatusForbidden)
