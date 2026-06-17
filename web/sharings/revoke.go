@@ -38,10 +38,6 @@ func RevokeRecipient(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
 	index, err := strconv.Atoi(c.Param("index"))
 	if err != nil {
 		return jsonapi.InvalidParameter("index", err)
@@ -49,11 +45,50 @@ func RevokeRecipient(c echo.Context) error {
 	if index == 0 || index >= len(s.Members) {
 		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
 	}
-	if err = s.RevokeRecipient(inst, index); err != nil {
+	if err = authorizeRevokeRecipient(c, s); err != nil {
+		return err
+	}
+	if s.Owner {
+		if err = s.RevokeRecipient(inst, index); err != nil {
+			return wrapErrors(err)
+		}
+		go s.NotifyRecipients(inst, nil)
+		return c.NoContent(http.StatusNoContent)
+	}
+	if owner := sharing.LocalInstanceFromURL(s.Members[0].Instance); owner != nil && owner.Domain != inst.Domain {
+		if len(s.Credentials) == 0 || s.Credentials[0].AccessToken == nil {
+			return wrapErrors(sharing.ErrInvalidSharing)
+		}
+		// Re-enter the owner-side handler so delegated calls keep the same authorization path.
+		c.Request().Header.Set(echo.HeaderAuthorization, "Bearer "+s.Credentials[0].AccessToken.AccessToken)
+		middlewares.ForcePermission(c, nil)
+		c.Set("claims", nil)
+		middlewares.SetInstance(c, owner)
+		return RevokeRecipient(c)
+	}
+	if err = s.DelegateRevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
 	}
-	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
+}
+
+func authorizeRevokeRecipient(c echo.Context, s *sharing.Sharing) error {
+	if _, err := checkCreatePermissions(c, s); err == nil {
+		if s.Owner || s.Drive {
+			return nil
+		}
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if !s.Owner || !s.Drive {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err := hasSharingWritePermissions(c); err != nil {
+		return err
+	}
+	if _, err := requestMember(c, s); err != nil {
+		return wrapErrors(err)
+	}
+	return nil
 }
 
 // RevokeGroup is used by the owner to revoke a group

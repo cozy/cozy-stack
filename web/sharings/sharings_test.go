@@ -1562,6 +1562,56 @@ func TestSharings(t *testing.T) {
 	})
 }
 
+func TestRevokeRecipientDelegationRejectsNonDriveSharing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	testutils.NeedCouchdb(t)
+
+	setup := testutils.NewSetup(t, t.Name()+"_recipient")
+	inst := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "recipient@example.net",
+		PublicName: "Recipient",
+	})
+	token := generateAppToken(inst, "testapp", iocozytests)
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	s := &sharing.Sharing{
+		SID:    "non-open-delegated-revoke",
+		Active: true,
+		Open:   true,
+		Owner:  false,
+		Rules: []sharing.Rule{{
+			Title:   "test",
+			DocType: iocozytests,
+			Values:  []string{"doc1"},
+		}},
+		Members: []sharing.Member{
+			{Status: sharing.MemberStatusOwner, Email: "owner@example.net", Instance: "https://owner.example"},
+			{Status: sharing.MemberStatusReady, Email: "recipient@example.net", Instance: "https://recipient.example"},
+			{Status: sharing.MemberStatusReady, Email: "other@example.net", Instance: "https://other.example"},
+		},
+		Credentials: []sharing.Credentials{{}},
+	}
+	require.NoError(t, couchdb.CreateNamedDocWithDB(inst, s))
+
+	e := httpexpect.Default(t, ts.URL)
+	e.DELETE("/sharings/"+s.SID+"/recipients/2").
+		WithHeader("Authorization", "Bearer "+token).
+		Expect().Status(http.StatusForbidden)
+
+	stored, err := sharing.FindSharing(inst, s.SID)
+	require.NoError(t, err)
+	require.Equal(t, sharing.MemberStatusReady, stored.Members[2].Status)
+}
+
 // createSharingAndGetState creates a sharing and returns its ID and state
 func createSharingAndGetState(t *testing.T, e *httpexpect.Expect, inst *instance.Instance, token, value string) (string, string) {
 	t.Helper()
