@@ -459,6 +459,37 @@ func findSharingMemberByEmail(t *testing.T, inst *instance.Instance, sharingID, 
 	return sharing.Member{}
 }
 
+func findSharingMemberIndexByEmail(t *testing.T, inst *instance.Instance, sharingID, email string) int {
+	t.Helper()
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	require.NoError(t, err)
+
+	for i, member := range s.Members {
+		if member.Email == email {
+			return i
+		}
+	}
+
+	require.FailNowf(t, "member not found", "email %s not found in sharing %s", email, sharingID)
+	return -1
+}
+
+func requireOwnerMemberState(
+	t *testing.T,
+	owner *instance.Instance,
+	sharingID string,
+	email string,
+	status string,
+	readOnly bool,
+) {
+	t.Helper()
+
+	member := findSharingMemberByEmail(t, owner, sharingID, email)
+	require.Equal(t, status, member.Status)
+	require.Equal(t, readOnly, member.ReadOnly)
+}
+
 type driveAutoAcceptEnv struct {
 	ownerInstance     *instance.Instance
 	recipientInstance *instance.Instance
@@ -2224,6 +2255,48 @@ func TestSharedDriveDelegatedRecipientRemoval(t *testing.T) {
 		betty := findSharingMemberByEmail(t, env.acme, sharingID, "betty@example.net")
 		require.Equal(t, sharing.MemberStatusReady, betty.Status)
 	})
+}
+
+func TestSharedDriveDelegatedPendingRecipientManagement(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	_, eBetty, _ := env.createClients(t)
+
+	sharingID, _, _ := createSharedDrive(
+		t,
+		DriveCreationMethodLegacy,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		"Delegated Pending Recipient Management Drive",
+		"Drive for delegated pending recipient management tests",
+		[]RecipientInfo{
+			{Name: "Betty", Email: "betty@example.net", ReadOnly: false},
+			{Name: "Charlie", Email: "charlie@example.net", ReadOnly: false},
+		},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+	charlieIndex := findSharingMemberIndexByEmail(t, env.acme, sharingID, "charlie@example.net")
+	requireOwnerMemberState(t, env.acme, sharingID, "charlie@example.net", sharing.MemberStatusPendingInvitation, false)
+
+	eBetty.POST(fmt.Sprintf("/sharings/%s/recipients/%d/readonly", sharingID, charlieIndex)).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(http.StatusNoContent)
+	requireOwnerMemberState(t, env.acme, sharingID, "charlie@example.net", sharing.MemberStatusPendingInvitation, true)
+
+	eBetty.DELETE(fmt.Sprintf("/sharings/%s/recipients/%d/readonly", sharingID, charlieIndex)).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(http.StatusNoContent)
+	requireOwnerMemberState(t, env.acme, sharingID, "charlie@example.net", sharing.MemberStatusPendingInvitation, false)
+
+	eBetty.DELETE(fmt.Sprintf("/sharings/%s/recipients/%d", sharingID, charlieIndex)).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(http.StatusNoContent)
+	requireOwnerMemberState(t, env.acme, sharingID, "charlie@example.net", sharing.MemberStatusRevoked, false)
 }
 
 func TestSharedDriveAccess(t *testing.T) {

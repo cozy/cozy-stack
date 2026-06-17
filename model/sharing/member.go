@@ -760,6 +760,15 @@ func (s *Sharing) recipientTarget(index int) (*Member, *Credentials, *url.URL, e
 	return m, c, u, nil
 }
 
+func (s *Sharing) shouldUpdateReadOnlyFlagWithoutRecipientSync(index int) bool {
+	switch s.Members[index].Status {
+	case MemberStatusMailNotSent, MemberStatusPendingInvitation, MemberStatusSeen:
+		return true
+	default:
+		return false
+	}
+}
+
 // ownerTarget returns what a recipient needs to call back to the owner:
 // the owner member, the credentials to authenticate with, and the owner's URL.
 func (s *Sharing) ownerTarget(index int) (*Member, *Credentials, *url.URL, error) {
@@ -793,6 +802,10 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	}
 	if s.Members[index].ReadOnly {
 		return nil
+	}
+	if s.shouldUpdateReadOnlyFlagWithoutRecipientSync(index) {
+		s.Members[index].ReadOnly = true
+		return couchdb.UpdateDoc(inst, s)
 	}
 	m, c, u, err := s.recipientTarget(index)
 	if err != nil {
@@ -945,6 +958,10 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	}
 	if !s.Members[index].ReadOnly {
 		return nil
+	}
+	if s.shouldUpdateReadOnlyFlagWithoutRecipientSync(index) {
+		s.Members[index].ReadOnly = false
+		return couchdb.UpdateDoc(inst, s)
 	}
 	m, c, u, err := s.recipientTarget(index)
 	if err != nil {
