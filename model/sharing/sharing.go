@@ -2045,6 +2045,16 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 	}
 
 	if s.Owner {
+		if len(s.Credentials)+1 != len(s.Members) {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "invalid_number_of_credentials",
+				"owner":      true,
+				"nb_members": len(s.Credentials),
+			})
+			return checks
+		}
+
 		for i, m := range s.Members {
 			if i == 0 || m.Status != MemberStatusReady {
 				continue
@@ -2073,16 +2083,6 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 				})
 			}
 		}
-
-		if len(s.Credentials)+1 != len(s.Members) {
-			checks = append(checks, map[string]interface{}{
-				"id":         s.SID,
-				"type":       "invalid_number_of_credentials",
-				"owner":      true,
-				"nb_members": len(s.Credentials),
-			})
-			return checks
-		}
 	} else {
 		if len(s.Credentials) != 1 {
 			checks = append(checks, map[string]interface{}{
@@ -2092,6 +2092,22 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 				"nb_members": len(s.Credentials),
 			})
 			return checks
+		}
+
+		if s.Credentials[0].Client == nil {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "missing_oauth_client",
+				"owner": false,
+			})
+		}
+
+		if s.Credentials[0].AccessToken == nil {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "missing_access_token",
+				"owner": false,
+			})
 		}
 
 		if s.Credentials[0].InboundClientID == "" {

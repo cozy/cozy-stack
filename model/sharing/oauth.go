@@ -590,12 +590,20 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return nil, ErrInvalidSharing
 	}
+	if err := requireOAuthCredentials(creds); err != nil {
+		return nil, err
+	}
+	if creds.State == "" {
+		return nil, ErrInvalidSharing
+	}
 	for i, c := range s.Credentials {
 		if c.State == creds.State {
-			s.Members[i+1].Status = MemberStatusReady
-			s.Members[i+1].PublicName = creds.PublicName
-			s.Credentials[i].Client = creds.Client
-			s.Credentials[i].AccessToken = creds.AccessToken
+			// Stage member changes on a local copy and only write them back
+			// once OAuth client + access token are minted, so a failure mid-way
+			// leaves the sharing untouched instead of partially mutated.
+			member := s.Members[i+1]
+			member.Status = MemberStatusReady
+			member.PublicName = creds.PublicName
 			ac := APICredentials{
 				CID: s.SID,
 				Credentials: &Credentials{
@@ -603,11 +611,10 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 				},
 			}
 			// Create the credentials for the recipient
-			cli, err := CreateOAuthClient(inst, &s.Members[i+1])
+			cli, err := CreateOAuthClient(inst, &member)
 			if err != nil {
-				return &ac, nil
+				return nil, err
 			}
-			s.Credentials[i].InboundClientID = cli.ClientID
 			ac.Credentials.Client = ConvertOAuthClient(cli)
 			var verb permission.VerbSet
 			// In case of read-only, the recipient only needs read access on the
@@ -619,9 +626,14 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			}
 			token, err := CreateAccessToken(inst, cli, s.SID, verb)
 			if err != nil {
-				return &ac, nil
+				return nil, err
 			}
 			ac.Credentials.AccessToken = token
+
+			s.Members[i+1] = member
+			s.Credentials[i].Client = creds.Client
+			s.Credentials[i].AccessToken = creds.AccessToken
+			s.Credentials[i].InboundClientID = cli.ClientID
 
 			// Update the contact to fill the name if missing
 			if email := s.Members[i+1].Email; email != "" {
