@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/web/excalidraw"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notes"
@@ -615,6 +616,41 @@ func OpenOffice(c echo.Context) error {
 		File:    &vfs.FileDoc{DocID: fileID},
 	}
 	open := &sharing.OfficeOpener{FileOpener: fileOpener}
+
+	doc, err := open.GetResult(-1, false)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
+}
+
+// OpenExcalidraw returns the parameters to open an excalidraw document inside a
+// shared drive.
+func OpenExcalidraw(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Drive {
+		return jsonapi.NotFound(errors.New("not a drive"))
+	}
+	if s.Owner {
+		return excalidraw.OpenExcalidrawURL(c)
+	}
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	fileID := c.Param("file-id")
+	fileOpener := &sharing.FileOpener{
+		Inst:    inst,
+		Sharing: s,
+		File:    &vfs.FileDoc{DocID: fileID},
+	}
+	open := &sharing.ExcalidrawOpener{FileOpener: fileOpener}
 
 	doc, err := open.GetResult(-1, false)
 	if err != nil {
@@ -1319,6 +1355,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/notes", proxy(CreateNote, true))
 	drive.GET("/notes/:file-id/open", OpenNoteURL)
 	drive.GET("/office/:file-id/open", OpenOffice)
+	drive.GET("/excalidraw/:file-id/open", OpenExcalidraw)
 
 	drive.GET("/shortcuts/:file-id", proxy(GetShortcut, true))
 

@@ -32,6 +32,8 @@ const (
 	NoteExtension = ".cozy-note"
 	// DocsExtension is the extension for the .docs-note files.
 	DocsExtension = ".docs-note"
+	// ExcalidrawExtension is the extension for the .excalidraw files.
+	ExcalidrawExtension = ".excalidraw"
 	// MarkdownExtension is the extension for the markdown files.
 	MarkdownExtension = ".md"
 	// ImageClass is the class for the image files
