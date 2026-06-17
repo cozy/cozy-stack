@@ -55,9 +55,6 @@ func RevokeRecipient(c echo.Context) error {
 		go s.NotifyRecipients(inst, nil)
 		return c.NoContent(http.StatusNoContent)
 	}
-	if !s.Drive {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
 	if owner := sharing.LocalInstanceFromURL(s.Members[0].Instance); owner != nil && owner.Domain != inst.Domain {
 		if len(s.Credentials) == 0 || s.Credentials[0].AccessToken == nil {
 			return wrapErrors(sharing.ErrInvalidSharing)
