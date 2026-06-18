@@ -46,6 +46,20 @@ func TestIntents(t *testing.T) {
 		require.NoError(t, err)
 	}
 	appToken := ins.BuildAppToken("app", "")
+
+	customApp := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":             consts.Apps + "/custom",
+			"slug":            "custom",
+			"client_url_flag": "custom_url_flag",
+		},
+	}
+	require.NoError(t, couchdb.CreateNamedDoc(ins, customApp))
+
+	customAppPerms, err := permission.CreateWebappSet(ins, "custom", permission.Set{}, "1.0.0")
+	require.NoError(t, err)
+	customAppToken := ins.BuildAppToken("custom", "")
 	files := &couchdb.JSONDoc{
 		Type: consts.Apps,
 		M: map[string]interface{}{
@@ -92,7 +106,7 @@ func TestIntents(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		intentID = checkIntentResult(obj, appPerms, true)
+		intentID = checkIntentResult(obj, appPerms, true, "https://app.cozy.example.net")
 	})
 
 	t.Run("GetIntent", func(t *testing.T) {
@@ -105,7 +119,7 @@ func TestIntents(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		checkIntentResult(obj, appPerms, true)
+		checkIntentResult(obj, appPerms, true, "https://app.cozy.example.net")
 	})
 
 	t.Run("GetIntentNotFromTheService", func(t *testing.T) {
@@ -138,11 +152,86 @@ func TestIntents(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		checkIntentResult(obj, appPerms, false)
+		checkIntentResult(obj, appPerms, false, "")
+	})
+
+	t.Run("CreateIntentWithClientURLMatchingFlag", func(t *testing.T) {
+		ins.FeatureFlags = map[string]interface{}{"custom_url_flag": "https://flag.example.com"}
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+customAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		checkIntentResult(obj, customAppPerms, true, "https://flag.example.com")
+	})
+
+	t.Run("CreateIntentWithClientURLNoMatchingFlag", func(t *testing.T) {
+		ins.FeatureFlags = nil
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+customAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		checkIntentResult(obj, customAppPerms, true, "https://custom.cozy.example.net")
+	})
+
+	t.Run("CreateIntentWithClientURLInvalidFlagValue", func(t *testing.T) {
+		ins.FeatureFlags = map[string]interface{}{"custom_url_flag": "not-a-url"}
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+customAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		checkIntentResult(obj, customAppPerms, true, "https://custom.cozy.example.net")
 	})
 }
 
-func checkIntentResult(obj *httpexpect.Object, appPerms *permission.Permission, fromWeb bool) string {
+func checkIntentResult(obj *httpexpect.Object, appPerms *permission.Permission, fromWeb bool, expectedClient string) string {
 	data := obj.Value("data").Object()
 	data.ValueEqual("type", "io.cozy.intents")
 	intentID := data.Value("id").String().NotEmpty().Raw()
@@ -159,7 +248,7 @@ func checkIntentResult(obj *httpexpect.Object, appPerms *permission.Permission, 
 		return intentID
 	}
 
-	attrs.ValueEqual("client", "https://app.cozy.example.net")
+	attrs.ValueEqual("client", expectedClient)
 
 	links := data.Value("links").Object()
 	links.ValueEqual("self", "/intents/"+intentID)
