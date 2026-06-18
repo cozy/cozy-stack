@@ -699,6 +699,7 @@ func renderInvalidSharing(c echo.Context, inst *instance.Instance) error {
 		"Title":          inst.TemplateTitle(),
 		"Favicon":        middlewares.Favicon(inst),
 		"Illustration":   "/images/generic-error.svg",
+		"ErrorTitle":     "Error Invalid sharing Title",
 		"Error":          "Error Invalid sharing",
 		"SupportEmail":   inst.SupportEmailAddress(),
 		"SupportPageURL": inst.SupportPageURL(),

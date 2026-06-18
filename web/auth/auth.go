@@ -41,18 +41,24 @@ func wantsJSON(c echo.Context) bool {
 }
 
 func renderError(c echo.Context, code int, msg string) error {
-	instance := middlewares.GetInstance(c)
-	return c.Render(code, "error.html", echo.Map{
-		"Domain":         instance.ContextualDomain(),
-		"ContextName":    instance.ContextName,
-		"Locale":         instance.Locale,
-		"Title":          instance.TemplateTitle(),
-		"Favicon":        middlewares.Favicon(instance),
+	return renderErrorWithTitle(c, code, "", msg)
+}
+
+func renderErrorWithTitle(c echo.Context, code int, title, msg string) error {
+	i := middlewares.GetInstance(c)
+	data := echo.Map{
+		"Domain":         i.ContextualDomain(),
+		"ContextName":    i.ContextName,
+		"Locale":         i.Locale,
+		"Title":          i.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(i),
 		"Illustration":   "/images/generic-error.svg",
+		"ErrorTitle":     title,
 		"Error":          msg,
-		"SupportEmail":   instance.SupportEmailAddress(),
-		"SupportPageURL": instance.SupportPageURL(),
-	})
+		"SupportEmail":   i.SupportEmailAddress(),
+		"SupportPageURL": i.SupportPageURL(),
+	}
+	return c.Render(code, "error.html", data)
 }
 
 // Home is the handler for /
