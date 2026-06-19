@@ -121,6 +121,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			HSTSMaxAge:        hstsMaxAge,
 			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
 			CSPScriptSrc:      []middlewares.CSPSource{middlewares.CSPWasmUnsafeEval},
+			CSPConnectSrc:     []middlewares.CSPSource{middlewares.CSPSrcBlob},
 			CSPStyleSrc:       []middlewares.CSPSource{middlewares.CSPUnsafeInline},
 			CSPFontSrc:        []middlewares.CSPSource{middlewares.CSPSrcData},
 			CSPImgSrc:         []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},

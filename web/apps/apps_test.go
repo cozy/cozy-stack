@@ -280,6 +280,7 @@ func TestApps(t *testing.T) {
 			Header(echo.HeaderContentSecurityPolicy)
 		csp.Contains("script-src")
 		csp.Contains("'wasm-unsafe-eval'")
+		csp.Contains("connect-src blob:")
 		csp.Contains("worker-src 'self' blob:;")
 		csp.Contains("frame-ancestors 'self' https://test-app.cozywithapps.example.net/;")
 	})
