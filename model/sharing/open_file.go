@@ -267,6 +267,16 @@ func (o *FileOpener) OpenLocalFile(code string) OpenFileParameters {
 	return params
 }
 
+// OpenLocalFileForMember returns the parameters for opening the file locally
+// with a sharecode resolved for the member.
+func (o *FileOpener) OpenLocalFileForMember(memberIndex int, readOnly bool) (OpenFileParameters, error) {
+	code, err := o.GetSharecode(memberIndex, readOnly)
+	if err != nil {
+		return OpenFileParameters{}, err
+	}
+	return o.OpenLocalFile(code), nil
+}
+
 // PreparedRequest contains the parameters to make a request to another
 // instance for opening a shared file. If it is not possible, Opts will be
 // empty and the MemberIndex and ReadOnly fields can be used for opening
@@ -357,4 +367,16 @@ func (o *FileOpener) PrepareRequestForSharedFile() (*PreparedRequest, error) {
 		ParseError: ParseRequestError,
 	}
 	return &prepared, nil
+}
+
+// RequestSharedFile executes a prepared open request on another instance and
+// refreshes the sharing token if needed.
+func (o *FileOpener) RequestSharedFile(prepared *PreparedRequest, path string) (*http.Response, error) {
+	prepared.Opts.Path = path
+	res, err := request.Req(prepared.Opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(o.Inst, res, err, o.Sharing, prepared.Creator,
+			prepared.Creds, prepared.Opts, nil)
+	}
+	return res, err
 }

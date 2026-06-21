@@ -1,7 +1,6 @@
 package sharing
 
 import (
-	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/settings"
@@ -86,11 +85,10 @@ func (o *NoteOpener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL,
 	// continue to work.
 	_ = note.SetupTrigger(o.Inst, o.File.ID())
 
-	code, err := o.GetSharecode(memberIndex, readOnly)
+	params, err := o.OpenLocalFileForMember(memberIndex, readOnly)
 	if err != nil {
 		return nil, err
 	}
-	params := o.OpenLocalFile(code)
 	doc := apiNoteURL{
 		NoteID:    params.FileID,
 		Protocol:  params.Protocol,
@@ -110,12 +108,7 @@ func (o *NoteOpener) openSharedNote() (*apiNoteURL, error) {
 		return o.openLocalNote(prepared.MemberIndex, prepared.ReadOnly)
 	}
 
-	prepared.Opts.Path = "/notes/" + prepared.XoredID + "/open"
-	res, err := request.Req(prepared.Opts)
-	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(o.Inst, res, err, o.Sharing, prepared.Creator,
-			prepared.Creds, prepared.Opts, nil)
-	}
+	res, err := o.RequestSharedFile(prepared, "/notes/"+prepared.XoredID+"/open")
 	if err != nil {
 		return nil, ErrInternalServerError
 	}

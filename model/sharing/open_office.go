@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net/url"
 
-	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/office"
 	"github.com/cozy/cozy-stack/model/settings"
@@ -160,11 +159,10 @@ func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOf
 	}
 
 	// Create a local result
-	code, err := o.GetSharecode(memberIndex, readOnly)
+	params, err := o.OpenLocalFileForMember(memberIndex, readOnly)
 	if err != nil {
 		return nil, err
 	}
-	params := o.OpenLocalFile(code)
 	doc := apiOfficeURL{
 		DocID:     params.FileID,
 		Protocol:  params.Protocol,
@@ -255,12 +253,7 @@ func (o *OfficeOpener) openSharedDocument() (*apiOfficeURL, error) {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}
 
-	prepared.Opts.Path = "/office/" + prepared.XoredID + "/open"
-	res, err := request.Req(prepared.Opts)
-	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(o.Inst, res, err, o.Sharing, prepared.Creator,
-			prepared.Creds, prepared.Opts, nil)
-	}
+	res, err := o.RequestSharedFile(prepared, "/office/"+prepared.XoredID+"/open")
 	if res != nil && res.StatusCode == 404 {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}

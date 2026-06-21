@@ -3,7 +3,6 @@ package sharing
 import (
 	"path/filepath"
 
-	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -83,11 +82,10 @@ func (o *ExcalidrawOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Ob
 }
 
 func (o *ExcalidrawOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiExcalidrawURL, error) {
-	code, err := o.GetSharecode(memberIndex, readOnly)
+	params, err := o.OpenLocalFileForMember(memberIndex, readOnly)
 	if err != nil {
 		return nil, err
 	}
-	params := o.OpenLocalFile(code)
 	doc := apiExcalidrawURL{
 		Protocol:  params.Protocol,
 		Subdomain: params.Subdomain,
@@ -106,12 +104,7 @@ func (o *ExcalidrawOpener) openSharedDocument() (*apiExcalidrawURL, error) {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}
 
-	prepared.Opts.Path = "/excalidraw/" + prepared.XoredID + "/open"
-	res, err := request.Req(prepared.Opts)
-	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(o.Inst, res, err, o.Sharing, prepared.Creator,
-			prepared.Creds, prepared.Opts, nil)
-	}
+	res, err := o.RequestSharedFile(prepared, "/excalidraw/"+prepared.XoredID+"/open")
 	if err != nil {
 		return nil, ErrInternalServerError
 	}
