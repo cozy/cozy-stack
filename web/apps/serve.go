@@ -132,7 +132,7 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 	if len(parts) < 2 || parts[0] != consts.Apps {
 		return
 	}
-	from := i.SubDomain(parts[1]).String()
+	from := app.ResolveClientURL(i, parts[1])
 	if !config.GetConfig().CSPDisabled {
 		middlewares.AppendCSPRule(c, "frame-ancestors", from)
 	}
