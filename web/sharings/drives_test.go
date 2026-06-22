@@ -835,6 +835,20 @@ func assertSharedDriveRedirectLocation(t *testing.T, location, sharingID string)
 	}
 }
 
+func assertInvalidSharingUnavailableErrorPage(t *testing.T, body *httpexpect.String) {
+	t.Helper()
+
+	body.Contains("This item is no longer available")
+	body.Contains("The file or folder was deleted or your access was removed.")
+	body.Contains("Contact the owner for more information.")
+	body.NotContains("unexpected error")
+	body.NotContains("Sorry, an unexpected error occurred.")
+	body.NotContains("Unqualified error")
+	body.NotContains("sharing was not found or has been revoked")
+	body.NotContains(`"error":`)
+	body.NotContains(`{"error"`)
+}
+
 func submitSharingAuthorize(
 	t *testing.T,
 	eRecipient *httpexpect.Expect,
@@ -1918,6 +1932,81 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 		Header("Location").
 		Raw()
 	assertSharedDriveRedirectLocation(t, location, sharingID)
+}
+
+func TestRevokedSharedDriveInvitationAuthorizeShowsErrorPage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eOwner, eRecipient, _ := env.createClients(t)
+	sharingID := createDirectRecipientDriveSharing(
+		t,
+		env.acme,
+		eOwner,
+		env.acmeToken,
+		"Betty revoked",
+		"betty@example.net",
+		env.tsB.URL,
+		"Revoked invitation drive",
+		"Revoked invitation drive",
+	)
+
+	recipientSharing := waitForSharingOnRecipient(t, env.betty, sharingID)
+	require.NotEmpty(t, recipientSharing.Credentials)
+	state := recipientSharing.Credentials[0].State
+	require.NotEmpty(t, state)
+
+	csrfToken := loginSharingRecipient(t, eRecipient)
+	eOwner.DELETE("/sharings/"+sharingID+"/recipients/1").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		Expect().Status(http.StatusNoContent)
+
+	require.Eventually(t, func() bool {
+		revokedSharing, err := sharing.FindSharing(env.betty, sharingID)
+		return err == nil &&
+			len(revokedSharing.Credentials) == 0 &&
+			len(revokedSharing.Members) > 1 &&
+			revokedSharing.Members[1].Status == sharing.MemberStatusRevoked
+	}, 5*time.Second, 100*time.Millisecond, "recipient sharing should be marked as revoked")
+
+	FakeOwnerInstanceForSharing(t, env.betty, env.tsA.URL, sharingID)
+	body := eRecipient.GET("/auth/authorize/sharing").
+		WithQuery("sharing_id", sharingID).
+		WithQuery("state", state).
+		Expect().
+		Status(http.StatusBadRequest).
+		HasContentType("text/html", "utf-8").
+		Body()
+	assertInvalidSharingUnavailableErrorPage(t, body)
+
+	body = eRecipient.POST("/auth/authorize/sharing").
+		WithFormField("sharing_id", sharingID).
+		WithFormField("state", state).
+		WithFormField("csrf_token", csrfToken).
+		Expect().
+		Status(http.StatusBadRequest).
+		HasContentType("text/html", "utf-8").
+		Body()
+	assertInvalidSharingUnavailableErrorPage(t, body)
+}
+
+func TestInvalidSharingDiscoveryShowsErrorPage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eOwner, _, _ := env.createClients(t)
+
+	body := eOwner.GET("/sharings/missing-sharing/discovery").
+		WithQuery("state", "missing-state").
+		Expect().
+		Status(http.StatusBadRequest).
+		HasContentType("text/html", "utf-8").
+		Body()
+	assertInvalidSharingUnavailableErrorPage(t, body)
 }
 
 func TestSendAnswerIsIdempotentAfterStaleConflict(t *testing.T) {
@@ -4811,6 +4900,37 @@ func TestSharedDriveRecipientSelfRevocation(t *testing.T) {
 			status := obj.Path("$.data.attributes.members[1].status").String().Raw()
 			return status == "revoked"
 		}, 5*time.Second, 100*time.Millisecond, "Betty's status should be revoked on owner's side")
+	})
+
+	t.Run("OwnerCanAddBettyAgain", func(t *testing.T) {
+		eA.GET("/files/"+env.firstRootDirID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(http.StatusOK)
+
+		bettyContact, err := contact.FindByEmail(env.acme, "betty@example.net")
+		require.NoError(t, err)
+
+		eA.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes(makeAddRecipientsPayload(t, sharingID, "recipients", bettyContact.ID())).
+			Expect().Status(http.StatusOK)
+
+		ownerSharing, err := sharing.FindSharing(env.acme, sharingID)
+		require.NoError(t, err)
+
+		bettyCount := 0
+		for index, member := range ownerSharing.Members {
+			if member.Email != "betty@example.net" {
+				continue
+			}
+			bettyCount++
+			require.Equal(t, 1, index)
+			require.Equal(t, sharing.MemberStatusPendingInvitation, member.Status)
+			require.False(t, member.ReadOnly)
+		}
+		require.Equal(t, 1, bettyCount)
+		require.NotEmpty(t, ownerSharing.Credentials[0].State)
 	})
 }
 
