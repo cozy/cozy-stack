@@ -1,5 +1,5 @@
-// Package excalidraw is about the routes used to open excalidraw documents.
-package excalidraw
+// Package editor is about the routes used to open files with editors.
+package editor
 
 import (
 	"net/http"
@@ -14,13 +14,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// OpenExcalidrawURL is the API handler for GET /excalidraw/:file-id/open. It
-// returns the parameters to build the URL where the excalidraw document can be
-// opened.
-func OpenExcalidrawURL(c echo.Context) error {
+// OpenURL is the API handler for GET /editor/:file-id/open. It returns the
+// parameters to build the URL where the file can be opened by an editor.
+func OpenURL(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("file-id")
-	open, err := sharing.OpenExcalidraw(inst, fileID)
+	open, err := sharing.OpenEditor(inst, fileID)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -32,9 +31,9 @@ func OpenExcalidrawURL(c echo.Context) error {
 	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
 	readOnly := c.QueryParam("ReadOnly") == "true"
 
-	// If a directory is shared by link and contains an excalidraw document, the
-	// document can be opened with the same sharecode as the directory. The
-	// sharecode is also used to identify the member that previews a sharing.
+	// If a directory is shared by link and contains the file, it can be opened
+	// with the same sharecode as the directory. The sharecode is also used to
+	// identify the member that previews a sharing.
 	if pdoc.Type == permission.TypeShareByLink ||
 		pdoc.Type == permission.TypeSharePreview ||
 		pdoc.Type == permission.TypeShareInteract {
@@ -55,9 +54,9 @@ func OpenExcalidrawURL(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-// Routes sets the routing for opening excalidraw documents.
+// Routes sets the routing for opening files with editors.
 func Routes(router *echo.Group) {
-	router.GET("/:file-id/open", OpenExcalidrawURL)
+	router.GET("/:file-id/open", OpenURL)
 }
 
 func wrapError(err error) *jsonapi.Error {

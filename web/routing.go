@@ -24,8 +24,8 @@ import (
 	"github.com/cozy/cozy-stack/web/conncheck"
 	"github.com/cozy/cozy-stack/web/contacts"
 	"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/editor"
 	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/cozy/cozy-stack/web/excalidraw"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/intents"
@@ -238,7 +238,7 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		realtime.Routes(router.Group("/realtime", mws...))
 		notes.Routes(router.Group("/notes", mws...))
 		office.Routes(router.Group("/office", mws...))
-		excalidraw.Routes(router.Group("/excalidraw", mws...))
+		editor.Routes(router.Group("/editor", mws...))
 		remote.NewHTTPHandler(services.RabbitMQ).Register(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))
 		bitwarden.Routes(router.Group("/bitwarden", mws...))

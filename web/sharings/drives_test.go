@@ -4266,6 +4266,27 @@ func TestSharedDriveNotes(t *testing.T) {
 		}
 	})
 
+	t.Run("OpenFileWithEditorFromSharedDrive", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		fileID := createFileWithMime(t, eA, env.meetingsDirID, "drawing.excalidraw", env.acmeToken, "application/json")
+
+		obj := eB.GET("/sharings/drives/"+env.firstSharingID+"/editor/"+fileID+"/open").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.Files)
+		data.ValueEqual("id", fileID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("file_id", fileID)
+		attrs.Value("instance").String().NotEmpty()
+		attrs.Value("sharecode").String().NotEmpty()
+	})
+
 	t.Run("CreateNoteWithoutAuth", func(t *testing.T) {
 		_, eB, _ := env.createClients(t)
 

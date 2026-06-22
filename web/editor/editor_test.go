@@ -1,4 +1,4 @@
-package excalidraw
+package editor
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExcalidraw(t *testing.T) {
+func TestEditor(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -26,16 +26,16 @@ func TestExcalidraw(t *testing.T) {
 	inst := setup.GetTestInstance()
 	_, token := setup.GetTestClient(consts.Files)
 
-	fileID := createExcalidrawFile(t, inst)
+	fileID := createEditorFile(t, inst, "drawing.excalidraw", "application/json", "application")
 
-	ts := setup.GetTestServer("/excalidraw", Routes)
+	ts := setup.GetTestServer("/editor", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 
 	t.Run("OpenLocal", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		obj := e.GET("/excalidraw/"+fileID+"/open").
+		obj := e.GET("/editor/"+fileID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -46,37 +46,30 @@ func TestExcalidraw(t *testing.T) {
 		data.ValueEqual("id", fileID)
 
 		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("file_id", fileID)
 		attrs.ValueEqual("instance", inst.Domain)
 		attrs.Value("protocol").String().Contains("http")
 		attrs.Value("subdomain").String().NotEmpty()
 		attrs.Value("public_name").String().NotEmpty()
 	})
 
-	t.Run("OpenNonExcalidrawFile", func(t *testing.T) {
+	t.Run("OpenPlainFile", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		notDrawID := createPlainFile(t, inst)
-		e.GET("/excalidraw/"+notDrawID+"/open").
+		plainID := createEditorFile(t, inst, "notes.txt", "text/plain", "text")
+		obj := e.GET("/editor/"+plainID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
-			Expect().Status(404)
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.file_id").String().IsEqual(plainID)
 	})
 }
 
-func createExcalidrawFile(t *testing.T, inst *instance.Instance) string {
-	filedoc, err := vfs.NewFileDoc("drawing.excalidraw", consts.RootDirID, -1, nil,
-		"application/json", "application", time.Now(), false, false, false, nil)
-	require.NoError(t, err)
-
-	f, err := inst.VFS().CreateFile(filedoc, nil)
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-
-	return filedoc.ID()
-}
-
-func createPlainFile(t *testing.T, inst *instance.Instance) string {
-	filedoc, err := vfs.NewFileDoc("notes.txt", consts.RootDirID, -1, nil,
-		"text/plain", "text", time.Now(), false, false, false, nil)
+func createEditorFile(t *testing.T, inst *instance.Instance, name, mime, class string) string {
+	filedoc, err := vfs.NewFileDoc(name, consts.RootDirID, -1, nil,
+		mime, class, time.Now(), false, false, false, nil)
 	require.NoError(t, err)
 
 	f, err := inst.VFS().CreateFile(filedoc, nil)
