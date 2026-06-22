@@ -3,6 +3,7 @@ package sharing
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -129,6 +130,81 @@ func TestDelegateReadOnlyFlagRejectsBrokenOwnerCredentials(t *testing.T) {
 				require.ErrorIs(t, run(tc.sharing(), tc.index), tc.wantErr)
 			})
 		}
+	}
+}
+
+func TestReadOnlyFlagUpdatesPendingRecipientLocally(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance()
+	require.NoError(t, couchdb.ResetDB(inst, consts.Sharings))
+
+	cases := []struct {
+		name     string
+		status   string
+		readOnly bool
+		update   func(*Sharing) error
+		want     bool
+	}{
+		{
+			name:   "add pending invitation",
+			status: MemberStatusPendingInvitation,
+			update: func(s *Sharing) error {
+				return s.AddReadOnlyFlag(inst, 1)
+			},
+			want: true,
+		},
+		{
+			name:     "remove pending invitation",
+			status:   MemberStatusPendingInvitation,
+			readOnly: true,
+			update: func(s *Sharing) error {
+				return s.RemoveReadOnlyFlag(inst, 1)
+			},
+		},
+		{
+			name:   "add seen invitation",
+			status: MemberStatusSeen,
+			update: func(s *Sharing) error {
+				return s.AddReadOnlyFlag(inst, 1)
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := &Sharing{
+				SID:   "sharing-" + strings.ReplaceAll(tc.name, " ", "-"),
+				Owner: true,
+				Members: []Member{
+					{Status: MemberStatusOwner, Instance: "https://owner.example.test"},
+					{
+						Status:   tc.status,
+						Email:    "recipient@example.test",
+						Instance: "https://recipient.example.test",
+						ReadOnly: tc.readOnly,
+					},
+				},
+				Credentials: []Credentials{{State: "state"}},
+			}
+			require.NoError(t, couchdb.CreateNamedDoc(inst, s))
+
+			err := tc.update(s)
+
+			require.NoError(t, err)
+			require.Equal(t, tc.want, s.Members[1].ReadOnly)
+			stored, err := FindSharing(inst, s.SID)
+			require.NoError(t, err)
+			require.Equal(t, tc.status, stored.Members[1].Status)
+			require.Equal(t, tc.want, stored.Members[1].ReadOnly)
+			require.Nil(t, stored.Credentials[0].AccessToken)
+		})
 	}
 }
 
