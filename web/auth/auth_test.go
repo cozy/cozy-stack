@@ -2207,6 +2207,19 @@ func TestTokenExchange(t *testing.T) {
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	e := testutils.CreateTestClient(t, ts.URL)
+	withAppTokenInstanceClaim := func(t *testing.T, claim string) {
+		appExchange := oidcConfig["app_token_exchange"].(map[string]interface{})
+		appConfig := appExchange[appTokenAudience].(map[string]interface{})
+		previous, hadPrevious := appConfig["instance_claim"]
+		appConfig["instance_claim"] = claim
+		t.Cleanup(func() {
+			if hadPrevious {
+				appConfig["instance_claim"] = previous
+				return
+			}
+			delete(appConfig, "instance_claim")
+		})
+	}
 
 	t.Run("RequiresMandatoryParameters", func(t *testing.T) {
 		e.POST("/auth/token_exchange").
@@ -2447,6 +2460,69 @@ func TestTokenExchange(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, boundClients, 1)
 		require.Equal(t, clientIDValue, boundClients[0].OAuthClientID)
+	})
+
+	t.Run("ExchangesAppTokenWithInstanceClaim", func(t *testing.T) {
+		withAppTokenInstanceClaim(t, " workplaceFqdn ")
+		const sid = "mail-app-sid-instance-claim"
+		idToken := makeTokenExchangeSignedJWT(t, privateKey, kid, map[string]interface{}{
+			"iss":           issuer,
+			"aud":           []string{appTokenAudience},
+			"sub":           "mail-user@on.cozy.lin-saas.com",
+			"sid":           sid,
+			"iat":           time.Now().Unix(),
+			"exp":           time.Now().Add(time.Hour).Unix(),
+			"workplaceFqdn": testInstance.Domain,
+		})
+
+		resp := e.POST("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Accept", "application/json").
+			WithHeader("Origin", "https://mail."+testInstance.Domain).
+			WithJSON(map[string]string{
+				"id_token":      idToken,
+				"exchange_type": "app",
+			}).
+			Expect().
+			Status(http.StatusOK)
+		obj := resp.JSON().Object()
+		clientIDValue := obj.Value("client_id").String().Raw()
+		scope := oauth.BuildLinkedAppScope(appTokenAppSlug)
+
+		obj.ValueEqual("token_type", "bearer")
+		obj.ValueEqual("scope", scope)
+		client, err := oauth.FindClient(testInstance, clientIDValue)
+		require.NoError(t, err)
+		require.Equal(t, appTokenSoftwareID, client.SoftwareID)
+		require.Equal(t, sid, client.OIDCSessionID)
+		require.Equal(t, []string{"https://mail." + testInstance.Domain}, client.RedirectURIs)
+	})
+
+	t.Run("RejectsAppTokenWithInstanceClaimMismatch", func(t *testing.T) {
+		withAppTokenInstanceClaim(t, "workplaceFqdn")
+		actualDomain := "other." + testInstance.Domain
+		idToken := makeTokenExchangeSignedJWT(t, privateKey, kid, map[string]interface{}{
+			"iss":           issuer,
+			"aud":           []string{appTokenAudience},
+			"sub":           "mail-user@on.cozy.lin-saas.com",
+			"sid":           "mail-app-sid-instance-claim-mismatch",
+			"iat":           time.Now().Unix(),
+			"exp":           time.Now().Add(time.Hour).Unix(),
+			"workplaceFqdn": actualDomain,
+		})
+
+		e.POST("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Accept", "application/json").
+			WithHeader("Origin", "https://mail."+testInstance.Domain).
+			WithJSON(map[string]string{
+				"id_token":      idToken,
+				"exchange_type": "app",
+			}).
+			Expect().
+			Status(http.StatusBadRequest).
+			JSON().Object().
+			ValueEqual("error", "OIDC Domain Mismatch "+testInstance.Domain+" "+actualDomain)
 	})
 
 	t.Run("RejectsAppTokenWithoutExchangeTypeAsAdmin", func(t *testing.T) {
