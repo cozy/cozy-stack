@@ -407,6 +407,8 @@ authentication:
           # Must be a Cozy linked application software_id. The local OAuth
           # scope is derived from this linked app manifest.
           software_id: registry://mail
+          # Optional OIDC claim containing the target Cozy instance domain.
+          instance_claim: workplaceFqdn
 
 notifications:
   # Activate development APIs (iOS only)
