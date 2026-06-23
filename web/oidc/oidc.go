@@ -23,10 +23,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/bitwarden"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -38,7 +36,7 @@ import (
 var (
 	ErrInvalidToken         = errors.New("invalid token")
 	ErrInvalidConfiguration = errors.New("invalid configuration")
-	ErrAuthenticationFailed = errors.New("the authentication has failed")
+	ErrAuthenticationFailed = oidcprovider.ErrInstanceAuthenticationFailed
 	ErrFranceConnectFailed  = errors.New("the FranceConnect authentication has failed")
 	ErrIdentityProvider     = errors.New("error from the identity provider")
 	ErrAmbiguousLogout      = errors.New("ambiguous logout context")
@@ -46,24 +44,7 @@ var (
 
 // DomainMismatchError is returned when the user tries to connect to an
 // instance but has an active OIDC session for a different instance/account.
-type DomainMismatchError struct {
-	ExpectedDomain string // The instance the user is trying to access
-	ActualDomain   string // The instance from the OIDC token
-}
-
-// TranslationKey returns the i18n key for translating this error.
-func (e *DomainMismatchError) TranslationKey() string {
-	return "OIDC Domain Mismatch %s %s"
-}
-
-// TranslationArgs returns the arguments for the translation.
-func (e *DomainMismatchError) TranslationArgs() []interface{} {
-	return []interface{}{e.ExpectedDomain, e.ActualDomain}
-}
-
-func (e *DomainMismatchError) Error() string {
-	return fmt.Sprintf("OIDC Domain Mismatch %s %s", e.ExpectedDomain, e.ActualDomain)
-}
+type DomainMismatchError = oidcprovider.InstanceMismatchError
 
 // extractSessionID extracts the session ID (sid) from an id_token.
 func extractSessionID(idToken string) string {
@@ -124,8 +105,14 @@ func StartFranceConnect(c echo.Context) error {
 // Sharing is the route to use the SSO to accept a sharing.
 func Sharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	return RedirectSharingWithContext(c, inst, inst.ContextName, c.QueryParam("sharingID"), c.QueryParam("state"), "")
+}
+
+// RedirectSharingWithContext starts the sharing OIDC flow with the given context.
+// If loginHint is empty, the usual instance login hint is used.
+func RedirectSharingWithContext(c echo.Context, inst *instance.Instance, contextName, sharingID, sharingState, loginHint string) error {
 	conf, err := oidcprovider.LoadConfig(
-		inst.ContextName,
+		contextName,
 		oidcprovider.RequireClientID,
 		oidcprovider.RequireScope,
 		oidcprovider.RequireRedirectURI,
@@ -135,7 +122,10 @@ func Sharing(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeSharingStartURL(inst, c.QueryParam("sharingID"), c.QueryParam("state"), conf, inst.ContextName)
+	if loginHint == "" {
+		loginHint = getLoginHint(inst)
+	}
+	u, err := makeSharingStartURLWithLoginHint(inst, sharingID, sharingState, conf, contextName, loginHint)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -278,9 +268,9 @@ func Redirect(c echo.Context) error {
 			logger.WithNamespace("oidc").Errorf("Missing sub")
 			return ErrAuthenticationFailed
 		}
-		domain, err := extractDomain(conf, params)
+		domain, err := oidcprovider.ExtractDomainFromClaims(conf, params)
 		if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
-			inst, err := findInstanceBySub(sub, state.OIDCContext)
+			inst, err := oidcprovider.FindInstanceBySub(sub, state.OIDCContext)
 			if err != nil {
 				return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 			}
@@ -469,7 +459,7 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 			"OIDC sharing lookup by oidc_id: oidc_id=%q context=%s",
 			sub, state.OIDCContext,
 		)
-		memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+		memberInst, err = oidcprovider.FindInstanceBySub(sub, state.OIDCContext)
 		if err != nil {
 			oidcLog.Warnf(
 				"OIDC sharing lookup by oidc_id failed: oidc_id=%q context=%s error=%s",
@@ -479,7 +469,7 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 	}
 	if memberInst == nil {
 		// Fall back to domain extraction from user info
-		domain, err := extractDomain(conf, params)
+		domain, err := oidcprovider.ExtractDomainFromClaims(conf, params)
 		if err == nil {
 			oidcLog.Infof("OIDC sharing lookup by domain: domain=%s", domain)
 			memberInst, err = lifecycle.GetInstance(domain)
@@ -494,7 +484,7 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 				"OIDC sharing lookup domain extraction failed, retrying oidc_id lookup: oidc_id=%q context=%s error=%s",
 				sub, state.OIDCContext, err,
 			)
-			memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+			memberInst, err = oidcprovider.FindInstanceBySub(sub, state.OIDCContext)
 			if err != nil {
 				oidcLog.Infof(
 					"OIDC sharing lookup retry by oidc_id failed: oidc_id=%q context=%s error=%s",
@@ -927,27 +917,11 @@ func applyLogoutForContext(verified logoutContext) error {
 }
 
 func resolveLogoutInstance(contextName string, conf *Config, claims jwt.MapClaims) (*instance.Instance, error) {
-	if conf.AllowCustomInstance {
-		sub, ok := claims["sub"].(string)
-		if !ok {
-			return nil, errors.New("invalid claims")
-		}
-		logger.WithNamespace("oidc").Debugf(
-			"Resolving logout instance by subject for context %s",
-			contextName,
-		)
-		return findInstanceBySub(sub, contextName)
-	}
-
-	domain, ok := claims[conf.UserInfoField].(string)
-	if !ok {
-		return nil, errors.New("invalid claims")
-	}
 	logger.WithNamespace("oidc").Debugf(
-		"Resolving logout instance by %s for context %s",
-		conf.UserInfoField, contextName,
+		"Resolving logout instance for context %s using OIDC instance mapping",
+		contextName,
 	)
-	return lifecycle.GetInstance(buildDomain(domain, conf))
+	return oidcprovider.ResolveInstanceFromClaims(contextName, conf, claims)
 }
 
 func audienceContains(audiences []string, clientID string) bool {
@@ -1217,6 +1191,10 @@ func makeStartURL(inst *instance.Instance, domain, redirect, confirm, oidcContex
 }
 
 func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string, conf *Config, contextName string) (string, error) {
+	return makeSharingStartURLWithLoginHint(inst, sharingID, sharingState, conf, contextName, getLoginHint(inst))
+}
+
+func makeSharingStartURLWithLoginHint(inst *instance.Instance, sharingID, sharingState string, conf *Config, contextName, loginHint string) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
@@ -1232,7 +1210,6 @@ func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
-	loginHint := getLoginHint(inst)
 	if loginHint != "" {
 		vv.Add("login_hint", loginHint)
 	}
@@ -1313,7 +1290,7 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return extractDomain(conf, params)
+	return oidcprovider.ExtractDomainFromClaims(conf, params)
 }
 
 func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string) error {
@@ -1322,39 +1299,17 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		return err
 	}
 
-	if conf.AllowCustomInstance {
-		sub, ok := params["sub"].(string)
-		expected := inst.OIDCID
-		if conf.Provider == oidcprovider.FranceConnectProvider {
-			expected = inst.FranceConnectID
+	err = oidcprovider.CheckClaimsForInstance(conf, inst, params)
+	if err != nil && conf.Provider == oidcprovider.FranceConnectProvider {
+		if errors.Is(err, ErrAuthenticationFailed) {
+			return ErrFranceConnectFailed
 		}
-		if !ok || sub == "" {
-			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
-			if conf.Provider == oidcprovider.FranceConnectProvider {
-				return ErrFranceConnectFailed
-			}
-			return ErrAuthenticationFailed
+		var mismatch *oidcprovider.InstanceMismatchError
+		if errors.As(err, &mismatch) {
+			return ErrFranceConnectFailed
 		}
-		if sub != expected {
-			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
-			if conf.Provider == oidcprovider.FranceConnectProvider {
-				return ErrFranceConnectFailed
-			}
-			return &DomainMismatchError{ExpectedDomain: inst.Domain, ActualDomain: sub}
-		}
-		return nil
 	}
-
-	domain, err := extractDomain(conf, params)
-	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Cannot extract domain: %s", err)
-		return err
-	}
-	if domain != inst.Domain {
-		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return &DomainMismatchError{ExpectedDomain: inst.Domain, ActualDomain: domain}
-	}
-	return nil
+	return err
 }
 
 func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
@@ -1384,46 +1339,6 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 		return nil, ErrIdentityProvider
 	}
 	return params, nil
-}
-
-func extractDomain(conf *Config, params map[string]interface{}) (string, error) {
-	domain, ok := params[conf.UserInfoField].(string)
-	if !ok {
-		return "", ErrAuthenticationFailed
-	}
-	return buildDomain(domain, conf), nil
-}
-
-func buildDomain(domain string, conf *Config) string {
-	domain = strings.ToLower(domain)             // The domain is case insensitive
-	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
-	if conf.UserInfoSuffix != "" {
-		// When we have a suffix, it means that the data from user infos is
-		// just the slug, and we don't . in the slug
-		domain = strings.ReplaceAll(domain, ".", "")
-	}
-	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
-	return domain
-}
-
-func findInstanceBySub(sub, contextName string) (*instance.Instance, error) {
-	var instances []*instance.Instance
-	req := &couchdb.FindRequest{
-		UseIndex: "by-oidcid",
-		Selector: mango.And(
-			mango.Equal("oidc_id", sub),
-			mango.Equal("context", contextName),
-		),
-		Limit: 1,
-	}
-	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &instances)
-	if err != nil {
-		return nil, err
-	}
-	if len(instances) == 0 {
-		return nil, errors.New("instance not found")
-	}
-	return instances[0], nil
 }
 
 func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
@@ -1549,7 +1464,7 @@ func GetDelegatedCode(c echo.Context) error {
 		}
 		s = sub
 	} else {
-		domain, err := extractDomain(conf, params)
+		domain, err := oidcprovider.ExtractDomainFromClaims(conf, params)
 		if err != nil {
 			logger.WithNamespace("oidc").Warnf("Cannot extract domain: %s", err)
 			return err

@@ -3,9 +3,12 @@ package sharings_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1422,6 +1425,270 @@ func TestSharings(t *testing.T) {
 		require.NoError(t, instance.Update(aliceInstance))
 		clearPublicOIDCContext(config.DefaultInstanceContext)
 	})
+
+	t.Run("DiscoveryAutomaticallyRedirectsToCompanyOIDCContext", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		companyContextName := "company-domain-oidc"
+		conf.Authentication[companyContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"domain":        "example.net",
+				"client_id":     "company-client-id",
+				"client_secret": "company-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.company.example/authorize",
+			},
+		}
+		t.Cleanup(func() {
+			delete(conf.Authentication, companyContextName)
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "company-domain")
+
+		location := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusSeeOther).
+			Header("Location").NotEmpty().Raw()
+
+		redirectURL, err := url.Parse(location)
+		require.NoError(t, err)
+		assert.Equal(t, "https", redirectURL.Scheme)
+		assert.Equal(t, "idp.company.example", redirectURL.Host)
+		assert.Equal(t, "/authorize", redirectURL.Path)
+
+		query := redirectURL.Query()
+		assert.Equal(t, "code", query.Get("response_type"))
+		assert.Equal(t, "openid profile email", query.Get("scope"))
+		assert.Equal(t, "company-client-id", query.Get("client_id"))
+		assert.Equal(t, "https://oauthcallback.example.net/oidc/redirect", query.Get("redirect_uri"))
+		assert.Equal(t, "bob@example.net", query.Get("login_hint"))
+		assert.NotEmpty(t, query.Get("state"))
+		assert.NotEmpty(t, query.Get("nonce"))
+	})
+
+	t.Run("DiscoveryAutomaticallyRedirectsToOrgDomainOIDCContext", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		orgContextName := "company-org-oidc"
+		conf.Authentication[orgContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "org-client-id",
+				"client_secret": "org-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.org.example/authorize",
+			},
+		}
+
+		originalOrgDomain := bobInstance.OrgDomain
+		originalContext := bobInstance.ContextName
+		bobInstance.OrgDomain = "example.net"
+		bobInstance.ContextName = orgContextName
+		require.NoError(t, instance.Update(bobInstance))
+		t.Cleanup(func() {
+			delete(conf.Authentication, orgContextName)
+			bobInstance.OrgDomain = originalOrgDomain
+			bobInstance.ContextName = originalContext
+			require.NoError(t, instance.Update(bobInstance))
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "org-domain")
+
+		location := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusSeeOther).
+			Header("Location").NotEmpty().Raw()
+
+		redirectURL, err := url.Parse(location)
+		require.NoError(t, err)
+		assert.Equal(t, "https", redirectURL.Scheme)
+		assert.Equal(t, "idp.org.example", redirectURL.Host)
+		assert.Equal(t, "/authorize", redirectURL.Path)
+
+		query := redirectURL.Query()
+		assert.Equal(t, "code", query.Get("response_type"))
+		assert.Equal(t, "openid profile email", query.Get("scope"))
+		assert.Equal(t, "org-client-id", query.Get("client_id"))
+		assert.Equal(t, "https://oauthcallback.example.net/oidc/redirect", query.Get("redirect_uri"))
+		assert.Equal(t, "bob@example.net", query.Get("login_hint"))
+		assert.NotEmpty(t, query.Get("state"))
+		assert.NotEmpty(t, query.Get("nonce"))
+	})
+
+	t.Run("DiscoveryFallsBackWhenOrgDomainContextIsEmpty", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+		fallbackContextName := "company-domain-fallback-oidc"
+		conf.Authentication[fallbackContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"domain":        "example.net",
+				"client_id":     "fallback-client-id",
+				"client_secret": "fallback-client-secret",
+				"scope":         "openid profile email",
+				"redirect_uri":  "https://oauthcallback.example.net/oidc/redirect",
+				"authorize_url": "https://idp.fallback.example/authorize",
+			},
+		}
+
+		originalOrgDomain := bobInstance.OrgDomain
+		originalContext := bobInstance.ContextName
+		bobInstance.OrgDomain = "example.net"
+		bobInstance.ContextName = ""
+		require.NoError(t, instance.Update(bobInstance))
+		t.Cleanup(func() {
+			delete(conf.Authentication, fallbackContextName)
+			bobInstance.OrgDomain = originalOrgDomain
+			bobInstance.ContextName = originalContext
+			require.NoError(t, instance.Update(bobInstance))
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		testSharingID, testState := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "org-domain-empty-context")
+
+		eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusOK).
+			Body().NotContains("idp.fallback.example")
+	})
+}
+
+func TestRevokeRecipientDelegationRejectsNonDriveSharing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	testutils.NeedCouchdb(t)
+
+	setup := testutils.NewSetup(t, t.Name()+"_recipient")
+	inst := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "recipient@example.net",
+		PublicName: "Recipient",
+	})
+	token := generateAppToken(inst, "testapp", iocozytests)
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	s := &sharing.Sharing{
+		SID:    "non-open-delegated-revoke",
+		Active: true,
+		Open:   true,
+		Owner:  false,
+		Rules: []sharing.Rule{{
+			Title:   "test",
+			DocType: iocozytests,
+			Values:  []string{"doc1"},
+		}},
+		Members: []sharing.Member{
+			{Status: sharing.MemberStatusOwner, Email: "owner@example.net", Instance: "https://owner.example"},
+			{Status: sharing.MemberStatusReady, Email: "recipient@example.net", Instance: "https://recipient.example"},
+			{Status: sharing.MemberStatusReady, Email: "other@example.net", Instance: "https://other.example"},
+		},
+		Credentials: []sharing.Credentials{{}},
+	}
+	require.NoError(t, couchdb.CreateNamedDocWithDB(inst, s))
+
+	e := httpexpect.Default(t, ts.URL)
+	e.DELETE("/sharings/"+s.SID+"/recipients/2").
+		WithHeader("Authorization", "Bearer "+token).
+		Expect().Status(http.StatusForbidden)
+
+	stored, err := sharing.FindSharing(inst, s.SID)
+	require.NoError(t, err)
+	require.Equal(t, sharing.MemberStatusReady, stored.Members[2].Status)
+}
+
+func TestReadOnlyRecipientCannotPromoteSelfToEditor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	testutils.NeedCouchdb(t)
+
+	setup := testutils.NewSetup(t, t.Name()+"_owner")
+	inst := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	var recipientNotified atomic.Bool
+	recipientTS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		recipientNotified.Store(true)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(recipientTS.Close)
+
+	sharingID := "readonly-recipient-promote-self"
+	recipient := sharing.Member{
+		Status:   sharing.MemberStatusReady,
+		Email:    "recipient@example.net",
+		Instance: recipientTS.URL,
+		ReadOnly: true,
+	}
+	cli, err := sharing.CreateOAuthClient(inst, &recipient)
+	require.NoError(t, err)
+	access, err := sharing.CreateAccessToken(inst, cli, sharingID, permission.ALL)
+	require.NoError(t, err)
+
+	s := &sharing.Sharing{
+		SID:    sharingID,
+		Active: true,
+		Owner:  true,
+		Drive:  true,
+		Rules: []sharing.Rule{{
+			Title:   "Shared drive",
+			DocType: consts.Files,
+			Values:  []string{"shared-drive-root"},
+		}},
+		Members: []sharing.Member{
+			{
+				Status:     sharing.MemberStatusOwner,
+				PublicName: "Owner",
+				Email:      "owner@example.net",
+				Instance:   "https://owner.example",
+			},
+			recipient,
+		},
+		Credentials: []sharing.Credentials{{
+			AccessToken:     access,
+			InboundClientID: cli.ClientID,
+			XorKey:          sharing.MakeXorKey(),
+		}},
+	}
+	require.NoError(t, couchdb.CreateNamedDocWithDB(inst, s))
+
+	e := httpexpect.Default(t, ts.URL)
+	e.DELETE("/sharings/"+sharingID+"/recipients/1/readonly").
+		WithHeader("Authorization", "Bearer "+access.AccessToken).
+		Expect().Status(http.StatusForbidden)
+
+	stored, err := sharing.FindSharing(inst, sharingID)
+	require.NoError(t, err)
+	require.True(t, stored.Members[1].ReadOnly)
+	require.False(t, recipientNotified.Load(), "recipient should not receive upgrade credentials")
 }
 
 // createSharingAndGetState creates a sharing and returns its ID and state

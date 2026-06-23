@@ -1054,21 +1054,42 @@ Content-Type: application/json
 This endpoint exchanges an external OIDC `id_token` for a normal Cozy OAuth
 client and token pair on the target instance.
 
-It is intended for browser-based admin applications that authenticate with an
-external identity provider, then need to call Cozy APIs directly on an
-organization instance.
+It supports two configured exchanges:
+
+- admin applications that authenticate with an external identity provider, then
+  need to call Cozy APIs directly on an organization instance
+- trusted user applications mapped by OIDC audience to a Cozy linked app, such
+  as `twake-mail-web` to `registry://mail`
 
 The target Cozy instance is the request host. The exchanged `id_token` must:
 
 - be signed by the configured OIDC provider
 - match the configured issuer and audience
+- contain `iat` and `exp` claims
+- contain a `sid` claim so the created OAuth client can be revoked by OIDC
+  backchannel logout
+
+For admin exchanges, the `id_token` must also:
+
 - contain an `org_id` claim equal to the target instance organization id
 - contain an `org_role` claim equal to `owner` or `admin`
+
+For user app exchanges, the `id_token` audience must be present in the
+`oidc.app_token_exchange` stack configuration. The token must also match the
+target Cozy instance. When the matched app exchange entry sets `instance_claim`,
+that claim must contain the target instance domain. Otherwise the existing OIDC
+instance mapping is used (`sub` to `oidc_id` when `allow_custom_instance` is
+true, otherwise `userinfo_instance_field` with prefix/suffix). The returned
+scope is derived from the configured linked app manifest, for example
+`@io.cozy.apps/mail`; caller-provided scopes are rejected.
 
 The request body is JSON:
 
 - `id_token`, the external OIDC token
-- `scope`, a space-separated list of allowed doctypes: `io.cozy.files`, `io.cozy.contacts`, `io.cozy.contacts.groups`
+- `exchange_type`, optional, either `admin` or `app`; when omitted, `admin`
+  is used
+- `scope`, for admin exchanges only, a space-separated list of allowed
+  doctypes: `io.cozy.files`, `io.cozy.contacts`, `io.cozy.contacts.groups`
 
 Example:
 
@@ -1081,6 +1102,15 @@ Accept: application/json
 {
   "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRva2VuLWV4Y2hhbmdlIn0...",
   "scope": "io.cozy.files"
+}
+```
+
+Example app exchange:
+
+```json
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRva2VuLWV4Y2hhbmdlIn0...",
+  "exchange_type": "app"
 }
 ```
 
@@ -1112,9 +1142,8 @@ The returned OAuth client is a normal Cozy OAuth client:
 - `registration_access_token` can be used with
   `DELETE /auth/register/:client-id` to revoke that exchanged client
 
-When the external `id_token` contains a `sid` claim, the created OAuth client
-is bound to that upstream OIDC session so it can be revoked by OIDC
-backchannel logout.
+The created OAuth client is bound to the upstream OIDC session so it can be
+revoked by OIDC backchannel logout.
 
 ### POST /auth/session_code
 

@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -134,13 +133,19 @@ func MoveHandler(c echo.Context) error {
 		return err
 	}
 
-	sourceInstance, err := resolveInstanceOrCurrent(req.Source.Instance, inst)
-	if err != nil {
-		return err
+	sourceInstance := inst
+	if req.Source.Instance != "" {
+		if err := validateInstanceURL(req.Source.Instance); err != nil {
+			return err
+		}
+		sourceInstance = LocalInstanceFromURL(req.Source.Instance)
 	}
-	destInstance, err := resolveInstanceOrCurrent(req.Dest.Instance, inst)
-	if err != nil {
-		return err
+	destInstance := inst
+	if req.Dest.Instance != "" {
+		if err := validateInstanceURL(req.Dest.Instance); err != nil {
+			return err
+		}
+		destInstance = LocalInstanceFromURL(req.Dest.Instance)
 	}
 
 	moveDirectory := req.Source.DirID != ""
@@ -157,7 +162,7 @@ func MoveHandler(c echo.Context) error {
 		if err := validateFileBackedDriveMoveCopy(req, sourceSharing, destSharing); err != nil {
 			return err
 		}
-		if OnSameStackCheck(sourceInstance, destInstance) {
+		if sourceInstance != nil && destInstance != nil {
 			if moveDirectory {
 				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, destSharing, req.Copy)
 			} else {
@@ -177,7 +182,7 @@ func MoveHandler(c echo.Context) error {
 		if err := validateFileBackedDriveMoveCopy(req, s, nil); err != nil {
 			return err
 		}
-		if OnSameStackCheck(sourceInstance, destInstance) {
+		if sourceInstance != nil && destInstance != nil {
 			if moveDirectory {
 				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, nil, req.Copy)
 			} else {
@@ -185,9 +190,9 @@ func MoveHandler(c echo.Context) error {
 			}
 		} else {
 			if moveDirectory {
-				return moveDirFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
+				return moveDirFromSharedDrive(c, inst, req.Source.Instance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			}
-			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s, req.Copy)
+			return moveFileFromSharedDrive(c, inst, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s, req.Copy)
 		}
 	} else if req.Source.Instance == "" && req.Dest.Instance != "" {
 		s, err := checkSharedDrivePermission(inst, req.Dest.SharingID, true)
@@ -197,7 +202,7 @@ func MoveHandler(c echo.Context) error {
 		if err := validateFileBackedDriveMoveCopy(req, nil, s); err != nil {
 			return err
 		}
-		if OnSameStackCheck(sourceInstance, destInstance) {
+		if sourceInstance != nil && destInstance != nil {
 			if moveDirectory {
 				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			} else {
@@ -205,9 +210,9 @@ func MoveHandler(c echo.Context) error {
 			}
 		} else {
 			if moveDirectory {
-				return moveDirToSharedDrive(c, sourceInstance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
+				return moveDirToSharedDrive(c, inst, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			}
-			return moveFileToSharedDrive(c, sourceInstance, req.Dest.DirID, req.Source.FileID, s, req.Copy)
+			return moveFileToSharedDrive(c, inst, req.Dest.DirID, req.Source.FileID, s, req.Copy)
 		}
 	} else {
 		return jsonapi.BadRequest(errors.New("to move files inside personal drive use patch function"))
@@ -868,50 +873,16 @@ func moveFileBetweenSharedDrives(c echo.Context, sourceInstanceURL, fileID strin
 	return respondRemoteUpload(c, uploaded, destSharing.ID())
 }
 
-func getInstanceIdentifierFromURL(urlStr string) (*instance.Instance, error) {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return nil, err
-	}
-	// Try to get the real instance first (for same-stack operations)
-	inst, err := lifecycle.GetInstance(u.Host)
-	if err == nil {
-		return inst, nil
-	}
-	// If not found locally, return a minimal instance (for cross-stack operations)
-	return &instance.Instance{Domain: u.Host}, nil
-}
+// LocalInstanceFromURL allows tests to replace same-stack detection.
+var LocalInstanceFromURL = sharing.LocalInstanceFromURL
 
-// resolveInstanceOrCurrent returns the instance resolved from the given URL,
-// or the provided current instance when the URL is empty. Invalid URLs are
-// reported as a BadRequest error suitable for handlers.
-func resolveInstanceOrCurrent(urlStr string, current *instance.Instance) (*instance.Instance, error) {
-	if urlStr == "" {
-		return current, nil
+func validateInstanceURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return jsonapi.BadRequest(errors.New("invalid instance URL"))
 	}
-	inst, err := getInstanceIdentifierFromURL(urlStr)
-	if err != nil {
-		return nil, jsonapi.BadRequest(errors.New("invalid instance URL"))
-	}
-	return inst, nil
+	return nil
 }
-
-func onSameStack(src, dst *instance.Instance) bool {
-	var srcPort, dstPort string
-	parts := strings.SplitN(src.Domain, ":", 2)
-	if len(parts) > 1 {
-		srcPort = parts[1]
-	}
-	parts = strings.SplitN(dst.Domain, ":", 2)
-	if len(parts) > 1 {
-		dstPort = parts[1]
-	}
-	return srcPort == dstPort
-}
-
-// OnSameStackCheck allows tests to replace same-stack detection logic.
-// Default points to onSameStack; tests may replace it.
-var OnSameStackCheck = onSameStack
 
 // NewRemoteClient allows tests to inject custom client behavior for cross-stack operations.
 var NewRemoteClient = func(u *url.URL, bearerToken string) *client.Client {

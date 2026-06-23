@@ -131,6 +131,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"",
 			false,
 			false,
+			false,
 		)
 		require.NoError(t, err)
 	})
@@ -147,6 +148,24 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"creator.example",
 			true,
 			false,
+			false,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("AllowsWritableMemberWithConfig", func(t *testing.T) {
+		s := &modelsharing.Sharing{Owner: false}
+		target := permissionWithCreatorDomain("creator.example")
+		current := &permission.Permission{Type: permission.TypeShareInteract}
+
+		err := sharingsweb.CheckSharedDrivePermissionMutationAuthorization(
+			s,
+			target,
+			current,
+			"writer.example",
+			true,
+			false,
+			true,
 		)
 		require.NoError(t, err)
 	})
@@ -166,6 +185,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"creator.example",
 			true,
 			true,
+			false,
 		)
 		require.NoError(t, err)
 	})
@@ -185,6 +205,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"creator.example",
 			true,
 			true,
+			true,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "write access denied")
 	})
@@ -201,6 +222,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"",
 			false,
 			false,
+			true,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "public share token cannot modify")
 	})
@@ -217,6 +239,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"",
 			false,
 			false,
+			true,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "public share token cannot modify")
 	})
@@ -233,11 +256,12 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"",
 			false,
 			false,
+			true,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "cannot verify caller identity")
 	})
 
-	t.Run("RejectsNonOwnerNonCreator", func(t *testing.T) {
+	t.Run("RejectsNonOwnerNonCreatorWithoutConfig", func(t *testing.T) {
 		s := &modelsharing.Sharing{Owner: false}
 		target := permissionWithCreatorDomain("creator.example")
 		current := &permission.Permission{Type: permission.TypeWebapp}
@@ -249,6 +273,27 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			"other.example",
 			true,
 			false,
+			false,
+		)
+		assertJSONAPIError(t, err, http.StatusForbidden, "only creator or owner can modify")
+	})
+
+	t.Run("RejectsReadOnlyNonCreatorWithConfig", func(t *testing.T) {
+		s := &modelsharing.Sharing{Owner: false}
+		target := permissionWithCreatorDomain("creator.example")
+		target.Permissions = permission.Set{
+			{Type: "io.cozy.files", Verbs: permission.Verbs(permission.GET)},
+		}
+		current := &permission.Permission{Type: permission.TypeShareInteract}
+
+		err := sharingsweb.CheckSharedDrivePermissionMutationAuthorization(
+			s,
+			target,
+			current,
+			"readonly.example",
+			true,
+			true,
+			true,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "only creator or owner can modify")
 	})

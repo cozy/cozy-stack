@@ -385,6 +385,31 @@ deprecated_apps:
 authorized_hosts_for_confirm_auth:
   - sometool.example.org
 
+# Authentication can be configured per context. The keys under "authentication"
+# are context names.
+authentication:
+  beta:
+    disable_password_authentication: false
+    oidc:
+      client_id: aClientID
+      client_secret: s3cret3
+      scope: openid profile
+      redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
+      authorize_url: https://identity-provider/path/to/authorize
+      token_url: https://identity-provider/path/to/token
+      userinfo_url: https://identity-provider/path/to/userinfo
+      userinfo_instance_field: cozy_number
+      id_token_jwk_url: https://identity-provider/path/to/jwk
+      allow_app_token_exchange: true
+      app_token_exchange:
+        # OIDC id_token audience.
+        twake-mail-web:
+          # Must be a Cozy linked application software_id. The local OAuth
+          # scope is derived from this linked app manifest.
+          software_id: registry://mail
+          # Optional OIDC claim containing the target Cozy instance domain.
+          instance_claim: workplaceFqdn
+
 notifications:
   # Activate development APIs (iOS only)
   development: false
@@ -541,6 +566,9 @@ contexts:
       trusted_domains:
         - example.com
         - mycompany.twake.app
+      # Allow shared drive members with write access to update or revoke
+      # share-by-link permissions created by other members (default: false)
+      allow_writers_to_manage_links: false
     # Antivirus configuration for scanning uploaded files using ClamAV
     antivirus:
       # Enable or disable antivirus scanning
@@ -591,6 +619,18 @@ contexts:
       auto_accept_trusted: false
       auto_accept_trusted_contacts: false
       trusted_domains: []
+
+# WARNING: Closed-network deployments only.
+# Allows safehttp callers to reach private CIDRs, bypassing SSRF protections
+# for those addresses (including non-standard ports).
+# This affects sharing, move/import/export, WebDAV, BI, common settings,
+# Bitwarden icon fetching, and all other safehttp-backed outbound calls.
+# Default behavior (empty list) keeps all private addresses blocked.
+# safe_http:
+#   trusted_private_networks:
+#     - 10.0.0.0/8
+#     - 172.16.0.0/12
+#     - 192.168.0.0/16
 
 rabbitmq:
   enabled: true

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,52 @@ func TestLoadConfigRequireIssuerOrTokenURL(t *testing.T) {
 
 	_, err := LoadConfig("missing-issuer-and-token-url", RequireIssuerOrTokenURL)
 	require.EqualError(t, err, "The issuer or token_url is missing for this context")
+}
+
+func TestCheckClaimsForInstance(t *testing.T) {
+	inst := &instance.Instance{
+		Domain: "alice.example.net",
+		OIDCID: "alice-sub",
+	}
+
+	err := CheckClaimsForInstance(&Config{AllowCustomInstance: true}, inst, jwt.MapClaims{
+		"sub": "alice-sub",
+	})
+	require.NoError(t, err)
+
+	err = CheckClaimsForInstance(&Config{AllowCustomInstance: true}, inst, jwt.MapClaims{
+		"sub": "bob-sub",
+	})
+	require.EqualError(t, err, "OIDC Domain Mismatch alice.example.net bob-sub")
+
+	domainInst := &instance.Instance{Domain: "name00001.mycozy.cloud"}
+	err = CheckClaimsForInstance(&Config{
+		UserInfoField:  "cozy_number",
+		UserInfoPrefix: "name",
+		UserInfoSuffix: ".mycozy.cloud",
+	}, domainInst, jwt.MapClaims{
+		"cozy_number": "00001",
+	})
+	require.NoError(t, err)
+
+	err = CheckClaimsForInstance(&Config{
+		UserInfoField:  "cozy_number",
+		UserInfoPrefix: "alice",
+		UserInfoSuffix: ".example.net",
+	}, inst, jwt.MapClaims{
+		"cozy_number": "bob",
+	})
+	require.EqualError(t, err, "OIDC Domain Mismatch alice.example.net alicebob.example.net")
+}
+
+func TestBuildInstanceDomain(t *testing.T) {
+	conf := &Config{
+		UserInfoPrefix: "name",
+		UserInfoSuffix: ".mycozy.cloud",
+	}
+
+	require.Equal(t, "name00001.mycozy.cloud", buildInstanceDomain("000-01", conf))
+	require.Equal(t, "nameuserdomain.mycozy.cloud", buildInstanceDomain("user.domain", conf))
 }
 
 func TestVerifyLogoutTokenFailsWhenIssuerCannotBeResolved(t *testing.T) {

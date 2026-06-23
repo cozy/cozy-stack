@@ -91,6 +91,18 @@ func (m *Member) InstanceHost() string {
 	return u.Host
 }
 
+// InstanceURL returns the parsed Cozy URL of the member.
+func (m *Member) InstanceURL() (*url.URL, bool) {
+	if m == nil || m.Instance == "" {
+		return nil, false
+	}
+	u, err := url.Parse(m.Instance)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return nil, false
+	}
+	return u, true
+}
+
 // Same returns true if the two members are the same.
 func (m *Member) Same(other Member) bool {
 	return m.Name == other.Name &&
@@ -355,6 +367,9 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 	u, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		return err
+	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
 	}
 	c := &s.Credentials[0]
 	if c.AccessToken == nil {
@@ -689,9 +704,9 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 	if c.Client == nil || c.AccessToken == nil {
 		return ErrNoOAuthClient
 	}
-	u, err := url.Parse(m.Instance)
-	if err != nil {
-		return err
+	u, ok := m.InstanceURL()
+	if !ok {
+		return ErrInvalidSharing
 	}
 	r := &auth.Request{
 		Scheme: u.Scheme,
@@ -713,11 +728,73 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 	return nil
 }
 
+// requireOAuthCredentials checks that an incoming credentials payload carries
+// the embedded credentials, the OAuth client, and a non-empty access token —
+// the fields that downstream code dereferences without further guards.
+func requireOAuthCredentials(creds *APICredentials) error {
+	if creds == nil || creds.Credentials == nil ||
+		creds.Client == nil ||
+		creds.AccessToken == nil ||
+		creds.AccessToken.AccessToken == "" {
+		return ErrInvalidSharing
+	}
+	return nil
+}
+
+// recipientTarget returns what the owner needs to call a recipient:
+// the recipient member, the credentials to authenticate with, and the recipient's URL.
+// It validates everything up front so callers don't hit nil pointer panics later.
+func (s *Sharing) recipientTarget(index int) (*Member, *Credentials, *url.URL, error) {
+	if index <= 0 || index >= len(s.Members) || index-1 >= len(s.Credentials) {
+		return nil, nil, nil, ErrMemberNotFound
+	}
+	m := &s.Members[index]
+	u, ok := m.InstanceURL()
+	if !ok {
+		return nil, nil, nil, ErrInvalidSharing
+	}
+	c := &s.Credentials[index-1]
+	if c.AccessToken == nil {
+		return nil, nil, nil, ErrInvalidSharing
+	}
+	return m, c, u, nil
+}
+
+func (s *Sharing) shouldUpdateReadOnlyFlagWithoutRecipientSync(index int) bool {
+	switch s.Members[index].Status {
+	case MemberStatusMailNotSent, MemberStatusPendingInvitation, MemberStatusSeen:
+		return true
+	default:
+		return false
+	}
+}
+
+// ownerTarget returns what a recipient needs to call back to the owner:
+// the owner member, the credentials to authenticate with, and the owner's URL.
+func (s *Sharing) ownerTarget(index int) (*Member, *Credentials, *url.URL, error) {
+	if index <= 0 || index >= len(s.Members) {
+		return nil, nil, nil, ErrMemberNotFound
+	}
+	if len(s.Credentials) != 1 {
+		return nil, nil, nil, ErrInvalidSharing
+	}
+	m := &s.Members[0]
+	u, ok := m.InstanceURL()
+	if !ok {
+		return nil, nil, nil, ErrInvalidSharing
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return nil, nil, nil, ErrInvalidSharing
+	}
+	return m, c, u, nil
+}
+
 // AddReadOnlyFlag adds the read-only flag of a recipient, and send
 // an access token with a short validity to let it synchronize its last
 // changes.
 func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 0 {
+	if index <= 0 || index >= len(s.Members) {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnlyFlag() {
@@ -726,7 +803,14 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	if s.Members[index].ReadOnly {
 		return nil
 	}
-	s.Members[index].ReadOnly = true
+	if s.shouldUpdateReadOnlyFlagWithoutRecipientSync(index) {
+		s.Members[index].ReadOnly = true
+		return couchdb.UpdateDoc(inst, s)
+	}
+	m, c, u, err := s.recipientTarget(index)
+	if err != nil {
+		return err
+	}
 
 	ac := APICredentials{
 		CID:         s.SID,
@@ -736,11 +820,11 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	// on this cozy), so we have to revoke the client. And we create a new
 	// client for the temporary access token used to synchronize the last
 	// changes (the recipient won't have a refresh token).
-	cli, err := CreateOAuthClient(inst, &s.Members[index])
+	cli, err := CreateOAuthClient(inst, m)
 	if err != nil {
 		return err
 	}
-	s.Credentials[index-1].InboundClientID = cli.ClientID
+	c.InboundClientID = cli.ClientID
 	ac.Credentials.Client = ConvertOAuthClient(cli)
 	scope := consts.Sharings + ":ALL:" + s.SID
 	issuedAt := time.Now().Add(1*time.Hour - consts.AccessTokenValidityDuration)
@@ -755,10 +839,6 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		Scope: scope,
 	}
 
-	u, err := url.Parse(s.Members[index].Instance)
-	if s.Members[index].Instance == "" || err != nil {
-		return ErrInvalidSharing
-	}
 	data, err := jsonapi.MarshalObject(&ac)
 	if err != nil {
 		return err
@@ -775,14 +855,14 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		Headers: request.Headers{
 			echo.HeaderAccept:        jsonapi.ContentType,
 			echo.HeaderContentType:   jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, res, err, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
 		if res != nil {
@@ -792,17 +872,17 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	}
 	defer res.Body.Close()
 
+	m.ReadOnly = true
 	return couchdb.UpdateDoc(inst, s)
 }
 
 // DelegateAddReadOnlyFlag is used by a recipient to ask the sharer to
 // add the read-only falg for another member of the sharing.
 func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) error {
-	u, err := url.Parse(s.Members[0].Instance)
+	m, c, u, err := s.ownerTarget(index)
 	if err != nil {
 		return err
 	}
-	c := &s.Credentials[0]
 	opts := &request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
@@ -815,7 +895,7 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
+		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusBadRequest {
@@ -830,8 +910,11 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 // DowngradeToReadOnly is used to receive credentials on a read-write instance
 // to sync the last changes before going to read-only mode.
 func (s *Sharing) DowngradeToReadOnly(inst *instance.Instance, creds *APICredentials) error {
-	if s.Owner {
+	if s.Owner || len(s.Credentials) != 1 {
 		return ErrInvalidSharing
+	}
+	if err := requireOAuthCredentials(creds); err != nil {
+		return err
 	}
 
 	for i, m := range s.Members {
@@ -867,7 +950,7 @@ func (s *Sharing) DowngradeToReadOnly(inst *instance.Instance, creds *APICredent
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 0 {
+	if index <= 0 || index >= len(s.Members) {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnlyFlag() {
@@ -876,20 +959,27 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	if !s.Members[index].ReadOnly {
 		return nil
 	}
-	s.Members[index].ReadOnly = false
+	if s.shouldUpdateReadOnlyFlagWithoutRecipientSync(index) {
+		s.Members[index].ReadOnly = false
+		return couchdb.UpdateDoc(inst, s)
+	}
+	m, c, u, err := s.recipientTarget(index)
+	if err != nil {
+		return err
+	}
 
 	ac := APICredentials{
 		CID: s.SID,
 		Credentials: &Credentials{
-			XorKey: s.Credentials[index-1].XorKey,
+			XorKey: c.XorKey,
 		},
 	}
 	// Create the credentials for the recipient
-	cli, err := CreateOAuthClient(inst, &s.Members[index])
+	cli, err := CreateOAuthClient(inst, m)
 	if err != nil {
 		return err
 	}
-	s.Credentials[index-1].InboundClientID = cli.ClientID
+	c.InboundClientID = cli.ClientID
 	ac.Credentials.Client = ConvertOAuthClient(cli)
 	token, err := CreateAccessToken(inst, cli, s.SID, permission.ALL)
 	if err != nil {
@@ -897,10 +987,6 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	}
 	ac.Credentials.AccessToken = token
 
-	u, err := url.Parse(s.Members[index].Instance)
-	if s.Members[index].Instance == "" || err != nil {
-		return ErrInvalidSharing
-	}
 	data, err := jsonapi.MarshalObject(&ac)
 	if err != nil {
 		return err
@@ -917,27 +1003,31 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		Headers: request.Headers{
 			echo.HeaderAccept:        jsonapi.ContentType,
 			echo.HeaderContentType:   jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, res, err, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
 		return err
 	}
 	res.Body.Close()
+	m.ReadOnly = false
 	return couchdb.UpdateDoc(inst, s)
 }
 
 // UpgradeToReadWrite is used to receive credentials on a read-only instance
 // to upgrade it to read-write.
 func (s *Sharing) UpgradeToReadWrite(inst *instance.Instance, creds *APICredentials) error {
-	if s.Owner {
+	if s.Owner || len(s.Credentials) != 1 {
 		return ErrInvalidSharing
+	}
+	if err := requireOAuthCredentials(creds); err != nil {
+		return err
 	}
 
 	for i, m := range s.Members {
@@ -960,11 +1050,10 @@ func (s *Sharing) UpgradeToReadWrite(inst *instance.Instance, creds *APICredenti
 // DelegateRemoveReadOnlyFlag is used by a recipient to ask the sharer to
 // remove the read-only falg for another member of the sharing.
 func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int) error {
-	u, err := url.Parse(s.Members[0].Instance)
+	m, c, u, err := s.ownerTarget(index)
 	if err != nil {
 		return err
 	}
-	c := &s.Credentials[0]
 	opts := &request.Options{
 		Method: http.MethodDelete,
 		Scheme: u.Scheme,
@@ -977,7 +1066,7 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
+		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusBadRequest {
@@ -986,6 +1075,48 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		return err
 	}
 	res.Body.Close()
+	return nil
+}
+
+// DelegateRevokeRecipient is used by a recipient to ask the sharer to revoke
+// another member of the sharing.
+func (s *Sharing) DelegateRevokeRecipient(inst *instance.Instance, index int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/recipients/%d", s.SID, index),
+		Headers: request.Headers{
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+		},
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	originalRes, originalErr := res, err
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
+	}
+	if err != nil {
+		if originalRes != nil && originalRes.StatusCode == http.StatusForbidden {
+			return preserveDelegatedRequestError(originalRes.StatusCode, originalErr)
+		}
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		return ErrInternalServerError
+	}
 	return nil
 }
 

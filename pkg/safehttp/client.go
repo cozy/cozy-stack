@@ -2,17 +2,48 @@
 // not trusted (user inputs). It will avoid SSRF by ensuring that the IP
 // address which will connect is not a private address, or loopback. It also
 // checks that the port is 80 or 443, not anything else.
+//
+// Operators can configure trusted private networks (CIDRs) to allow safehttp
+// callers to reach private addresses in closed-network deployments.
 package safehttp
 
 import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
 )
+
+// trustedPrivateNetworks holds the parsed CIDRs that are allowed to bypass
+// private-IP and port restrictions. Set once at startup via
+// SetTrustedPrivateNetworks. Stored as an atomic.Value to avoid data races
+// between config/test setup and concurrent outbound requests.
+var trustedPrivateNetworks atomic.Value // holds []*net.IPNet
+
+// SetTrustedPrivateNetworks parses the given CIDR strings and stores them for
+// use by safeControl. It should be called once at startup. If any CIDR is
+// invalid, it returns an error and does not update the allowlist.
+func SetTrustedPrivateNetworks(cidrs []string) error {
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, cidr := range cidrs {
+		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return fmt.Errorf("invalid trusted private network CIDR %q: %w", cidr, err)
+		}
+		nets = append(nets, ipnet)
+	}
+	trustedPrivateNetworks.Store(nets)
+	return nil
+}
+
+func loadTrustedNetworks() []*net.IPNet {
+	nets, _ := trustedPrivateNetworks.Load().([]*net.IPNet)
+	return nets
+}
 
 var safeDialer = &net.Dialer{
 	Timeout:   30 * time.Second,
@@ -81,6 +112,14 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 		return fmt.Errorf("%s is not a valid IP address", host)
 	}
 
+	// Trusted private networks bypass private-IP, loopback, and port
+	// restrictions only for private or loopback destinations. This is for
+	// closed-network deployments where internal services run on private
+	// addresses and non-standard ports.
+	if (ipaddress.IsPrivate() || ipaddress.IsLoopback()) && isInTrustedNetwork(ipaddress) {
+		return nil
+	}
+
 	if ipaddress.IsPrivate() {
 		return fmt.Errorf("%s is not a public IP address", ipaddress)
 	}
@@ -101,4 +140,13 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 	}
 
 	return nil
+}
+
+func isInTrustedNetwork(ip net.IP) bool {
+	for _, ipnet := range loadTrustedNetworks() {
+		if ipnet.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

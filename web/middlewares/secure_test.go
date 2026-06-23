@@ -80,10 +80,22 @@ func TestSecure(t *testing.T) {
 		})(echo.NotFoundHandler)
 		_ = h4(c4)
 
+		e5 := echo.New()
+		req5, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+		rec5 := httptest.NewRecorder()
+		c5 := e5.NewContext(req5, rec5)
+		h5 := Secure(&SecureConfig{
+			CSPScriptSrc:  []CSPSource{CSPWasmUnsafeEval},
+			CSPConnectSrc: []CSPSource{CSPSrcBlob},
+			CSPWorkerSrc:  []CSPSource{CSPSrcSelf, CSPSrcBlob},
+		})(echo.NotFoundHandler)
+		_ = h5(c5)
+
 		assert.Equal(t, "", rec1.Header().Get(echo.HeaderContentSecurityPolicy))
 		assert.Equal(t, "script-src 'self';frame-src *;", rec2.Header().Get(echo.HeaderContentSecurityPolicy))
 		assert.Equal(t, "script-src https://*.cozy.local;frame-src *;connect-src https://cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
 		assert.Equal(t, "script-src 'self';frame-src * https://example.net;connect-src https://example.com;", rec4.Header().Get(echo.HeaderContentSecurityPolicy))
+		assert.Equal(t, "script-src 'wasm-unsafe-eval';connect-src blob:;worker-src 'self' blob:;", rec5.Header().Get(echo.HeaderContentSecurityPolicy))
 	})
 
 	t.Run("AppendCSPRule", func(t *testing.T) {

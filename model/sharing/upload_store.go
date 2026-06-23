@@ -18,6 +18,7 @@ import (
 type UploadStore interface {
 	Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error)
 	Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string, error)
+	IsShared() bool
 }
 
 // uploadStoreTTL is the time an entry stay alive
@@ -46,6 +47,10 @@ func getStore() UploadStore {
 	return globalStore
 }
 
+func uploadStoreIsShared() bool {
+	return getStore().IsShared()
+}
+
 type memRef struct {
 	val *FileDocWithRevisions
 	exp time.Time
@@ -60,6 +65,10 @@ func newMemStore() UploadStore {
 type memStore struct {
 	mu   sync.Mutex
 	vals map[string]*memRef
+}
+
+func (s *memStore) IsShared() bool {
+	return false
 }
 
 func (s *memStore) cleaner() {
@@ -101,6 +110,10 @@ func (s *memStore) Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string
 type redisStore struct {
 	c   redis.UniversalClient
 	ctx context.Context
+}
+
+func (s *redisStore) IsShared() bool {
+	return true
 }
 
 func (s *redisStore) Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error) {

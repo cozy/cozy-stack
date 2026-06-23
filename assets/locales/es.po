@@ -739,6 +739,9 @@ msgstr "Una nueva manera de intercambiar está disponible en su Twake"
 msgid "Notification Sharing Description"
 msgstr "%s le invita a %s el %s %s"
 
+msgid "Notification Sharing Type Shared Drive"
+msgstr "directorio"
+
 msgid "Notification Sharing Type Document"
 msgstr "documento"
 

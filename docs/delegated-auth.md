@@ -50,6 +50,11 @@ authentication:
       allow_custom_instance: false
       allow_oauth_token: false
       id_token_jwk_url: https://identity-provider/path/to/jwk
+      allow_app_token_exchange: true
+      app_token_exchange:
+        twake-mail-web:
+          software_id: registry://mail
+          instance_claim: workplaceFqdn
 ```
 
 Let's see what it means:
@@ -83,6 +88,17 @@ And in the `oidc` section, we have:
   instance name
 - `allow_oauth_token` must be set to true to enable the
   `POST /oidc/access_token` route (see below for more details).
+- `allow_app_token_exchange` can be set to true to enable user app exchanges
+  on `POST /auth/token_exchange`. The request body must set
+  `exchange_type` to `app` for this exchange.
+- `app_token_exchange` maps an OIDC token audience to a trusted Cozy linked
+  app. The `software_id` must use the `registry://<slug>` format. The stack
+  derives the Cozy OAuth scope from the linked app manifest, so the OIDC
+  provider does not need to expose `registry://...` as an OIDC scope. When
+  `instance_claim` is set, the claim must contain the target Cozy instance
+  domain and is used instead of the default OIDC instance mapping.
+- Token exchange requires a `sid` claim so the created OAuth client can be
+  revoked by OIDC backchannel logout.
 
 With the example config, if the UserInfo response contains `"cozy_number":
 "00001"`, the user can login on the instance `name00001.mycozy.cloud`.
