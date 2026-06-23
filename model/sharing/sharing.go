@@ -32,6 +32,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
@@ -96,6 +97,14 @@ func (s *Sharing) Rev() string { return s.SRev }
 // DocType returns the sharing document type
 func (s *Sharing) DocType() string { return consts.Sharings }
 
+// DocReference returns the CouchDB reference for the sharing.
+func (s *Sharing) DocReference() couchdb.DocReference {
+	return couchdb.DocReference{
+		ID:   s.SID,
+		Type: s.DocType(),
+	}
+}
+
 // SetID changes the sharing qualified identifier
 func (s *Sharing) SetID(id string) { s.SID = id }
 
@@ -154,6 +163,26 @@ func (s *Sharing) DriveRootID() (string, error) {
 		return "", ErrDriveRootNotFound
 	}
 	return rule.Values[0], nil
+}
+
+// DriveTargetURL returns the Drive URL that opens the shared drive root.
+func (s *Sharing) DriveTargetURL(inst *instance.Instance) *url.URL {
+	u := inst.SubDomain(consts.DriveSlug)
+
+	rootID, err := s.DriveRootID()
+	if err != nil {
+		u.Fragment = "/folder/" + consts.SharedDrivesDirID
+		return u
+	}
+
+	sharingID := url.PathEscape(s.SID)
+	rootID = url.PathEscape(rootID)
+	if s.HasFileDriveRoot() {
+		u.Fragment = "/sharings/shareddrive/" + sharingID + "/file/" + rootID
+	} else {
+		u.Fragment = "/shareddrive/" + sharingID + "/" + rootID
+	}
+	return u
 }
 
 // GetFileDriveRoot returns the root file of a file-root shared drive.
@@ -600,6 +629,17 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 // Revoke remove the credentials for all members, contact them, removes the
 // triggers and set the active flag to false.
 func (s *Sharing) Revoke(inst *instance.Instance) error {
+	return s.revoke(inst, revokeOptions{removeRootReference: true})
+}
+
+// revokeOptions keeps the revoke steps explicit for special callers. When the
+// shared root is already being trashed, the VFS update removes referenced_by,
+// so revoke must not update the root document again.
+type revokeOptions struct {
+	removeRootReference bool
+}
+
+func (s *Sharing) revoke(inst *instance.Instance, opts revokeOptions) error {
 	var errm error
 
 	if !s.Owner {
@@ -618,6 +658,11 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	}
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
+	}
+	if opts.removeRootReference {
+		if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
+			return err
+		}
 	}
 	if s.PreviewPath != "" {
 		if err := s.RevokePreviewPermissions(inst); err != nil {
@@ -904,6 +949,9 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
 			return err
 		}
+		if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
+			return err
+		}
 		if err := s.RevokeInteractPermissions(inst); err != nil {
 			return err
 		}
@@ -919,6 +967,9 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 		}
 	}
 	if err := s.RemoveTriggers(inst); err != nil {
+		return err
+	}
+	if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
 		return err
 	}
 	s.Active = false
@@ -943,7 +994,7 @@ func (s *Sharing) hasRemainingRecipients() bool {
 }
 
 func (s *Sharing) deleteRevokedDriveSharing(inst *instance.Instance) error {
-	if !s.Drive {
+	if !s.Drive || s.OrgDrive {
 		return nil
 	}
 	err := couchdb.DeleteDoc(inst, s)
@@ -1060,6 +1111,10 @@ func findIntentForRedirect(inst *instance.Instance, webapp *app.WebappManifest, 
 // RedirectAfterAuthorizeURL returns the URL for the redirection after a user
 // has authorized a sharing.
 func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
+	if s.Drive {
+		return s.DriveTargetURL(inst)
+	}
+
 	doctype := s.Rules[0].DocType
 	webapp, _ := app.GetWebappBySlug(inst, s.AppSlug)
 
@@ -1188,21 +1243,76 @@ func (s *Sharing) GetSharecodeFromShortcut(inst *instance.Instance) (string, err
 }
 
 func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
-	if s.ShortcutID == "" {
+	fs := inst.VFS()
+	// remove a shortcut by id, as it before
+	parentID, deletedByID, err := destroyShortcutByID(fs, s.ShortcutID)
+	if err != nil {
 		return ""
+	}
+	shouldClearShortcutID := deletedByID || s.ShortcutID != ""
+
+	// remove shortcut reference from sharing
+	referencedParentID, deletedByRef, err := destroyReferencedShortcutFiles(inst, fs, s.SID)
+	if err == nil && parentID == "" {
+		parentID = referencedParentID
+	}
+	if err == nil && deletedByRef {
+		shouldClearShortcutID = true
+	}
+
+	if shouldClearShortcutID {
+		s.ShortcutID = ""
+		_ = couchdb.UpdateDoc(inst, s)
+	}
+	return parentID
+}
+
+func destroyShortcutByID(fs vfs.VFS, shortcutID string) (string, bool, error) {
+	if shortcutID == "" {
+		return "", false, nil
+	}
+	file, err := fs.FileByID(shortcutID)
+	if err != nil {
+		return "", false, nil
+	}
+	if err := fs.DestroyFile(file); err != nil {
+		return "", false, err
+	}
+	return file.DirID, true, nil
+}
+
+func destroyReferencedShortcutFiles(inst *instance.Instance, fs vfs.VFS, sharingID string) (string, bool, error) {
+	key := []string{consts.Sharings, sharingID}
+	req := &couchdb.ViewRequest{
+		StartKey: key,
+		EndKey:   []string{key[0], key[1], couchdb.MaxString},
+	}
+	var res couchdb.ViewResponse
+	if err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res); err != nil {
+		return "", false, err
 	}
 
 	var parentID string
-	fs := inst.VFS()
-	if file, err := fs.FileByID(s.ShortcutID); err == nil {
-		parentID = file.DirID
-		if err := fs.DestroyFile(file); err != nil {
-			return ""
+	var deleted bool
+	for _, row := range res.Rows {
+		file, err := fs.FileByID(row.ID)
+		if err != nil || !isShortcutFile(file) {
+			continue
 		}
+		if err := fs.DestroyFile(file); err != nil {
+			return "", false, err
+		}
+		if parentID == "" {
+			parentID = file.DirID
+		}
+		deleted = true
 	}
-	s.ShortcutID = ""
-	_ = couchdb.UpdateDoc(inst, s)
-	return parentID
+	return parentID, deleted, nil
+}
+
+func isShortcutFile(file *vfs.FileDoc) bool {
+	return file.Type == consts.FileType &&
+		(file.Mime == consts.ShortcutMimeType || file.Class == "shortcut")
 }
 
 // GetPreviewURL asks the owner's Cozy the URL for previewing the sharing.
@@ -1350,20 +1460,19 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 			continue
 		}
 
-		// Optimization: use direct database update for recipients on the same stack
-		if IsSameStack(inst, m.Instance) {
-			err = s.UpdateDescriptionSameStack(inst, m.Instance, s.Description)
-			if err != nil {
-				inst.Logger().WithNamespace("sharing").
-					Warnf("Can't update description directly for same-stack recipient %s: %s", m.Instance, err)
-				errors = append(errors, fmt.Errorf("failed to update same-stack recipient %s: %w", m.Instance, err))
+		if recipientInst := LocalInstanceFromURL(m.Instance); recipientInst != nil {
+			recipientSharing, localErr := FindSharing(recipientInst, s.SID)
+			if localErr == nil {
+				localErr = recipientSharing.PatchDescription(recipientInst, s.Description)
+			}
+			if localErr == nil {
+				successCount++
 				continue
 			}
-			successCount++
-			continue
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Same-stack update failed for %s, falling through to HTTP: %s", m.Instance, localErr)
 		}
 
-		// Fall back to HTTP request for cross-stack recipients
 		opts := &request.Options{
 			Method: http.MethodPut,
 			Scheme: u.Scheme,
@@ -1411,48 +1520,35 @@ func shouldReplicateDescriptionChange(i int, m Member) bool {
 	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
 }
 
-// IsSameStack checks if the recipient instance is on the same stack as the owner instance
-func IsSameStack(ownerInst *instance.Instance, recipientURL string) bool {
-	u, err := url.Parse(recipientURL)
-	if err != nil {
-		return false
+// LocalInstanceFromURL returns the local instance for the given URL, or nil.
+func LocalInstanceFromURL(rawURL string) *instance.Instance {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return nil
 	}
-
-	// Extract port from both domains for comparison
-	var ownerPort, recipientPort string
-	ownerParts := strings.SplitN(ownerInst.Domain, ":", 2)
-	if len(ownerParts) > 1 {
-		ownerPort = ownerParts[1]
-	}
-	recipientParts := strings.SplitN(u.Host, ":", 2)
-	if len(recipientParts) > 1 {
-		recipientPort = recipientParts[1]
-	}
-
-	// Same stack if ports match (both instances running on same port)
-	return ownerPort == recipientPort
+	return LocalInstanceFromHost(u.Host)
 }
 
-// UpdateDescriptionSameStack directly updates the sharing description for recipients on the same stack
-func (s *Sharing) UpdateDescriptionSameStack(ownerInst *instance.Instance, recipientURL string, description string) error {
-	u, err := url.Parse(recipientURL)
-	if err != nil {
-		return err
+// LocalInstanceFromHost returns the local instance for the given host, or nil.
+// The host may include a port (e.g. "example.com:8080"). The exact host is
+// tried first, then a normalized host without port is tried as a fallback.
+func LocalInstanceFromHost(host string) *instance.Instance {
+	if host == "" {
+		return nil
+	}
+	if inst, err := lifecycle.GetInstance(host); err == nil {
+		return inst
 	}
 
-	// Get the recipient instance directly from the same stack
-	recipientInst, err := lifecycle.GetInstance(u.Host)
-	if err != nil {
-		return err
+	domain := utils.ExtractInstanceHost(host)
+	if domain == "" || domain == host {
+		return nil
 	}
-
-	// Find the sharing document on the recipient's instance
-	recipientSharing, err := FindSharing(recipientInst, s.SID)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
-		return err
+		return nil
 	}
-
-	return recipientSharing.PatchDescription(recipientInst, description)
+	return inst
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.
@@ -1949,6 +2045,16 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 	}
 
 	if s.Owner {
+		if len(s.Credentials)+1 != len(s.Members) {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "invalid_number_of_credentials",
+				"owner":      true,
+				"nb_members": len(s.Credentials),
+			})
+			return checks
+		}
+
 		for i, m := range s.Members {
 			if i == 0 || m.Status != MemberStatusReady {
 				continue
@@ -1977,16 +2083,6 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 				})
 			}
 		}
-
-		if len(s.Credentials)+1 != len(s.Members) {
-			checks = append(checks, map[string]interface{}{
-				"id":         s.SID,
-				"type":       "invalid_number_of_credentials",
-				"owner":      true,
-				"nb_members": len(s.Credentials),
-			})
-			return checks
-		}
 	} else {
 		if len(s.Credentials) != 1 {
 			checks = append(checks, map[string]interface{}{
@@ -1996,6 +2092,22 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 				"nb_members": len(s.Credentials),
 			})
 			return checks
+		}
+
+		if s.Credentials[0].Client == nil {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "missing_oauth_client",
+				"owner": false,
+			})
+		}
+
+		if s.Credentials[0].AccessToken == nil {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "missing_access_token",
+				"owner": false,
+			})
 		}
 
 		if s.Credentials[0].InboundClientID == "" {

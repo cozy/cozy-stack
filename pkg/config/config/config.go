@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/pdf"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -150,6 +151,10 @@ type Config struct {
 	Clouderies     map[string]ClouderyConfig
 
 	RabbitMQ RabbitMQ
+
+	// SafeHTTPTrustedNetworks is a list of private CIDRs that safehttp
+	// callers are allowed to reach. For closed-network deployments only.
+	SafeHTTPTrustedNetworks []string
 
 	RemoteAllowCustomPort bool
 
@@ -323,6 +328,7 @@ type SharingConfig struct {
 	AutoAcceptTrusted         bool     `mapstructure:"auto_accept_trusted"`
 	AutoAcceptTrustedContacts bool     `mapstructure:"auto_accept_trusted_contacts"`
 	TrustedDomains            []string `mapstructure:"trusted_domains"`
+	AllowWritersToManageLinks bool     `mapstructure:"allow_writers_to_manage_links"`
 }
 
 // GetSharingConfig returns the sharing configuration for a given context.
@@ -334,6 +340,7 @@ func GetSharingConfig(contextName string) SharingConfig {
 		AutoAcceptTrusted:         false,
 		AutoAcceptTrustedContacts: false,
 		TrustedDomains:            []string{},
+		AllowWritersToManageLinks: false,
 	}
 
 	if config == nil || config.Contexts == nil {
@@ -419,6 +426,20 @@ type DeprecatedApp struct {
 	Name string `mapstructure:"name"`
 
 	StoreURLs map[string]string `mapstructure:"store_urls"`
+}
+
+// OIDCAppTokenExchangeConfig contains OIDC application token exchange settings.
+type OIDCAppTokenExchangeConfig struct {
+	Enabled bool
+	Apps    map[string]OIDCAppTokenExchangeAppConfig
+}
+
+// OIDCAppTokenExchangeAppConfig contains the linked application allowed for an
+// OIDC token audience.
+type OIDCAppTokenExchangeAppConfig struct {
+	Audience      string
+	SoftwareID    string `mapstructure:"software_id"`
+	InstanceClaim string `mapstructure:"instance_claim"`
 }
 
 // Worker contains the configuration fields for a specific worker type.
@@ -546,6 +567,82 @@ func GetOIDC(contextName string) (map[string]interface{}, bool) {
 	}
 	config, ok := auth["oidc"].(map[string]interface{})
 	return config, ok
+}
+
+// ErrOIDCDomainConflict is returned when a domain is configured on more than
+// one OIDC context.
+var ErrOIDCDomainConflict = errors.New("multiple OIDC contexts match domain")
+
+// GetOIDCContextByDomain returns the OIDC context configured for a normalized
+// email domain.
+func GetOIDCContextByDomain(domain string) (string, error) {
+	domain = utils.NormalizeDomain(domain)
+	if domain == "" || config.Authentication == nil {
+		return "", nil
+	}
+
+	var match string
+	for contextName, rawAuth := range config.Authentication {
+		auth, ok := rawAuth.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		oidc, ok := auth["oidc"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		configuredDomain, ok := oidc["domain"].(string)
+		if !ok || utils.NormalizeDomain(configuredDomain) != domain {
+			continue
+		}
+		if match != "" && match != contextName {
+			return "", ErrOIDCDomainConflict
+		}
+		match = contextName
+	}
+	return match, nil
+}
+
+// GetOIDCAppTokenExchange returns the trusted linked applications allowed to
+// exchange OIDC ID tokens for local OAuth tokens in the given context.
+func GetOIDCAppTokenExchange(contextName string) (OIDCAppTokenExchangeConfig, error) {
+	var cfg OIDCAppTokenExchangeConfig
+	oidc, ok := GetOIDC(contextName)
+	if !ok {
+		return cfg, nil
+	}
+
+	enabled, _ := oidc["allow_app_token_exchange"].(bool)
+	cfg.Enabled = enabled
+	if !enabled {
+		return cfg, nil
+	}
+
+	rawApps, ok := oidc["app_token_exchange"]
+	if !ok {
+		cfg.Apps = map[string]OIDCAppTokenExchangeAppConfig{}
+		return cfg, nil
+	}
+
+	apps := make(map[string]OIDCAppTokenExchangeAppConfig)
+	if err := mapstructure.Decode(rawApps, &apps); err != nil {
+		return cfg, fmt.Errorf("invalid app token exchange configuration: %w", err)
+	}
+
+	for audience, appConfig := range apps {
+		appConfig.Audience = audience
+		appConfig.SoftwareID = strings.TrimSpace(appConfig.SoftwareID)
+		appConfig.InstanceClaim = strings.TrimSpace(appConfig.InstanceClaim)
+		if appConfig.SoftwareID == "" {
+			return cfg, fmt.Errorf("software_id is required for app token exchange audience %q", audience)
+		}
+		if !strings.HasPrefix(appConfig.SoftwareID, "registry://") || strings.TrimPrefix(appConfig.SoftwareID, "registry://") == "" {
+			return cfg, fmt.Errorf("software_id for app token exchange audience %q must be a linked app", audience)
+		}
+		apps[audience] = appConfig
+	}
+	cfg.Apps = apps
+	return cfg, nil
 }
 
 // GetFranceConnect returns the FranceConnect config for the given context
@@ -1136,6 +1233,11 @@ func UseViper(v *viper.Viper) error {
 	err = v.UnmarshalKey("rabbitmq", &config.RabbitMQ)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "rabbitmq": %w`, err)
+	}
+
+	config.SafeHTTPTrustedNetworks = v.GetStringSlice("safe_http.trusted_private_networks")
+	if err = safehttp.SetTrustedPrivateNetworks(config.SafeHTTPTrustedNetworks); err != nil {
+		return fmt.Errorf("invalid safe_http.trusted_private_networks config: %w", err)
 	}
 
 	// For compatibility

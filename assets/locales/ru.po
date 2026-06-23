@@ -1106,6 +1106,9 @@ msgstr "%s поделился %s с вами"
 msgid "Notification Sharing Description"
 msgstr "%s приглашает вас %s %s **%s**"
 
+msgid "Notification Sharing Type Shared Drive"
+msgstr "папку"
+
 msgid "Notification Sharing Type Organization"
 msgstr "общая папка паролей"
 

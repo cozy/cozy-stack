@@ -1,10 +1,12 @@
 package sharing
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -13,6 +15,77 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDriveURLHelpers(t *testing.T) {
+	config.UseTestFile(t)
+	inst := &instance.Instance{Domain: "alice.example.net"}
+
+	t.Run("DirectoryRootTarget", func(t *testing.T) {
+		s := &Sharing{
+			SID:   "sharing-id",
+			Drive: true,
+			Rules: []Rule{{DocType: consts.Files, Values: []string{"folder-id"}}},
+		}
+
+		u := s.DriveTargetURL(inst)
+		assert.Empty(t, u.RawQuery)
+		assert.Equal(t, "/shareddrive/sharing-id/folder-id", u.Fragment)
+	})
+
+	t.Run("FileRootTarget", func(t *testing.T) {
+		s := &Sharing{
+			SID:           "sharing-id",
+			Drive:         true,
+			DriveRootType: DriveRootTypeFile,
+			Rules:         []Rule{{DocType: consts.Files, Values: []string{"file-id"}}},
+		}
+
+		u := s.DriveTargetURL(inst)
+		assert.Empty(t, u.RawQuery)
+		assert.Equal(t, "/sharings/shareddrive/sharing-id/file/file-id", u.Fragment)
+	})
+
+	t.Run("FallbackTarget", func(t *testing.T) {
+		s := &Sharing{
+			SID:   "sharing-id",
+			Drive: true,
+		}
+
+		u := s.DriveTargetURL(inst)
+		assert.Empty(t, u.RawQuery)
+		assert.Equal(t, "/folder/"+consts.SharedDrivesDirID, u.Fragment)
+	})
+
+	t.Run("AuthorizeSharingURL", func(t *testing.T) {
+		s := &Sharing{SID: "sharing-id"}
+		u, err := url.Parse(s.AuthorizeSharingURL(inst, "state-id"))
+		require.NoError(t, err)
+
+		assert.Equal(t, "/auth/authorize/sharing", u.Path)
+		assert.Equal(t, "sharing-id", u.Query().Get("sharing_id"))
+		assert.Equal(t, "state-id", u.Query().Get("state"))
+	})
+
+	t.Run("DriveShortcutURL", func(t *testing.T) {
+		s := &Sharing{
+			SID:         "sharing-id",
+			Drive:       true,
+			Credentials: []Credentials{{State: "state-id"}},
+			Rules:       []Rule{{DocType: consts.Files, Values: []string{"folder-id"}}},
+		}
+
+		pendingURL, err := url.Parse(s.driveShortcutURL(inst, false))
+		require.NoError(t, err)
+		assert.Equal(t, "/auth/authorize/sharing", pendingURL.Path)
+		assert.Equal(t, "sharing-id", pendingURL.Query().Get("sharing_id"))
+		assert.Equal(t, "state-id", pendingURL.Query().Get("state"))
+
+		seenURL, err := url.Parse(s.driveShortcutURL(inst, true))
+		require.NoError(t, err)
+		assert.Empty(t, seenURL.RawQuery)
+		assert.Equal(t, "/shareddrive/sharing-id/folder-id", seenURL.Fragment)
+	})
+}
 
 func TestFiles(t *testing.T) {
 	if testing.Short() {

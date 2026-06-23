@@ -339,12 +339,17 @@ func Ws(c echo.Context) error {
 		return jsonapi.InternalServerError(err)
 	}
 
-	go func() {
-		if err := markSharingAsSeen(inst, s); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Warnf("markSharingAsSeen failed: %s", err)
-		}
-	}()
+	// Background consumers (like the dataproxy indexer) watch the drive
+	// without the user looking at it, so they must not consume the "new"
+	// status that feeds the sharings news counter.
+	if c.QueryParam("background") != "true" {
+		go func() {
+			if err := markSharingAsSeen(inst, s); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("markSharingAsSeen failed: %s", err)
+			}
+		}()
+	}
 
 	// XXX Let's try to avoid one http request by cheating a bit. If the two
 	// instances are on the same domain (same stack), we can watch directly

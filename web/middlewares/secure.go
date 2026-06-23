@@ -80,6 +80,9 @@ const (
 	// CSPUnsafeInline is the  'unsafe-inline' option. It allows to have inline
 	// styles or scripts to be injected in the page.
 	CSPUnsafeInline
+	// CSPWasmUnsafeEval allows WebAssembly compilation without allowing
+	// JavaScript eval-like sinks.
+	CSPWasmUnsafeEval
 	// CSPAllowList inserts a allowList of domains.
 	CSPAllowList
 )
@@ -114,7 +117,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	conf.CSPStyleSrc, conf.CSPStyleSrcAllowList =
 		validCSPList(conf.CSPStyleSrc, conf.CSPDefaultSrc, conf.CSPStyleSrcAllowList)
 	conf.CSPWorkerSrc, conf.CSPWorkerSrcAllowList =
-		validCSPList(conf.CSPWorkerSrc, conf.CSPDefaultSrc, conf.CSPWorkerSrcAllowList)
+		validCSPList(conf.CSPWorkerSrc, nil, conf.CSPWorkerSrcAllowList)
 	conf.CSPFormAction, conf.CSPFormActionAllowList =
 		validCSPList(conf.CSPFormAction, nil, conf.CSPFormActionAllowList)
 
@@ -272,6 +275,8 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 			headers[i] = "*"
 		case CSPUnsafeInline:
 			headers[i] = "'unsafe-inline'"
+		case CSPWasmUnsafeEval:
+			headers[i] = "'wasm-unsafe-eval'"
 		case CSPAllowList:
 			headers[i] = cspAllowList
 		}

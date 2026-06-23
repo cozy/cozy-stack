@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/gomail"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -129,6 +130,7 @@ func TestConfigUnmarshal(t *testing.T) {
 	myContextSharing := GetSharingConfig("my-context")
 	assert.Equal(t, true, myContextSharing.AutoAcceptTrusted)
 	assert.Equal(t, []string{"linagora.com"}, myContextSharing.TrustedDomains)
+	assert.Equal(t, true, myContextSharing.AllowWritersToManageLinks)
 
 	// Test GetAntivirusConfig for my-context (includes duration parsing)
 	myContextAntivirus := GetAntivirusConfig("my-context")
@@ -148,10 +150,12 @@ func TestConfigUnmarshal(t *testing.T) {
 	// Test GetSharingConfig for default context
 	defaultSharing := GetSharingConfig("default")
 	assert.Equal(t, true, defaultSharing.AutoAcceptTrusted)
+	assert.Equal(t, false, defaultSharing.AllowWritersToManageLinks)
 
 	// Test GetSharingConfig for non-existent context falls back to default
 	fallbackSharing := GetSharingConfig("non-existent")
 	assert.Equal(t, true, fallbackSharing.AutoAcceptTrusted)
+	assert.Equal(t, false, fallbackSharing.AllowWritersToManageLinks)
 
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
@@ -168,8 +172,9 @@ func TestConfigUnmarshal(t *testing.T) {
 				map[string]interface{}{"home_hidden_apps": []interface{}{"foobar"}},
 			},
 			"sharing": map[string]interface{}{
-				"auto_accept_trusted": true,
-				"trusted_domains":     []interface{}{"linagora.com"},
+				"auto_accept_trusted":           true,
+				"allow_writers_to_manage_links": true,
+				"trusted_domains":               []interface{}{"linagora.com"},
 			},
 			"antivirus": map[string]interface{}{
 				"enabled":       true,
@@ -241,15 +246,22 @@ func TestConfigUnmarshal(t *testing.T) {
 		"example_oidc": map[string]interface{}{
 			"disable_password_authentication": true,
 			"oidc": map[string]interface{}{
-				"client_id":               "some-id",
-				"client_secret":           "some-secret",
-				"scope":                   "openid",
-				"redirect_uri":            "https://some-redirect-uri",
-				"authorize_url":           "https://some-authorize-url",
-				"token_url":               "https://some-token-url",
-				"userinfo_url":            "https://some-user-info-url",
-				"logout_url":              "https://some-logout-url",
-				"userinfo_instance_field": "instance-field",
+				"client_id":                "some-id",
+				"client_secret":            "some-secret",
+				"scope":                    "openid",
+				"redirect_uri":             "https://some-redirect-uri",
+				"authorize_url":            "https://some-authorize-url",
+				"token_url":                "https://some-token-url",
+				"userinfo_url":             "https://some-user-info-url",
+				"logout_url":               "https://some-logout-url",
+				"userinfo_instance_field":  "instance-field",
+				"allow_app_token_exchange": true,
+				"app_token_exchange": map[string]interface{}{
+					"twake-mail-web": map[string]interface{}{
+						"software_id":    "registry://mail",
+						"instance_claim": "workplaceFqdn",
+					},
+				},
 			},
 		},
 	}, cfg.Authentication)
@@ -302,6 +314,69 @@ func TestConfigUnmarshal(t *testing.T) {
 			"connect": "https://connect-url",
 		},
 	}, cfg.CSPPerContext)
+
+	// SafeHTTP
+	assert.Equal(t, []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}, cfg.SafeHTTPTrustedNetworks)
+}
+
+func TestGetOIDCContextByDomain(t *testing.T) {
+	oldConfig := config
+	t.Cleanup(func() {
+		config = oldConfig
+	})
+
+	config = &Config{
+		Authentication: map[string]interface{}{
+			"acme": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "acme.fr.",
+				},
+			},
+			"beta": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "beta.example",
+				},
+			},
+		},
+	}
+
+	contextName, err := GetOIDCContextByDomain(" ACME.FR ")
+	require.NoError(t, err)
+	assert.Equal(t, "acme", contextName)
+
+	contextName, err = GetOIDCContextByDomain("beta.example")
+	require.NoError(t, err)
+	assert.Equal(t, "beta", contextName)
+
+	contextName, err = GetOIDCContextByDomain("unknown.example")
+	require.NoError(t, err)
+	assert.Empty(t, contextName)
+}
+
+func TestGetOIDCContextByDomainConflict(t *testing.T) {
+	oldConfig := config
+	t.Cleanup(func() {
+		config = oldConfig
+	})
+
+	config = &Config{
+		Authentication: map[string]interface{}{
+			"first": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "example.com",
+				},
+			},
+			"second": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"domain": "example.com",
+				},
+			},
+		},
+	}
+
+	contextName, err := GetOIDCContextByDomain("example.com")
+	assert.ErrorIs(t, err, ErrOIDCDomainConflict)
+	assert.Empty(t, contextName)
 }
 
 func TestUseViper(t *testing.T) {
@@ -309,6 +384,79 @@ func TestUseViper(t *testing.T) {
 	cfg.Set("couchdb.url", "http://db:1234")
 	assert.NoError(t, UseViper(cfg))
 	assert.Equal(t, "http://db:1234/", CouchCluster(prefixer.GlobalCouchCluster).URL.String())
+}
+
+func TestGetOIDCAppTokenExchange(t *testing.T) {
+	t.Run("loads configured linked apps", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{
+							"software_id":    " registry://mail ",
+							"instance_claim": " workplaceFqdn ",
+						},
+					},
+				},
+			},
+		}
+
+		cfg, err := GetOIDCAppTokenExchange("mail-context")
+		require.NoError(t, err)
+		require.True(t, cfg.Enabled)
+		require.Contains(t, cfg.Apps, "twake-mail-web")
+		assert.Equal(t, "twake-mail-web", cfg.Apps["twake-mail-web"].Audience)
+		assert.Equal(t, "registry://mail", cfg.Apps["twake-mail-web"].SoftwareID)
+		assert.Equal(t, "workplaceFqdn", cfg.Apps["twake-mail-web"].InstanceClaim)
+	})
+
+	t.Run("disabled when missing", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{}
+
+		cfg, err := GetOIDCAppTokenExchange("missing-context")
+		require.NoError(t, err)
+		assert.False(t, cfg.Enabled)
+		assert.Nil(t, cfg.Apps)
+	})
+
+	t.Run("requires software id", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		_, err := GetOIDCAppTokenExchange("mail-context")
+		require.EqualError(t, err, `software_id is required for app token exchange audience "twake-mail-web"`)
+	})
+
+	t.Run("requires linked app software id", func(t *testing.T) {
+		UseTestFile(t)
+		GetConfig().Authentication = map[string]interface{}{
+			"mail-context": map[string]interface{}{
+				"oidc": map[string]interface{}{
+					"allow_app_token_exchange": true,
+					"app_token_exchange": map[string]interface{}{
+						"twake-mail-web": map[string]interface{}{
+							"software_id": "mail",
+						},
+					},
+				},
+			},
+		}
+
+		_, err := GetOIDCAppTokenExchange("mail-context")
+		require.EqualError(t, err, `software_id for app token exchange audience "twake-mail-web" must be a linked app`)
+	})
 }
 
 func TestSetup(t *testing.T) {
@@ -512,4 +660,36 @@ rabbitmq:
 	assert.Equal(t, []string{"settings.admin.*"}, queue2b.Bindings)
 	assert.Equal(t, 8, queue2b.Prefetch)
 	assert.Equal(t, 2, queue2b.DeliveryLimit)
+}
+
+func TestSafeHTTPConfig(t *testing.T) {
+	t.Cleanup(func() { _ = safehttp.SetTrustedPrivateNetworks(nil) })
+
+	t.Run("valid CIDRs map through UseViper", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("safe_http.trusted_private_networks", []string{"10.0.0.0/8", "172.16.0.0/12"})
+		require.NoError(t, UseViper(cfg))
+		assert.Equal(t, []string{"10.0.0.0/8", "172.16.0.0/12"}, GetConfig().SafeHTTPTrustedNetworks)
+	})
+
+	t.Run("invalid CIDR makes UseViper fail", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("safe_http.trusted_private_networks", []string{"not-a-cidr"})
+		err := UseViper(cfg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid safe_http.trusted_private_networks config")
+	})
+
+	t.Run("empty config keeps strict defaults", func(t *testing.T) {
+		cfg := viper.New()
+		require.NoError(t, UseViper(cfg))
+		assert.Empty(t, GetConfig().SafeHTTPTrustedNetworks)
+	})
+
+	t.Run("missing key keeps strict defaults", func(t *testing.T) {
+		cfg := viper.New()
+		cfg.Set("host", "localhost")
+		require.NoError(t, UseViper(cfg))
+		assert.Empty(t, GetConfig().SafeHTTPTrustedNetworks)
+	})
 }

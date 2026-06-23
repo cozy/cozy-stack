@@ -307,9 +307,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 	}
 
 	filename := cleanFilename(s.Rules[0].Title) + ".url"
-	u := inst.SubDomain(consts.DriveSlug)
-	u.Fragment = "/folder/" + dir.ID()
-	driveURL := u.String()
+	driveURL := s.driveShortcutURL(inst, seen)
 	body := shortcut.Generate(driveURL)
 	cm := vfs.NewCozyMetadata(s.Members[0].Instance)
 	fileDoc, err := vfs.NewFileDoc(
@@ -351,29 +349,9 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		target["mime"] = rule.Mime
 		target["class"] = class
 	}
-	fileDoc.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	fileDoc.AddReferencedBy(s.DocReference())
 
-	file, err := inst.VFS().CreateFile(fileDoc, nil)
-	if err != nil {
-		basename := fileDoc.DocName
-		for i := 2; i < 100; i++ {
-			fileDoc.DocName = fmt.Sprintf("%s (%d)", basename, i)
-			file, err = inst.VFS().CreateFile(fileDoc, nil)
-			if err == nil {
-				break
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	_, err = file.Write(body)
-	if cerr := file.Close(); cerr != nil && err == nil {
-		err = cerr
-	}
+	fileDoc, err = s.createOrUpdateShortcut(inst, fileDoc, body)
 	if err != nil {
 		return err
 	}
@@ -387,6 +365,22 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return s.SendShortcutNotification(inst, fileDoc, driveURL)
 	}
 	return nil
+}
+
+// AuthorizeSharingURL returns the recipient-side URL that opens the sharing
+// authorization flow.
+func (s *Sharing) AuthorizeSharingURL(inst *instance.Instance, state string) string {
+	return inst.PageURL("/auth/authorize/sharing", url.Values{
+		"sharing_id": {s.SID},
+		"state":      {state},
+	})
+}
+
+func (s *Sharing) driveShortcutURL(inst *instance.Instance, seen bool) string {
+	if !seen && len(s.Credentials) > 0 && s.Credentials[0].State != "" {
+		return s.AuthorizeSharingURL(inst, s.Credentials[0].State)
+	}
+	return s.DriveTargetURL(inst).String()
 }
 
 var illegalChars = []string{"<", ">", ":", `"`, "/", "\\", "|", "?", "*"}
@@ -443,29 +437,9 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 			"mime":  s.Rules[0].Mime,
 		},
 	}
-	fileDoc.AddReferencedBy(couchdb.DocReference{
-		ID:   s.SID,
-		Type: consts.Sharings,
-	})
+	fileDoc.AddReferencedBy(s.DocReference())
 
-	file, err := inst.VFS().CreateFile(fileDoc, nil)
-	if err != nil {
-		basename := fileDoc.DocName
-		for i := 2; i < 100; i++ {
-			fileDoc.DocName = fmt.Sprintf("%s (%d)", basename, i)
-			file, err = inst.VFS().CreateFile(fileDoc, nil)
-			if err == nil {
-				break
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	_, err = file.Write(body)
-	if cerr := file.Close(); cerr != nil && err == nil {
-		err = cerr
-	}
+	fileDoc, err = s.createOrUpdateShortcut(inst, fileDoc, body)
 	if err != nil {
 		return err
 	}
@@ -479,6 +453,70 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		return s.SendShortcutNotification(inst, fileDoc, previewURL)
 	}
 	return nil
+}
+
+func (s *Sharing) createOrUpdateShortcut(inst *instance.Instance, fileDoc *vfs.FileDoc, body []byte) (*vfs.FileDoc, error) {
+	fs := inst.VFS()
+	if s.ShortcutID != "" {
+		if olddoc, err := fs.FileByID(s.ShortcutID); err == nil && isReusableShortcut(olddoc) {
+			newdoc := olddoc.Clone().(*vfs.FileDoc)
+			newdoc.ByteSize = int64(len(body))
+			newdoc.MD5Sum = nil
+			newdoc.Mime = fileDoc.Mime
+			newdoc.Class = fileDoc.Class
+			newdoc.Executable = fileDoc.Executable
+			newdoc.Encrypted = fileDoc.Encrypted
+			newdoc.UpdatedAt = fileDoc.UpdatedAt
+			newdoc.Metadata = fileDoc.Metadata
+			newdoc.ReferencedBy = fileDoc.ReferencedBy
+			newdoc.CozyMetadata = fileDoc.CozyMetadata
+			return newdoc, writeShortcutFile(fs, newdoc, olddoc, body)
+		}
+	}
+
+	if err := createShortcutFile(fs, fileDoc, body); err != nil {
+		return nil, err
+	}
+	return fileDoc, nil
+}
+
+func isReusableShortcut(file *vfs.FileDoc) bool {
+	return !file.Trashed &&
+		(file.Mime == consts.ShortcutMimeType || file.Class == "shortcut")
+}
+
+func createShortcutFile(fs vfs.VFS, fileDoc *vfs.FileDoc, body []byte) error {
+	file, err := fs.CreateFile(fileDoc, nil)
+	if err != nil {
+		basename := fileDoc.DocName
+		for i := 2; i < 100; i++ {
+			fileDoc.DocName = fmt.Sprintf("%s (%d)", basename, i)
+			file, err = fs.CreateFile(fileDoc, nil)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return writeShortcutContent(file, body)
+}
+
+func writeShortcutFile(fs vfs.VFS, newdoc, olddoc *vfs.FileDoc, body []byte) error {
+	file, err := fs.CreateFile(newdoc, olddoc)
+	if err != nil {
+		return err
+	}
+	return writeShortcutContent(file, body)
+}
+
+func writeShortcutContent(file vfs.File, body []byte) error {
+	_, err := file.Write(body)
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	return err
 }
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding
@@ -496,7 +534,9 @@ func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) 
 
 	v := url.Values{}
 	v.Add("shortcut", "true")
-	v.Add("url", link)
+	if !s.Drive {
+		v.Add("url", link)
+	}
 	u.RawQuery = v.Encode()
 	return m.CreateSharingRequest(inst, s, creds, u)
 }
