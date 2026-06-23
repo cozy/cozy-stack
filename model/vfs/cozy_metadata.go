@@ -32,6 +32,13 @@ type TrashedByEntry struct {
 	Domain      string `json:"domain,omitempty"`
 }
 
+// RAGMetadata holds the RAG indexation status for a file.
+type RAGMetadata struct {
+	Indexed         bool       `json:"indexed"`
+	LastSuccessDate *time.Time `json:"lastSuccessDate,omitempty"`
+	LastErrorDate   *time.Time `json:"lastErrorDate,omitempty"`
+}
+
 // FilesCozyMetadata is an extended version of cozyMetadata with some specific fields.
 type FilesCozyMetadata struct {
 	metadata.CozyMetadata
@@ -47,6 +54,8 @@ type FilesCozyMetadata struct {
 	TrashedAt *time.Time `json:"trashedAt,omitempty"`
 	// Information about who sent the file or folder to the trash
 	TrashedBy *TrashedByEntry `json:"trashedBy,omitempty"`
+	// RAG indexation status
+	RAG *RAGMetadata `json:"rag,omitempty"`
 }
 
 // NewCozyMetadata initializes a new FilesCozyMetadata struct
@@ -93,6 +102,18 @@ func (fcm *FilesCozyMetadata) Clone() *FilesCozyMetadata {
 			DisplayName: fcm.TrashedBy.DisplayName,
 			Domain:      fcm.TrashedBy.Domain,
 		}
+	}
+	if fcm.RAG != nil {
+		rag := *fcm.RAG
+		if fcm.RAG.LastSuccessDate != nil {
+			at := *fcm.RAG.LastSuccessDate
+			rag.LastSuccessDate = &at
+		}
+		if fcm.RAG.LastErrorDate != nil {
+			at := *fcm.RAG.LastErrorDate
+			rag.LastErrorDate = &at
+		}
+		cloned.RAG = &rag
 	}
 	return &cloned
 }
@@ -193,6 +214,18 @@ func (fcm *FilesCozyMetadata) ToJSONDoc() map[string]interface{} {
 			trashed["domain"] = fcm.TrashedBy.Domain
 		}
 		doc["trashedBy"] = trashed
+	}
+	if fcm.RAG != nil {
+		rag := map[string]interface{}{
+			"indexed": fcm.RAG.Indexed,
+		}
+		if fcm.RAG.LastSuccessDate != nil {
+			rag["lastSuccessDate"] = *fcm.RAG.LastSuccessDate
+		}
+		if fcm.RAG.LastErrorDate != nil {
+			rag["lastErrorDate"] = *fcm.RAG.LastErrorDate
+		}
+		doc["rag"] = rag
 	}
 	if fcm.SourceAccount != "" {
 		doc["sourceAccount"] = fcm.SourceAccount

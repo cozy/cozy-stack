@@ -1,11 +1,12 @@
 package rag
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -16,59 +17,104 @@ func init() {
 		WorkerType:   "rag-index-status",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      15 * time.Second,
+		Timeout:      30 * time.Second,
 		WorkerFunc:   WorkerIndexStatus,
 	})
 }
 
-// WorkerIndexStatus handles the "rag-index-status" jobs triggered by the RAG
-// indexer webhook. It updates the rag_status field in the file metadata.
-// Expected payload: {"file_id": string, "status": string}
-//
-// CouchDB write conflicts (409) are expected under concurrent updates and are
-// retried locally with a short incremental backoff, without consuming the
-// job's own MaxExecCount retry budget (which stays reserved for genuine
-// failures, e.g. network or instance issues).
+type statusMessage struct {
+	Partition string `json:"partition"`
+	FileID    string `json:"file_id"`
+	Indexed   bool   `json:"indexed"`
+}
+
+// WorkerIndexStatus handles jobs triggered by the RAG indexer webhook. It
+// updates cozyMetadata.RAG on the file document with the indexation result.
 func WorkerIndexStatus(ctx *job.TaskContext) error {
-	logger := ctx.Logger()
-	payload, err := ctx.UnmarshalPayload()
+	inst := ctx.Instance
+	log := inst.Logger().WithNamespace("rag")
+
+	raw, err := ctx.UnmarshalPayload()
 	if err != nil {
 		return err
 	}
-	fileID, _ := payload["file_id"].(string)
-	if fileID == "" {
-		return errors.New("rag-index-status: missing file_id in payload")
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return err
 	}
-	status, _ := payload["status"].(string)
-	if status == "" {
-		return errors.New("rag-index-status: missing status in payload")
+	var msg statusMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return err
 	}
-	logger.Debugf("RAG: received rag_status=%q for file %s", status, fileID)
+	if msg.FileID == "" {
+		return fmt.Errorf("rag-index-status: missing file_id in payload")
+	}
 
-	fs := ctx.Instance.VFS()
+	log.Debugf("Starting rag-index-status job for file %s", msg.FileID)
+
+	fs := inst.VFS()
+	file, err := fs.FileByID(msg.FileID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			log.Debugf("File %s not found (possibly deleted), skipping status update", msg.FileID)
+			return nil
+		}
+		log.Errorf("Failed to get file %s: %v", msg.FileID, err)
+		return err
+	}
+
+	log.Debugf("File %s: name=%s, mime=%s", msg.FileID, file.DocName, file.Mime)
+	log.Debugf("Updating RAG status for file %s: indexed=%v", msg.FileID, msg.Indexed)
+
+	return updateRAGStatus(inst, file, msg.Indexed)
+}
+
+// updateRAGStatus writes the RAG indexation result into cozyMetadata.RAG.
+// It retries on CouchDB conflict errors (409) up to maxRetries times,
+// re-fetching a fresh document revision each iteration to avoid stale-rev
+// conflicts. Both the boolean flag and the timestamp are written in a single
+// UpdateDoc call to stay atomic.
+func updateRAGStatus(inst *instance.Instance, file *vfs.FileDoc, indexed bool) error {
 	const maxRetries = 3
+	var err error
+	log := inst.Logger().WithNamespace("rag")
+	fs := inst.VFS()
+
 	for i := 0; i < maxRetries; i++ {
 		if i > 0 {
-			delay := time.Duration(i) * 100 * time.Millisecond
-			logger.Infof("RAG: retrying rag_status update for file %s (attempt %d/%d) after %s", fileID, i+1, maxRetries, delay)
-			time.Sleep(delay)
+			log.Infof("Retrying RAG status update for file %s (attempt %d/%d)", file.DocID, i+1, maxRetries)
 		}
-		olddoc, err := fs.FileByID(fileID) // relecture fraîche à chaque tour
+		var f *vfs.FileDoc
+		f, err = fs.FileByID(file.DocID)
 		if err != nil {
+			log.Errorf("Failed to get file %s: %v", file.DocID, err)
 			return err
 		}
-		newdoc := olddoc.Clone().(*vfs.FileDoc)
-		if newdoc.Metadata == nil {
-			newdoc.Metadata = make(vfs.Metadata)
+		newdoc := f.Clone().(*vfs.FileDoc)
+		if newdoc.CozyMetadata == nil {
+			newdoc.CozyMetadata = vfs.NewCozyMetadata(inst.Domain)
 		}
-		newdoc.Metadata["rag_status"] = status
-		if err = fs.UpdateFileDoc(olddoc, newdoc); err == nil {
-			logger.Infof("RAG: rag_status set to %q for file %s", status, fileID)
+		if newdoc.CozyMetadata.RAG == nil {
+			newdoc.CozyMetadata.RAG = &vfs.RAGMetadata{}
+		}
+		newdoc.CozyMetadata.RAG.Indexed = indexed
+		now := time.Now()
+		if indexed {
+			newdoc.CozyMetadata.RAG.LastSuccessDate = &now
+		} else {
+			newdoc.CozyMetadata.RAG.LastErrorDate = &now
+		}
+		err = couchdb.UpdateDoc(fs, newdoc)
+		if err == nil {
+			log.Infof("RAG status updated for file %s (indexed=%v)", file.DocID, indexed)
 			return nil
-		} else if !couchdb.IsConflictError(err) {
+		}
+		if !couchdb.IsConflictError(err) {
+			log.Errorf("Failed to update RAG status for file %s: %v", file.DocID, err)
 			return err
 		}
-		// 409 → on reboucle, FileByID redonne le rev à jour
 	}
-	return fmt.Errorf("rag-index-status: conflict after %d retries for file %s", maxRetries, fileID)
+
+	log.Errorf("Failed to update RAG status for file %s after %d retries: %v", file.DocID, maxRetries, err)
+	return err
 }
