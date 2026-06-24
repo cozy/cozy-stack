@@ -23,9 +23,11 @@ func init() {
 }
 
 type statusMessage struct {
-	Partition string `json:"partition"`
-	FileID    string `json:"file_id"`
-	Indexed   bool   `json:"indexed"`
+	Partition       string     `json:"partition"`
+	FileID          string     `json:"file_id"`
+	Indexed         bool       `json:"indexed"`
+	LastSuccessDate *time.Time `json:"last_success_date,omitempty"`
+	LastErrorDate   *time.Time `json:"last_error_date,omitempty"`
 }
 
 // WorkerIndexStatus handles jobs triggered by the RAG indexer webhook. It
@@ -50,71 +52,72 @@ func WorkerIndexStatus(ctx *job.TaskContext) error {
 		return fmt.Errorf("rag-index-status: missing file_id in payload")
 	}
 
-	log.Debugf("Starting rag-index-status job for file %s", msg.FileID)
-
-	fs := inst.VFS()
-	file, err := fs.FileByID(msg.FileID)
+	file, err := inst.VFS().FileByID(msg.FileID)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			log.Debugf("File %s not found (possibly deleted), skipping status update", msg.FileID)
+			log.Debugf("rag-index-status: file %s not found, skipping", msg.FileID)
 			return nil
 		}
-		log.Errorf("Failed to get file %s: %v", msg.FileID, err)
 		return err
 	}
 
-	log.Debugf("File %s: name=%s, mime=%s", msg.FileID, file.DocName, file.Mime)
-	log.Debugf("Updating RAG status for file %s: indexed=%v", msg.FileID, msg.Indexed)
-
-	return updateRAGStatus(inst, file, msg.Indexed)
+	return updateRAGStatus(inst, file, msg)
 }
 
-// updateRAGStatus writes the RAG indexation result into cozyMetadata.RAG.
-// It retries on CouchDB conflict errors (409) up to maxRetries times,
-// re-fetching a fresh document revision each iteration to avoid stale-rev
-// conflicts. Both the boolean flag and the timestamp are written in a single
-// UpdateDoc call to stay atomic.
-func updateRAGStatus(inst *instance.Instance, file *vfs.FileDoc, indexed bool) error {
-	const maxRetries = 3
-	var err error
-	log := inst.Logger().WithNamespace("rag")
+func updateRAGStatus(inst *instance.Instance, file *vfs.FileDoc, msg statusMessage) error {
 	fs := inst.VFS()
 
-	for i := 0; i < maxRetries; i++ {
-		if i > 0 {
-			log.Infof("Retrying RAG status update for file %s (attempt %d/%d)", file.DocID, i+1, maxRetries)
-		}
-		var f *vfs.FileDoc
-		f, err = fs.FileByID(file.DocID)
-		if err != nil {
-			log.Errorf("Failed to get file %s: %v", file.DocID, err)
-			return err
-		}
-		newdoc := f.Clone().(*vfs.FileDoc)
-		if newdoc.CozyMetadata == nil {
-			newdoc.CozyMetadata = vfs.NewCozyMetadata(inst.Domain)
-		}
-		if newdoc.CozyMetadata.RAG == nil {
-			newdoc.CozyMetadata.RAG = &vfs.RAGMetadata{}
-		}
-		newdoc.CozyMetadata.RAG.Indexed = indexed
-		now := time.Now()
-		if indexed {
-			newdoc.CozyMetadata.RAG.LastSuccessDate = &now
-		} else {
-			newdoc.CozyMetadata.RAG.LastErrorDate = &now
-		}
-		err = couchdb.UpdateDoc(fs, newdoc)
-		if err == nil {
-			log.Infof("RAG status updated for file %s (indexed=%v)", file.DocID, indexed)
-			return nil
-		}
-		if !couchdb.IsConflictError(err) {
-			log.Errorf("Failed to update RAG status for file %s: %v", file.DocID, err)
-			return err
-		}
+	err := couchdb.UpdateDoc(fs, ragStatusDoc(inst, file, msg))
+	if err == nil || !couchdb.IsConflictError(err) {
+		return err
 	}
 
-	log.Errorf("Failed to update RAG status for file %s after %d retries: %v", file.DocID, maxRetries, err)
-	return err
+	// A conflict means a parallel webhook already updated the file. Re-fetch it
+	// and overwrite only when our event is more recent than the stored one,
+	// otherwise the latest status would be lost.
+	fresh, err := fs.FileByID(file.DocID)
+	if err != nil {
+		return err
+	}
+	if cm := fresh.CozyMetadata; cm != nil && cm.RAG != nil && !msgIsNewer(msg, cm.RAG) {
+		return nil
+	}
+	return couchdb.UpdateDoc(fs, ragStatusDoc(inst, fresh, msg))
+}
+
+func ragStatusDoc(inst *instance.Instance, file *vfs.FileDoc, msg statusMessage) *vfs.FileDoc {
+	newdoc := file.Clone().(*vfs.FileDoc)
+	if newdoc.CozyMetadata == nil {
+		newdoc.CozyMetadata = vfs.NewCozyMetadata(inst.Domain)
+	}
+	if newdoc.CozyMetadata.RAG == nil {
+		newdoc.CozyMetadata.RAG = &vfs.RAGMetadata{}
+	}
+	newdoc.CozyMetadata.RAG.Indexed = msg.Indexed
+	if msg.LastSuccessDate != nil {
+		newdoc.CozyMetadata.RAG.LastSuccessDate = msg.LastSuccessDate
+	}
+	if msg.LastErrorDate != nil {
+		newdoc.CozyMetadata.RAG.LastErrorDate = msg.LastErrorDate
+	}
+	return newdoc
+}
+
+func msgIsNewer(msg statusMessage, rag *vfs.RAGMetadata) bool {
+	incoming := latestDate(msg.LastSuccessDate, msg.LastErrorDate)
+	if incoming == nil {
+		return false
+	}
+	stored := latestDate(rag.LastSuccessDate, rag.LastErrorDate)
+	return stored == nil || incoming.After(*stored)
+}
+
+func latestDate(a, b *time.Time) *time.Time {
+	if a == nil {
+		return b
+	}
+	if b != nil && b.After(*a) {
+		return b
+	}
+	return a
 }

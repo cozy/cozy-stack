@@ -18,12 +18,13 @@ func TestWorkerIndexStatus(t *testing.T) {
 	setup := testutils.NewSetup(t, "rag_status_test")
 	inst := setup.GetTestInstance(&lifecycle.Options{})
 
-	t.Run("indexed=true sets Indexed and LastSuccessDate", func(t *testing.T) {
+	t.Run("a success status sets Indexed and LastSuccessDate", func(t *testing.T) {
 		fs := inst.VFS()
 		doc := createStatusTestFile(t, fs, "rag-true.txt")
 		defer destroyStatusTestFile(t, fs, doc)
 
-		err := updateRAGStatus(inst, doc, true)
+		now := time.Now()
+		err := updateRAGStatus(inst, doc, statusMessage{FileID: doc.DocID, Indexed: true, LastSuccessDate: &now})
 		require.NoError(t, err)
 
 		updated, err := fs.FileByID(doc.DocID)
@@ -35,12 +36,13 @@ func TestWorkerIndexStatus(t *testing.T) {
 		require.Nil(t, updated.CozyMetadata.RAG.LastErrorDate)
 	})
 
-	t.Run("indexed=false sets Indexed=false and LastErrorDate", func(t *testing.T) {
+	t.Run("an error status sets Indexed=false and LastErrorDate", func(t *testing.T) {
 		fs := inst.VFS()
 		doc := createStatusTestFile(t, fs, "rag-false.txt")
 		defer destroyStatusTestFile(t, fs, doc)
 
-		err := updateRAGStatus(inst, doc, false)
+		now := time.Now()
+		err := updateRAGStatus(inst, doc, statusMessage{FileID: doc.DocID, Indexed: false, LastErrorDate: &now})
 		require.NoError(t, err)
 
 		updated, err := fs.FileByID(doc.DocID)
