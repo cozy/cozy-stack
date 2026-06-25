@@ -7,8 +7,8 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/vfs"
 	modelrag "github.com/cozy/cozy-stack/model/rag"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/require"

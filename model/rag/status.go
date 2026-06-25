@@ -91,6 +91,5 @@ func applyRAGStatus(rag *vfs.RAGMetadata, newStatus string, timestamp time.Time)
 	case RAGStatusError:
 		// Indexed is preserved: stays true if the file was previously indexed.
 		rag.LastErrorDate = &timestamp
-	// RAGStatusNotSupported: neither Indexed nor dates are touched.
 	}
 }
