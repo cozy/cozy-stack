@@ -35,6 +35,7 @@ type TrashedByEntry struct {
 // RAGMetadata holds the RAG indexation status for a file.
 type RAGMetadata struct {
 	Indexed         bool       `json:"indexed"`
+	Status          string     `json:"status,omitempty"`
 	LastSuccessDate *time.Time `json:"lastSuccessDate,omitempty"`
 	LastErrorDate   *time.Time `json:"lastErrorDate,omitempty"`
 }
@@ -218,6 +219,9 @@ func (fcm *FilesCozyMetadata) ToJSONDoc() map[string]interface{} {
 	if fcm.RAG != nil {
 		rag := map[string]interface{}{
 			"indexed": fcm.RAG.Indexed,
+		}
+		if fcm.RAG.Status != "" {
+			rag["status"] = fcm.RAG.Status
 		}
 		if fcm.RAG.LastSuccessDate != nil {
 			rag["lastSuccessDate"] = *fcm.RAG.LastSuccessDate
