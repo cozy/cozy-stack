@@ -58,12 +58,15 @@ func OpenNote(inst *instance.Instance, fileID string) (*NoteOpener, error) {
 // GetResult looks if the note can be opened locally or not, which code can be
 // used in case of a shared note, and other parameters.. and returns the information.
 func (o *NoteOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+	prepared, err := o.PrepareOpenFileRequest(memberIndex, readOnly)
+	if err != nil {
+		return nil, err
+	}
 	var result *apiNoteURL
-	var err error
-	if o.ShouldOpenLocally() {
-		result, err = o.openLocalNote(memberIndex, readOnly)
+	if prepared.Opts == nil {
+		result, err = o.openLocalNote(prepared.MemberIndex, prepared.ReadOnly)
 	} else {
-		result, err = o.openSharedNote()
+		result, err = o.openSharedNote(prepared)
 	}
 	if err != nil {
 		return nil, err
@@ -99,15 +102,7 @@ func (o *NoteOpener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL,
 	return &doc, nil
 }
 
-func (o *NoteOpener) openSharedNote() (*apiNoteURL, error) {
-	prepared, err := o.PrepareRequestForSharedFile()
-	if err != nil {
-		return nil, err
-	}
-	if prepared.Opts == nil {
-		return o.openLocalNote(prepared.MemberIndex, prepared.ReadOnly)
-	}
-
+func (o *NoteOpener) openSharedNote(prepared *PreparedRequest) (*apiNoteURL, error) {
 	res, err := o.RequestSharedFile(prepared, "/notes/"+prepared.XoredID+"/open")
 	if err != nil {
 		return nil, ErrInternalServerError

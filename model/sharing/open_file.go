@@ -277,6 +277,19 @@ func (o *FileOpener) OpenLocalFileForMember(memberIndex int, readOnly bool) (Ope
 	return o.OpenLocalFile(code), nil
 }
 
+// PrepareOpenFileRequest returns the parameters for opening the file on the
+// instance where collaborative editing should happen. If Opts is nil, the file
+// should be opened locally with MemberIndex and ReadOnly.
+func (o *FileOpener) PrepareOpenFileRequest(memberIndex int, readOnly bool) (*PreparedRequest, error) {
+	if o.ShouldOpenLocally() {
+		return &PreparedRequest{
+			MemberIndex: memberIndex,
+			ReadOnly:    readOnly,
+		}, nil
+	}
+	return o.PrepareRequestForSharedFile()
+}
+
 // PreparedRequest contains the parameters to make a request to another
 // instance for opening a shared file. If it is not possible, Opts will be
 // empty and the MemberIndex and ReadOnly fields can be used for opening
