@@ -481,6 +481,13 @@ contexts:
     # Indicates if debug related features should be enabled in front
     # applications.
     debug: false
+    # URL of the external signup (SaaS) application managing this context. When
+    # set, phone and recovery_email become read-only through PUT /settings/instance
+    # and the POST /settings/email flow is disabled, since the signup app owns the
+    # user profile. The email is always protected from PUT /settings/instance
+    # regardless of this setting (it must go through POST /settings/email or the
+    # CLI).
+    signup_url: https://signup.example.org
     # Redirect to a specific route of Cozy-Home after the onboarding
     # Format: appslug/#/path/to/route
     onboarded_redirection: home/#/discovery/?intro
