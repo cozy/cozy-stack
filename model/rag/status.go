@@ -1,6 +1,8 @@
 package rag
 
 import (
+	"errors"
+	"os"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -31,7 +33,7 @@ func SetRAGStatus(inst *instance.Instance, fileID string, newStatus string, time
 	fs := inst.VFS()
 	file, err := fs.FileByID(fileID)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
+		if couchdb.IsNotFoundError(err) || errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return err
@@ -52,7 +54,7 @@ func SetRAGStatus(inst *instance.Instance, fileID string, newStatus string, time
 	// our timestamp is still more recent than what was written.
 	file, err = fs.FileByID(fileID)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
+		if couchdb.IsNotFoundError(err) || errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return err
