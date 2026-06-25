@@ -137,12 +137,15 @@ func OpenOffice(inst *instance.Instance, fileID string) (*OfficeOpener, error) {
 // used in case of a shared office document, and other parameters.. and returns
 // the information.
 func (o *OfficeOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+	prepared, err := o.PrepareOpenFileRequest(memberIndex, readOnly)
+	if err != nil {
+		return nil, err
+	}
 	var result *apiOfficeURL
-	var err error
-	if o.ShouldOpenLocally() {
-		result, err = o.openLocalDocument(memberIndex, readOnly)
+	if prepared.Opts == nil {
+		result, err = o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	} else {
-		result, err = o.openSharedDocument()
+		result, err = o.openSharedDocument(prepared)
 	}
 	if err != nil {
 		return nil, err
@@ -244,15 +247,7 @@ func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOf
 	return &doc, nil
 }
 
-func (o *OfficeOpener) openSharedDocument() (*apiOfficeURL, error) {
-	prepared, err := o.PrepareRequestForSharedFile()
-	if err != nil {
-		return nil, err
-	}
-	if prepared.Opts == nil {
-		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
-	}
-
+func (o *OfficeOpener) openSharedDocument(prepared *PreparedRequest) (*apiOfficeURL, error) {
 	res, err := o.RequestSharedFile(prepared, "/office/"+prepared.XoredID+"/open")
 	if res != nil && res.StatusCode == 404 {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
