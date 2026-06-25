@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -39,6 +40,7 @@ func OpenURL(c echo.Context) error {
 		pdoc.Type == permission.TypeShareInteract {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
+		readOnly = readOnlyForSharedOpen(pdoc, readOnly)
 	}
 
 	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
@@ -57,6 +59,18 @@ func OpenURL(c echo.Context) error {
 // Routes sets the routing for opening files with editors.
 func Routes(router *echo.Group) {
 	router.GET("/:file-id/open", OpenURL)
+}
+
+func readOnlyForSharedOpen(pdoc *permission.Permission, readOnly bool) bool {
+	if readOnly {
+		return true
+	}
+	for _, perm := range pdoc.Permissions {
+		if perm.Type == consts.Files && !perm.Verbs.ReadOnly() {
+			return false
+		}
+	}
+	return true
 }
 
 func wrapError(err error) *jsonapi.Error {

@@ -249,6 +249,9 @@ func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOf
 
 func (o *OfficeOpener) openSharedDocument(prepared *PreparedRequest) (*apiOfficeURL, error) {
 	res, err := o.RequestSharedFile(prepared, "/office/"+prepared.XoredID+"/open")
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if res != nil && res.StatusCode == 404 {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}
@@ -256,7 +259,6 @@ func (o *OfficeOpener) openSharedDocument(prepared *PreparedRequest) (*apiOffice
 		o.Inst.Logger().WithNamespace("office").Infof("openSharedDocument error: %s", err)
 		return nil, ErrInternalServerError
 	}
-	defer res.Body.Close()
 	var doc apiOfficeURL
 	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
 		return nil, err

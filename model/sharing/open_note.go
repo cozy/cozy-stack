@@ -104,10 +104,12 @@ func (o *NoteOpener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL,
 
 func (o *NoteOpener) openSharedNote(prepared *PreparedRequest) (*apiNoteURL, error) {
 	res, err := o.RequestSharedFile(prepared, "/notes/"+prepared.XoredID+"/open")
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
 		return nil, ErrInternalServerError
 	}
-	defer res.Body.Close()
 	var doc apiNoteURL
 	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
 		return nil, err

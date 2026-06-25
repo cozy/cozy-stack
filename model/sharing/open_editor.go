@@ -56,12 +56,15 @@ func OpenEditor(inst *instance.Instance, fileID string) (*EditorOpener, error) {
 // used in case of a shared file, and other parameters, and returns the
 // information.
 func (o *EditorOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+	prepared, err := o.PrepareOpenFileRequest(memberIndex, readOnly)
+	if err != nil {
+		return nil, err
+	}
 	var result *apiEditorURL
-	var err error
-	if o.ShouldOpenLocally() {
-		result, err = o.openLocalFile(memberIndex, readOnly)
+	if prepared.Opts == nil {
+		result, err = o.openLocalFile(prepared.MemberIndex, prepared.ReadOnly)
 	} else {
-		result, err = o.openSharedFile()
+		result, err = o.openSharedFile(prepared)
 	}
 	if err != nil {
 		return nil, err
@@ -91,20 +94,14 @@ func (o *EditorOpener) openLocalFile(memberIndex int, readOnly bool) (*apiEditor
 	return &doc, nil
 }
 
-func (o *EditorOpener) openSharedFile() (*apiEditorURL, error) {
-	prepared, err := o.PrepareRequestForSharedFile()
-	if err != nil {
-		return nil, err
-	}
-	if prepared.Opts == nil {
-		return o.openLocalFile(prepared.MemberIndex, prepared.ReadOnly)
-	}
-
+func (o *EditorOpener) openSharedFile(prepared *PreparedRequest) (*apiEditorURL, error) {
 	res, err := o.RequestSharedFile(prepared, "/editor/"+prepared.XoredID+"/open")
+	if res != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
 		return nil, ErrInternalServerError
 	}
-	defer res.Body.Close()
 	var doc apiEditorURL
 	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
 		return nil, err
