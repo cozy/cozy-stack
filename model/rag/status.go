@@ -50,6 +50,7 @@ func SetRAGStatus(inst *instance.Instance, fileID string, newStatus string, time
 		return err
 	}
 	if file.CozyMetadata != nil && file.CozyMetadata.RAG != nil && !isNewerThan(timestamp, file.CozyMetadata.RAG) {
+		inst.Logger().WithNamespace("rag").Debugf("SetRAGStatus: 409 conflict on %s, dropping update (existing timestamp is newer)", fileID)
 		return nil
 	}
 	newdoc = file.Clone().(*vfs.FileDoc)
@@ -60,7 +61,11 @@ func SetRAGStatus(inst *instance.Instance, fileID string, newStatus string, time
 		newdoc.CozyMetadata.RAG = &vfs.RAGMetadata{}
 	}
 	applyRAGStatus(newdoc.CozyMetadata.RAG, newStatus, timestamp)
-	return couchdb.UpdateDoc(fs, newdoc)
+	if err := couchdb.UpdateDoc(fs, newdoc); err != nil {
+		return err
+	}
+	inst.Logger().WithNamespace("rag").Debugf("SetRAGStatus: 409 conflict on %s resolved, applied status=%s", fileID, newStatus)
+	return nil
 }
 
 func isNewerThan(ts time.Time, rag *vfs.RAGMetadata) bool {
