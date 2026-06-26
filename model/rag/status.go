@@ -16,16 +16,6 @@ const (
 	RAGStatusNotSupported = "notsupported"
 )
 
-// SetRAGStatus updates the RAG indexation status of a file.
-//
-// Invariants enforced:
-//   - success      → Indexed=true, LastSuccessDate=timestamp
-//   - error        → Indexed preserved, LastErrorDate=timestamp
-//   - notsupported → Indexed and dates are not touched
-//
-// On a 409 conflict (parallel webhook), the most recent timestamp wins: if the
-// file already has a newer date, the update is silently dropped. If timestamp
-// is zero, time.Now() is used as fallback.
 func SetRAGStatus(inst *instance.Instance, fileID string, newStatus string, timestamp time.Time) error {
 	if timestamp.IsZero() {
 		timestamp = time.Now()
