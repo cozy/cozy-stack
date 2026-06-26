@@ -33,7 +33,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		return WorkerIndexStatus(ctx)
 	}
 
-	t.Run("indexed status sets Status=success and Indexed=true", func(t *testing.T) {
+	t.Run("success status sets Status=success and Indexed=true", func(t *testing.T) {
 		fs := inst.VFS()
 		doc := createStatusTestFile(t, fs, "rag-success.txt")
 		defer destroyStatusTestFile(t, fs, doc)
@@ -42,7 +42,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		err := runWorker(t, map[string]interface{}{
 			"partition": inst.Domain,
 			"file_id":   doc.DocID,
-			"status":    "indexed",
+			"status":    "success",
 			"timestamp": ts.Format(time.RFC3339Nano),
 		})
 		require.NoError(t, err)
@@ -56,7 +56,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		require.Nil(t, updated.CozyMetadata.RAG.LastErrorDate)
 	})
 
-	t.Run("failed status sets Status=error and preserves Indexed", func(t *testing.T) {
+	t.Run("error status sets Status=error and preserves Indexed", func(t *testing.T) {
 		fs := inst.VFS()
 		doc := createStatusTestFile(t, fs, "rag-error.txt")
 		defer destroyStatusTestFile(t, fs, doc)
@@ -65,7 +65,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		err := runWorker(t, map[string]interface{}{
 			"partition": inst.Domain,
 			"file_id":   doc.DocID,
-			"status":    "failed",
+			"status":    "error",
 			"timestamp": ts.Format(time.RFC3339Nano),
 		})
 		require.NoError(t, err)
@@ -79,6 +79,37 @@ func TestWorkerIndexStatus(t *testing.T) {
 		require.NotNil(t, updated.CozyMetadata.RAG.LastErrorDate)
 	})
 
+	t.Run("notsupported status sets Status=notsupported without touching Indexed or dates", func(t *testing.T) {
+		fs := inst.VFS()
+		doc := createStatusTestFile(t, fs, "rag-notsupported.txt")
+		defer destroyStatusTestFile(t, fs, doc)
+
+		err := runWorker(t, map[string]interface{}{
+			"partition": inst.Domain,
+			"file_id":   doc.DocID,
+			"status":    "notsupported",
+			"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+		})
+		require.NoError(t, err)
+
+		updated, err := fs.FileByID(doc.DocID)
+		require.NoError(t, err)
+		require.NotNil(t, updated.CozyMetadata.RAG)
+		require.Equal(t, modelrag.RAGStatusNotSupported, updated.CozyMetadata.RAG.Status)
+		require.False(t, updated.CozyMetadata.RAG.Indexed)
+		require.Nil(t, updated.CozyMetadata.RAG.LastSuccessDate)
+		require.Nil(t, updated.CozyMetadata.RAG.LastErrorDate)
+	})
+
+	t.Run("unknown status returns error", func(t *testing.T) {
+		err := runWorker(t, map[string]interface{}{
+			"partition": inst.Domain,
+			"file_id":   "any-file-id",
+			"status":    "weird",
+		})
+		require.Error(t, err)
+	})
+
 	t.Run("missing timestamp falls back to now without error", func(t *testing.T) {
 		fs := inst.VFS()
 		doc := createStatusTestFile(t, fs, "rag-no-ts.txt")
@@ -87,7 +118,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		err := runWorker(t, map[string]interface{}{
 			"partition": inst.Domain,
 			"file_id":   doc.DocID,
-			"status":    "indexed",
+			"status":    "success",
 		})
 		require.NoError(t, err)
 
@@ -104,7 +135,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		err := runWorker(t, map[string]interface{}{
 			"partition": inst.Domain,
 			"file_id":   doc.DocID,
-			"status":    "indexed",
+			"status":    "success",
 			"timestamp": "not-a-date",
 		})
 		require.NoError(t, err)
@@ -118,7 +149,7 @@ func TestWorkerIndexStatus(t *testing.T) {
 		err := runWorker(t, map[string]interface{}{
 			"partition": inst.Domain,
 			"file_id":   "non-existent-file-id",
-			"status":    "indexed",
+			"status":    "success",
 		})
 		require.NoError(t, err)
 	})

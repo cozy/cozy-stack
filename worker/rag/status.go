@@ -24,7 +24,7 @@ func init() {
 type statusMessage struct {
 	Partition string `json:"partition"`
 	FileID    string `json:"file_id"`
-	Status    string `json:"status"`    // "indexed" | "failed"
+	Status    string `json:"status"`    // "success" | "error" | "notsupported"
 	Timestamp string `json:"timestamp"` // RFC3339Nano; absent in older emitters
 }
 
@@ -48,12 +48,8 @@ func WorkerIndexStatus(ctx *job.TaskContext) error {
 		return fmt.Errorf("rag-index-status: missing file_id in payload")
 	}
 
-	var ragStatus string
 	switch msg.Status {
-	case "indexed":
-		ragStatus = modelrag.RAGStatusSuccess
-	case "failed":
-		ragStatus = modelrag.RAGStatusError
+	case modelrag.RAGStatusSuccess, modelrag.RAGStatusError, modelrag.RAGStatusNotSupported:
 	default:
 		return fmt.Errorf("rag-index-status: unknown status %q for file %s", msg.Status, msg.FileID)
 	}
@@ -70,9 +66,9 @@ func WorkerIndexStatus(ctx *job.TaskContext) error {
 		ts = time.Now()
 	}
 
-	log.Debugf("rag-index-status: file %s status=%s ts=%s", msg.FileID, ragStatus, ts)
+	log.Debugf("rag-index-status: file %s status=%s ts=%s", msg.FileID, msg.Status, ts)
 
-	if err := modelrag.SetRAGStatus(inst, msg.FileID, ragStatus, ts); err != nil {
+	if err := modelrag.SetRAGStatus(inst, msg.FileID, msg.Status, ts); err != nil {
 		if couchdb.IsNotFoundError(err) {
 			log.Debugf("rag-index-status: file %s not found (possibly deleted), skipping", msg.FileID)
 			return nil
