@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -81,6 +82,11 @@ func createIntent(c echo.Context) error {
 		return jsonapi.InvalidParameter("type", errors.New("Type is missing"))
 	}
 	intent.Client = pdoc.SourceID
+	if oc, ok := pdoc.Client.(*oauth.Client); ok {
+		if slug := oauth.GetLinkedAppSlug(oc.SoftwareID); slug != "" {
+			intent.Client = consts.Apps + "/" + slug
+		}
+	}
 	intent.SetID("")
 	intent.SetRev("")
 	intent.Services = nil
