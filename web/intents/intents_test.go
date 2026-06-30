@@ -2,9 +2,11 @@ package intents
 
 import (
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -81,6 +83,18 @@ func TestIntents(t *testing.T) {
 	}
 	filesToken := ins.BuildAppToken("files", "")
 
+	driveApp := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":  consts.Apps + "/drive",
+			"slug": "drive",
+		},
+	}
+	require.NoError(t, couchdb.CreateNamedDoc(ins, driveApp))
+	if _, err := permission.CreateWebappSet(ins, "drive", permission.Set{}, "1.0.0"); err != nil {
+		require.NoError(t, err)
+	}
+
 	ts := setup.GetTestServer("/intents", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
@@ -153,6 +167,46 @@ func TestIntents(t *testing.T) {
 			Object()
 
 		checkIntentResult(obj, appPerms, false, "")
+	})
+
+	t.Run("CreateIntentWithOAuthLinkedApp", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		oauthClient := &oauth.Client{
+			ClientName:   "test-oauth-linked-app",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "registry://drive/stable",
+		}
+		require.Nil(t, oauthClient.Create(ins, oauth.SoftwareIDPrevalidated))
+
+		// Issue an OAuth access token (AccessTokenAudience) for that client,
+		// with the linked-app scope so GetForOauth translates it via the
+		// "drive" manifest.
+		tok, err := ins.MakeJWT(consts.AccessTokenAudience,
+			oauthClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
+		require.NoError(t, err)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+tok).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("client", "https://drive.cozy.example.net")
 	})
 
 	t.Run("CreateIntentWithClientURLMatchingFlag", func(t *testing.T) {
