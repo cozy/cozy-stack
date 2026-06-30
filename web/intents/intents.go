@@ -65,6 +65,23 @@ func (i *apiIntent) resolveClientURL(slug string) string {
 	return app.ResolveClientURL(i.ins, slug)
 }
 
+func RequestAppSourceID(pdoc *permission.Permission) string {
+	if pdoc.Type != permission.TypeOauth {
+		return pdoc.SourceID
+	}
+
+	oc, ok := pdoc.Client.(*oauth.Client)
+	if !ok {
+		return pdoc.SourceID
+	}
+
+	if slug := oauth.GetLinkedAppSlug(oc.SoftwareID); slug != "" {
+		return consts.Apps + "/" + slug
+	}
+
+	return pdoc.SourceID
+}
+
 func createIntent(c echo.Context) error {
 	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {
@@ -81,12 +98,7 @@ func createIntent(c echo.Context) error {
 	if intent.Type == "" {
 		return jsonapi.InvalidParameter("type", errors.New("Type is missing"))
 	}
-	intent.Client = pdoc.SourceID
-	if oc, ok := pdoc.Client.(*oauth.Client); ok {
-		if slug := oauth.GetLinkedAppSlug(oc.SoftwareID); slug != "" {
-			intent.Client = consts.Apps + "/" + slug
-		}
-	}
+	intent.Client = RequestAppSourceID(pdoc)
 	intent.SetID("")
 	intent.SetRev("")
 	intent.Services = nil

@@ -2,6 +2,7 @@ package intents
 
 import (
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -15,7 +16,6 @@ import (
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
-	"time"
 )
 
 func TestIntents(t *testing.T) {
@@ -175,9 +175,9 @@ func TestIntents(t *testing.T) {
 		oauthClient := &oauth.Client{
 			ClientName:   "test-oauth-linked-app",
 			RedirectURIs: []string{"https://foobar"},
-			SoftwareID:   "registry://drive",
+			SoftwareID:   "registry://drive/stable",
 		}
-		require.Nil(t, oauthClient.Create(ins))
+		require.Nil(t, oauthClient.Create(ins, oauth.SoftwareIDPrevalidated))
 
 		// Issue an OAuth access token (AccessTokenAudience) for that client,
 		// with the linked-app scope so GetForOauth translates it via the
