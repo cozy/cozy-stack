@@ -67,6 +67,19 @@ func (s *InstanceService) ListByOrgDomain(orgDomain string) ([]*Instance, error)
 	return docs, nil
 }
 
+func (s *InstanceService) ListByOrgID(orgID string) ([]*Instance, error) {
+	var docs []*Instance
+	req := &couchdb.FindRequest{
+		UseIndex: "by-orgid",
+		Selector: mango.Equal("org_id", orgID),
+	}
+	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
+}
+
 // Update saves the changes in CouchDB.
 func (s *InstanceService) Update(inst *Instance) error {
 	return couchdb.UpdateDoc(prefixer.GlobalPrefixer, inst)
