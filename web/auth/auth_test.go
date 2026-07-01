@@ -2134,14 +2134,15 @@ func TestTokenExchange(t *testing.T) {
 
 	privateKey, kid, jwksURL := newTokenExchangeSigningKey(t)
 	const (
-		contextName        = "token-exchange-test"
-		clientID           = "cozy-twake-int"
-		appTokenAudience   = "twake-mail-web"
-		appTokenAppSlug    = "mail"
-		appTokenSoftwareID = "registry://mail"
-		issuer             = "https://sign-up.example.com/"
+		contextName           = "token-exchange-test"
+		clientID              = "cozy-twake-int"
+		appTokenAudience      = "twake-mail-web"
+		appTokenAppSlug       = "mail"
+		appTokenSoftwareID    = "registry://mail"
+		appTokenClientURLFlag = "twake_mail_url"
+		issuer                = "https://sign-up.example.com/"
 	)
-	appManifest := makeTokenExchangeAppManifest(appTokenAppSlug)
+	appManifest := makeTokenExchangeAppManifest(appTokenAppSlug, appTokenClientURLFlag)
 	appRegistry := newTokenExchangeRegistry(t, appTokenAppSlug, appManifest)
 	appRegistryURL, err := url.Parse(appRegistry.URL)
 	require.NoError(t, err)
@@ -2293,6 +2294,58 @@ func TestTokenExchange(t *testing.T) {
 		resp.Header("Access-Control-Allow-Methods").Equal(http.MethodPost)
 		resp.Header("Access-Control-Allow-Headers").Equal("content-type")
 		resp.Header("Access-Control-Allow-Credentials").Equal("true")
+	})
+
+	t.Run("AllowsAppClientURLFlagOrigin", func(t *testing.T) {
+		const twakeMailURL = "https://mail.stg.lin-saas.com"
+		testutils.WithFlag(t, testInstance, appTokenClientURLFlag, twakeMailURL)
+
+		resp := e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", twakeMailURL).
+			WithHeader("Access-Control-Request-Headers", "content-type").
+			Expect().
+			Status(http.StatusNoContent)
+
+		resp.Header("Access-Control-Allow-Origin").Equal(twakeMailURL)
+		resp.Header("Access-Control-Allow-Methods").Equal(http.MethodPost)
+		resp.Header("Access-Control-Allow-Headers").Equal("content-type")
+		resp.Header("Access-Control-Allow-Credentials").Equal("true")
+	})
+
+	t.Run("RejectsAppClientURLFlagOriginWhenFlagInvalid", func(t *testing.T) {
+		const twakeMailURL = "https://mail.stg.lin-saas.com"
+		testutils.WithFlag(t, testInstance, appTokenClientURLFlag, twakeMailURL)
+
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://chat.stg.lin-saas.com").
+			WithHeader("Access-Control-Request-Headers", "content-type").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsAppClientURLFlagOriginWhenFlagUnset", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://mail.stg.lin-saas.com").
+			WithHeader("Access-Control-Request-Headers", "content-type").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
+	})
+
+	t.Run("RejectsAppClientURLFlagOriginWhenFlagNotAnUrl", func(t *testing.T) {
+		testutils.WithFlag(t, testInstance, appTokenClientURLFlag, "not-a-url")
+
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://mail.stg.lin-saas.com").
+			WithHeader("Access-Control-Request-Headers", "content-type").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
 	})
 
 	t.Run("RejectsAdminPanelPublicDomainSuffixOriginFromDifferentOrg", func(t *testing.T) {
@@ -3010,7 +3063,11 @@ func makeTokenExchangeOIDCConfig(issuer, clientID, jwksURL string) map[string]in
 	}
 }
 
-func makeTokenExchangeAppManifest(slug string) []byte {
+func makeTokenExchangeAppManifest(slug, clientURLFlag string) []byte {
+	var flagField string
+	if clientURLFlag != "" {
+		flagField = fmt.Sprintf(`, "client_url_flag": %q`, clientURLFlag)
+	}
 	return []byte(fmt.Sprintf(`{
   "name": "Mail",
   "name_prefix": "Twake",
@@ -3031,8 +3088,8 @@ func makeTokenExchangeAppManifest(slug string) []byte {
       "type": "io.cozy.contacts",
       "verbs": ["GET"]
     }
-  }
-}`, slug, slug))
+  }%s
+}`, slug, slug, flagField))
 }
 
 func installTokenExchangeWebapp(t *testing.T, inst *instance.Instance, manifestJSON []byte) {
