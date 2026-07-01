@@ -45,7 +45,7 @@ func setGroupDirectoryMetadata(doc *couchdb.JSONDoc, organizationID, externalID 
 	}
 }
 
-func setContactDirectoryMetadata(doc *couchdb.JSONDoc, input contactFields, email string) {
+func setContactDirectoryMetadata(doc *couchdb.JSONDoc, input ContactPatch, email string) {
 	if doc.M == nil {
 		doc.M = make(map[string]interface{})
 	}
