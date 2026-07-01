@@ -209,27 +209,27 @@ func (m *WebappManifest) ClientURLFlag() string { return m.val.ClientURLFlag }
 func ResolveClientURL(ins *instance.Instance, slug string) string {
 	manifest, err := GetWebappBySlug(ins, slug)
 	if err != nil {
-		return defaultClientURL(ins, slug)
+		return DefaultClientURL(ins, slug)
 	}
 	flagKey := manifest.ClientURLFlag()
 	if flagKey == "" {
-		return defaultClientURL(ins, slug)
+		return DefaultClientURL(ins, slug)
 	}
 	flags, err := feature.GetFlags(ins)
 	if err != nil {
-		return defaultClientURL(ins, slug)
+		return DefaultClientURL(ins, slug)
 	}
 	flagValue, ok := flags.M[flagKey].(string)
 	if !ok {
-		return defaultClientURL(ins, slug)
+		return DefaultClientURL(ins, slug)
 	}
 	if _, err := url.ParseRequestURI(flagValue); err != nil {
-		return defaultClientURL(ins, slug)
+		return DefaultClientURL(ins, slug)
 	}
 	return flagValue
 }
 
-func defaultClientURL(ins *instance.Instance, slug string) string {
+func DefaultClientURL(ins *instance.Instance, slug string) string {
 	u := ins.SubDomain(slug)
 	u.Path = ""
 	return u.String()
