@@ -344,7 +344,7 @@ func TestApps(t *testing.T) {
 			WithCookie("cozysessid", cozysessID).
 			Expect().Status(200).
 			Header(echo.HeaderContentSecurityPolicy)
-		csp.Contains("frame-ancestors 'self' https://external.example.com;")
+		csp.Contains("frame-ancestors 'self' https://external.example.com https://clienturl-app.cozywithapps.example.net;")
 	})
 
 	t.Run("FaviconWithContext", func(t *testing.T) {
