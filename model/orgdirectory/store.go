@@ -12,6 +12,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
+const managedDocsPageSize = 1000
+
 func findExternalContactByEmail(db prefixer.Prefixer, email string) (*contact.Contact, error) {
 	matches, err := contact.FindAllByEmail(db, email)
 	if errors.Is(err, contact.ErrNotFound) {
@@ -74,16 +76,37 @@ func listManagedJSONDocs(inst *instance.Instance, doctype, organizationID string
 
 func listManagedDocs[T any](inst *instance.Instance, doctype, organizationID string) ([]*T, error) {
 	var docs []*T
-	req := &couchdb.FindRequest{
+	var bookmark string
+	for {
+		var page []*T
+		req := managedDocsRequest(organizationID, bookmark)
+		res, err := couchdb.FindDocsUnoptimizedRaw(inst, doctype, req, &page)
+		if couchdb.IsNoDatabaseError(err) || couchdb.IsNotFoundError(err) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		docs = append(docs, page...)
+
+		nextBookmark := ""
+		if res != nil {
+			nextBookmark = res.Bookmark
+		}
+		if len(page) < managedDocsPageSize || nextBookmark == "" || nextBookmark == bookmark {
+			return docs, nil
+		}
+		bookmark = nextBookmark
+	}
+}
+
+func managedDocsRequest(organizationID, bookmark string) *couchdb.FindRequest {
+	return &couchdb.FindRequest{
 		Selector: mango.And(
 			mango.Equal(DirectoryMetadataKey+".managed", true),
 			mango.Equal(DirectoryMetadataKey+".organizationId", organizationID),
 		),
-		Limit: 10000,
+		Limit:    managedDocsPageSize,
+		Bookmark: bookmark,
 	}
-	err := couchdb.FindDocsUnoptimized(inst, doctype, req, &docs)
-	if couchdb.IsNoDatabaseError(err) || couchdb.IsNotFoundError(err) {
-		return nil, nil
-	}
-	return docs, err
 }
