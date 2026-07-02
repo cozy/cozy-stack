@@ -2515,6 +2515,51 @@ func TestTokenExchange(t *testing.T) {
 		require.Equal(t, clientIDValue, boundClients[0].OAuthClientID)
 	})
 
+	t.Run("ExchangesAppTokenFromClientURLFlagOrigin", func(t *testing.T) {
+		const (
+			sid          = "mail-app-sid-client-url-flag"
+			twakeMailURL = "https://mail.stg.lin-saas.com"
+		)
+		testutils.WithFlag(t, testInstance, appTokenClientURLFlag, twakeMailURL)
+		idToken := makeTokenExchangeSignedJWT(t, privateKey, kid, map[string]interface{}{
+			"iss": issuer,
+			"aud": []string{appTokenAudience},
+			"sub": "mail-user",
+			"sid": sid,
+			"iat": time.Now().Unix(),
+			"exp": time.Now().Add(time.Hour).Unix(),
+		})
+
+		resp := e.POST("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Accept", "application/json").
+			WithHeader("Origin", twakeMailURL).
+			WithJSON(map[string]string{
+				"id_token":      idToken,
+				"exchange_type": "app",
+			}).
+			Expect().
+			Status(http.StatusOK)
+		resp.Header("Access-Control-Allow-Origin").Equal(twakeMailURL)
+		obj := resp.JSON().Object()
+
+		clientIDValue := obj.Value("client_id").String().Raw()
+		accessToken := obj.Value("access_token").String().Raw()
+		refreshToken := obj.Value("refresh_token").String().Raw()
+		scope := oauth.BuildLinkedAppScope(appTokenAppSlug)
+
+		obj.ValueEqual("token_type", "bearer")
+		obj.ValueEqual("scope", scope)
+		assertValidToken(t, testInstance, accessToken, consts.AccessTokenAudience, clientIDValue, scope)
+		assertValidToken(t, testInstance, refreshToken, consts.RefreshTokenAudience, clientIDValue, scope)
+
+		client, err := oauth.FindClient(testInstance, clientIDValue)
+		require.NoError(t, err)
+		require.Equal(t, appTokenSoftwareID, client.SoftwareID)
+		require.Equal(t, sid, client.OIDCSessionID)
+		require.Equal(t, []string{"https://mail." + testInstance.Domain}, client.RedirectURIs)
+	})
+
 	t.Run("ExchangesAppTokenWithInstanceClaim", func(t *testing.T) {
 		withAppTokenInstanceClaim(t, " workplaceFqdn ")
 		const sid = "mail-app-sid-instance-claim"

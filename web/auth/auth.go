@@ -553,7 +553,7 @@ func tokenExchangeOriginAllowed(origin string, inst *instance.Instance) bool {
 	if tokenExchangeAppOriginAllowed(origin, originHost, inst) {
 		return true
 	}
-	if tokenExchangeAppClientURLOriginAllowed(origin, originHost, inst) {
+	if tokenExchangeAppClientURLOriginAllowed(origin, inst) {
 		return true
 	}
 
@@ -583,7 +583,7 @@ func tokenExchangeAppOriginAllowed(origin, originHost string, inst *instance.Ins
 		tokenExchangeAppSlugAllowed(inst.ContextName, appSlug)
 }
 
-func tokenExchangeAppClientURLOriginAllowed(origin, x string, inst *instance.Instance) bool {
+func tokenExchangeAppClientURLOriginAllowed(origin string, inst *instance.Instance) bool {
 	u, err := url.Parse(origin)
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		return false
