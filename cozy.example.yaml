@@ -719,6 +719,21 @@ rabbitmq:
           delivery_limit: 5
           bindings:
             - domain.user.deleted
+        - name: stack.b2b.group.lifecycle
+          declare: true
+          declare_dlx: true
+          declare_dlq: true
+          dlx_name: stack.b2b.dlx
+          dlq_name: stack.dead.letter.b2b.group.lifecycle
+          dl_routing_key: b2b.group.dead
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - b2b.group.created
+            - b2b.group.updated
+            - b2b.group.deleted
+            - b2b.group.member.added
+            - b2b.group.member.removed
         - name: stack.app.commands.queue
           declare: true
           declare_dlx: true
