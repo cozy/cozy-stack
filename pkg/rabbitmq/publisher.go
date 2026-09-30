@@ -57,8 +57,6 @@ func validatePublishRequest(r PublishRequest) error {
 	switch {
 	case r.Exchange == "":
 		return errors.New("rabbitmq publish: exchange is required")
-	case r.RoutingKey == "":
-		return errors.New("rabbitmq publish: routing key is required")
 	case r.Payload == nil:
 		return errors.New("rabbitmq publish: payload is required")
 	default:
