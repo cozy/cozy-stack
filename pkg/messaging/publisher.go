@@ -14,7 +14,8 @@ type PublishRequest struct {
 	ContextName string
 	// Exchange is the AMQP exchange name to publish to.
 	Exchange string
-	// RoutingKey is the AMQP routing key used to route the message.
+	// RoutingKey is the AMQP routing key used to route the message. It is
+	// empty for a fanout exchange.
 	RoutingKey string
 	// Payload is the application message body.
 	Payload any
