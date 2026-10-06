@@ -15,8 +15,11 @@ type PublishRequest struct {
 	// Exchange is the AMQP exchange name to publish to.
 	Exchange string
 	// RoutingKey is the AMQP routing key used to route the message. It is
-	// empty for a fanout exchange.
+	// required unless Fanout is set.
 	RoutingKey string
+	// Fanout marks a publish to a fanout exchange, which ignores the routing
+	// key, so it can be left empty.
+	Fanout bool
 	// Payload is the application message body.
 	Payload any
 	// MessageID is an optional stable identifier for deduplication, tracing or
