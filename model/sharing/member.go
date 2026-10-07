@@ -628,7 +628,7 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL, sho
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
@@ -1025,7 +1025,7 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
@@ -1058,7 +1058,7 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1173,7 +1173,7 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
@@ -1229,7 +1229,7 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1268,7 +1268,7 @@ func (s *Sharing) DelegateRevokeRecipient(inst *instance.Instance, index int) er
 	}
 	res, err := request.Req(opts)
 	preRefreshRes, preRefreshErr := res, err
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
@@ -1418,7 +1418,7 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1536,7 +1536,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			ParseError: ParseRequestError,
 		}
 		res, err := request.Req(opts)
-		if res != nil && res.StatusCode/100 == 4 {
+		if res != nil && ShouldRefreshToken(res.StatusCode) {
 			res, err = RefreshToken(inst, res, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {
