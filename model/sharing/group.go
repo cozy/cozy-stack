@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/orgdirectory"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -73,10 +74,14 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 }
 
 // RevokeGroup revokes a group of members on the sharer Cozy. After that, the
-// sharing is disabled if there are no longer any active recipient.
+// sharing is disabled if there are no longer any active recipient. Revoking
+// an already revoked group is a no-op.
 func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing
+	}
+	if index >= len(s.Groups) || s.Groups[index].Revoked {
+		return nil
 	}
 
 	var errm error
@@ -193,15 +198,29 @@ func revokeDeletedGroup(inst *instance.Instance, groupID string) error {
 
 	var errm error
 	for _, s := range sharings {
-		if !s.Owner {
-			continue
-		}
 		for idx, group := range s.Groups {
 			if group.ID != groupID || group.Revoked {
 				continue
 			}
-			if err := s.RevokeGroup(inst, idx); err != nil {
+			if s.Owner {
+				if err := s.RevokeGroup(inst, idx); err != nil {
+					errm = multierror.Append(errm, err)
+				}
+			} else if s.OrgDrive && orgdirectory.IsManagedDirectoryGroupID(groupID) {
+				// SyncGroupDeleted deletes an org group on every instance of
+				// the organization, including the owner of an org drive: the
+				// owner gets the same delete event and revokes the group
+				// itself. Delegating here would revoke it twice.
+				continue
+			} else if err := s.DelegateRevokeGroup(inst, idx); err != nil {
 				errm = multierror.Append(errm, err)
+			} else {
+				// Mark the group revoked locally so a retry of the share-group
+				// job does not delegate the same revocation again.
+				s.Groups[idx].Revoked = true
+				if err := couchdb.UpdateDoc(inst, s); err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 	}
@@ -399,6 +418,44 @@ func (s *Sharing) SendRemoveMemberFromGroup(inst *instance.Instance, groupIndex,
 		Scheme: u.Scheme,
 		Domain: u.Host,
 		Path:   fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, memberIndex),
+		Headers: request.Headers{
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+		},
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
+	}
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		return ErrInternalServerError
+	}
+	return nil
+}
+
+// DelegateRevokeGroup is used by a recipient to ask the sharer to revoke a
+// whole group of members of the sharing.
+func (s *Sharing) DelegateRevokeGroup(inst *instance.Instance, groupIndex int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/groups/%d", s.SID, groupIndex),
 		Headers: request.Headers{
 			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},

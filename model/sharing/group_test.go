@@ -2,14 +2,19 @@ package sharing
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/orgdirectory"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -587,4 +592,245 @@ func addEmailToContact(t *testing.T, inst *instance.Instance, c *contact.Contact
 	mail := map[string]interface{}{"address": email}
 	c.M["email"] = []interface{}{mail}
 	require.NoError(t, couchdb.UpdateDoc(inst, c))
+}
+
+func TestRevokeGroupIsIdempotent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "alice@example.net",
+		PublicName: "Alice",
+	})
+
+	team := createGroup(t, inst, "Idem Team")
+	_ = createContactInGroups(t, inst, "IdemAlice", []string{team.ID()})
+	s := createDriveSharingForGroupTest(t, inst, "Idempotent group revoke")
+	s.OrgDrive = true
+	sid := s.SID
+	require.NoError(t, s.AddGroup(inst, team.ID(), false))
+	require.NoError(t, couchdb.UpdateDoc(inst, s))
+
+	require.NoError(t, s.RevokeGroup(inst, 0))
+
+	stored := &Sharing{}
+	require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, stored))
+	revBefore := stored.Rev()
+
+	require.NoError(t, stored.RevokeGroup(inst, 0))
+
+	after := &Sharing{}
+	require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, after))
+	require.Equal(t, revBefore, after.Rev(), "second revoke must not touch the sharing")
+	assert.Equal(t, MemberStatusRevoked, after.Members[1].Status)
+	require.Len(t, after.Groups, 1)
+	assert.True(t, after.Groups[0].Revoked)
+}
+
+// TestDelegateRevokeGroup checks that a recipient asking for the revocation
+// of one of its groups contacts the sharer with the right request.
+func TestDelegateRevokeGroup(t *testing.T) {
+	config.UseTestFile(t)
+
+	// safehttp blocks loopback addresses outside dev mode; enable it so the
+	// in-memory httptest server is reachable.
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	inst := &instance.Instance{Domain: "bob.example.net"}
+
+	newSharing := func(srvURL string) *Sharing {
+		now := time.Now()
+		return &Sharing{
+			SID:    "delegaterevoke",
+			Active: true,
+			Drive:  true,
+			Groups: []Group{{
+				ID:      "deleted-team-id",
+				Name:    "Deleted Team",
+				AddedBy: 1,
+			}},
+			Members: []Member{
+				{Status: MemberStatusOwner, Instance: srv.URL},
+				{
+					Status:   MemberStatusReady,
+					Name:     "Bob",
+					Email:    "bob@cozy.tools",
+					Instance: inst.Domain,
+				},
+			},
+			Credentials: []Credentials{{
+				AccessToken: &auth.AccessToken{AccessToken: "test-token"},
+			}},
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+	}
+
+	t.Run("RevokesThroughTheSharer", func(t *testing.T) {
+		reqCh := make(chan *http.Request, 4)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqCh <- r
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		s := newSharing(srv.URL)
+		require.NoError(t, s.DelegateRevokeGroup(inst, 0))
+
+		require.Len(t, reqCh, 1)
+		r := <-reqCh
+		assert.Equal(t, http.MethodDelete, r.Method)
+		assert.Equal(t, "/sharings/delegaterevoke/groups/0", r.URL.Path)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+	})
+
+	t.Run("FailsOnUnexpectedResponse", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		s := newSharing(srv.URL)
+		require.ErrorIs(t, s.DelegateRevokeGroup(inst, 0), ErrInternalServerError)
+	})
+
+	t.Run("DoesNotRefreshOnUnfixableClientError", func(t *testing.T) {
+		reqCh := make(chan *http.Request, 4)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqCh <- r
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		s := newSharing(srv.URL)
+		require.Error(t, s.DelegateRevokeGroup(inst, 0))
+		// A 404 cannot be fixed by a fresh token: no refresh, no retry.
+		require.Len(t, reqCh, 1)
+	})
+}
+
+// TestRevokeDeletedGroupFromRecipient checks how a recipient reacts to the
+// deletion of one of its groups. For org groups of an org drive, the deletion
+// is broadcast to every org instance (SyncGroupDeleted), including the owner,
+// so the recipient must not delegate the revocation: the owner revokes the
+// group on its own and propagates it.
+func TestRevokeDeletedGroupFromRecipient(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "bob@example.net",
+		PublicName: "Bob",
+	})
+
+	// safehttp blocks loopback addresses outside dev mode; enable it so the
+	// in-memory httptest server is reachable.
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	newOwnerMock := func(t *testing.T) (string, chan *http.Request, func() int) {
+		t.Helper()
+		reqCh := make(chan *http.Request, 8)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqCh <- r
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		t.Cleanup(srv.Close)
+		return srv.URL, reqCh, func() int { return len(reqCh) }
+	}
+
+	// FindActive matches every active sharing of the instance, and the setup
+	// shares one instance across subtests: keep the group IDs unique per
+	// subtest so sharings from other subtests never match.
+	newRecipientSharing := func(t *testing.T, srvURL, groupID string, orgDrive bool) *Sharing {
+		t.Helper()
+		now := time.Now()
+		s := &Sharing{
+			Active:   true,
+			Owner:    false,
+			Drive:    true,
+			OrgDrive: orgDrive,
+			Groups: []Group{{
+				ID:      groupID,
+				Name:    "Org Team",
+				AddedBy: 1,
+			}},
+			Members: []Member{
+				{Status: MemberStatusOwner, Instance: srvURL},
+				{
+					Status:   MemberStatusReady,
+					Name:     "Bob",
+					Email:    "bob@cozy.tools",
+					Instance: inst.Domain,
+				},
+			},
+			Credentials: []Credentials{{
+				AccessToken: &auth.AccessToken{AccessToken: "test-token"},
+			}},
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		require.NoError(t, couchdb.CreateDoc(inst, s))
+		return s
+	}
+
+	t.Run("SkipsDelegationForOrgGroupsOfOrgDrive", func(t *testing.T) {
+		groupID := orgdirectory.GroupDocID("org123", "engineering-1")
+		srvURL, _, requestCount := newOwnerMock(t)
+		newRecipientSharing(t, srvURL, groupID, true)
+
+		require.NoError(t, UpdateGroups(inst, job.ShareGroupMessage{DeletedGroupID: groupID}))
+		assert.Equal(t, 0, requestCount(), "the owner gets the same delete event, no delegation expected")
+	})
+
+	t.Run("DelegatesForRegularGroups", func(t *testing.T) {
+		srvURL, reqCh, requestCount := newOwnerMock(t)
+		s := newRecipientSharing(t, srvURL, "deleted-team-id-2", true)
+
+		require.NoError(t, UpdateGroups(inst, job.ShareGroupMessage{DeletedGroupID: "deleted-team-id-2"}))
+		require.Equal(t, 1, requestCount())
+		r := <-reqCh
+		assert.Equal(t, http.MethodDelete, r.Method)
+		assert.Equal(t, "/sharings/"+s.SID+"/groups/0", r.URL.Path)
+	})
+
+	t.Run("DelegatesOrgGroupWhenOwnerIsNotInOrg", func(t *testing.T) {
+		groupID := orgdirectory.GroupDocID("org123", "engineering-3")
+		srvURL, _, requestCount := newOwnerMock(t)
+		newRecipientSharing(t, srvURL, groupID, false)
+
+		require.NoError(t, UpdateGroups(inst, job.ShareGroupMessage{DeletedGroupID: groupID}))
+		assert.Equal(t, 1, requestCount(), "without OrgDrive the owner has no delete event, delegation needed")
+	})
+
+	t.Run("MarksGroupRevokedAfterDelegation", func(t *testing.T) {
+		srvURL, _, requestCount := newOwnerMock(t)
+		s := newRecipientSharing(t, srvURL, "deleted-team-id-4", true)
+		deleteGroup := func() error {
+			return UpdateGroups(inst, job.ShareGroupMessage{DeletedGroupID: "deleted-team-id-4"})
+		}
+
+		require.NoError(t, deleteGroup())
+		require.Equal(t, 1, requestCount())
+
+		stored := &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, s.SID, stored))
+		require.Len(t, stored.Groups, 1)
+		assert.True(t, stored.Groups[0].Revoked, "a successful delegation must mark the group revoked")
+
+		// A retry of the share-group job must not delegate again.
+		require.NoError(t, deleteGroup())
+		assert.Equal(t, 1, requestCount(), "the revoked group must not be delegated twice")
+	})
 }
