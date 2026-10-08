@@ -497,12 +497,12 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 		return err
 	}
 
-	size, err := fs.DirSize(dir)
+	size, count, err := fs.DirSize(dir)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
 
-	result := files.ApiDiskSize{DocID: dir.DocID, Size: size}
+	result := files.ApiDiskSize{DocID: dir.DocID, Size: size, FilesCount: count}
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
