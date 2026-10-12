@@ -1377,6 +1377,36 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 		}
 		require.True(t, found, "betty should be in the recipients list")
 	})
+
+	t.Run("InactiveOnTheOwnerIsForbidden", func(t *testing.T) {
+		// Betty's copy points to the owner's domain, so that the request
+		// takes the same stack shortcut instead of the HTTP proxy.
+		bettySharing, err := sharing.FindSharing(bettyInstance, sharingID)
+		require.NoError(t, err)
+		ownerURL := bettySharing.Members[0].Instance
+		bettySharing.Members[0].Instance = "http://" + ownerInstance.Domain
+		require.NoError(t, couchdb.UpdateDoc(bettyInstance, bettySharing))
+		t.Cleanup(func() {
+			bettySharing.Members[0].Instance = ownerURL
+			_ = couchdb.UpdateDoc(bettyInstance, bettySharing)
+		})
+		eBetty.GET("/sharings/drives/"+sharingID+"/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200)
+
+		s, err := sharing.FindSharing(ownerInstance, sharingID)
+		require.NoError(t, err)
+		s.Active = false
+		require.NoError(t, couchdb.UpdateDoc(ownerInstance, s))
+		t.Cleanup(func() {
+			s.Active = true
+			_ = couchdb.UpdateDoc(ownerInstance, s)
+		})
+
+		eBetty.GET("/sharings/drives/"+sharingID+"/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(403)
+	})
 }
 
 // TestCoreSharedDrivesWithBothMethods runs core shared drive tests with both
