@@ -17,11 +17,9 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	csettings "github.com/cozy/cozy-stack/model/settings"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -170,11 +168,11 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 					continue
 				}
 				if dir != nil {
-					nb, err := countFilesInDirectory(inst, dir)
+					_, nb, err := fs.DirSize(dir)
 					if err != nil {
 						continue
 					}
-					count += nb
+					count += int(nb)
 				} else {
 					count++
 				}
@@ -191,48 +189,6 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 		}
 	}
 	return count
-}
-
-func countFilesInDirectory(inst *instance.Instance, dir *vfs.DirDoc) (int, error) {
-	// Find the subdirectories
-	start := dir.Fullpath + "/"
-	stop := dir.Fullpath + "0" // 0 is the next ascii character after /
-	if dir.DocID == consts.RootDirID {
-		start = "/"
-		stop = "0"
-	}
-	sel := mango.And(
-		mango.Gt("path", start),
-		mango.Lt("path", stop),
-		mango.Equal("type", consts.DirType),
-	)
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-by-path",
-		Selector: sel,
-		Fields:   []string{"_id"},
-		Limit:    10000,
-	}
-	var children []couchdb.JSONDoc
-	err := couchdb.FindDocs(inst, consts.Files, req, &children)
-	if err != nil {
-		return 0, err
-	}
-	keys := make([]interface{}, len(children)+1)
-	keys[0] = dir.DocID
-	for i, child := range children {
-		keys[i+1] = child.ID()
-	}
-
-	// Get the number of files for the directory and each of its sub-directory
-	var resp couchdb.ViewResponse
-	err = couchdb.ExecView(inst, couchdb.DiskUsageView, &couchdb.ViewRequest{
-		Keys:  keys,
-		Limit: 100_000,
-	}, &resp)
-	if err != nil {
-		return 0, err
-	}
-	return len(resp.Rows), nil
 }
 
 // RegisterCozyURL saves a new Cozy URL for a member
