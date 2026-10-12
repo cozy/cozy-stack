@@ -45,3 +45,24 @@ func TestGoroutineProfiling(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(profile), "web/tools.parkedGoroutine")
 }
+
+func TestHeapProfiling(t *testing.T) {
+	e := echo.New()
+	Routes(e.Group("/tools"))
+
+	req := httptest.NewRequest(http.MethodGet, "/tools/pprof/heap", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, echo.MIMEOctetStream, rec.Header().Get(echo.HeaderContentType))
+	assert.Equal(t, `attachment; filename="heap.pprof"`,
+		rec.Header().Get(echo.HeaderContentDisposition))
+
+	gz, err := gzip.NewReader(rec.Body)
+	require.NoError(t, err)
+	defer gz.Close()
+	profile, err := io.ReadAll(gz)
+	require.NoError(t, err)
+	assert.NotEmpty(t, profile)
+}
