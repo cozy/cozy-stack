@@ -9,6 +9,10 @@ const (
 	ExchangePlatform = "platform"
 	// ExchangeContactsCollected carries the contacts collected by the stack.
 	ExchangeContactsCollected = "twake:contacts:collected"
+	// ExchangeDrive carries the commands on organization drives.
+	ExchangeDrive = "drive"
+	// ExchangeActivity carries the CloudEvents published by the stack.
+	ExchangeActivity = "activity"
 )
 
 const (
@@ -23,6 +27,7 @@ const (
 	QueueAppCommands               = "stack.app.commands.queue"
 	QueueBannerCommands            = "stack.banner.commands"
 	QueueCommonContacts            = "stack.contacts.common"
+	QueueDriveCommands             = "stack.drive.commands"
 )
 
 const (
@@ -38,6 +43,8 @@ const (
 	RoutingKeyNextcloudMigrationCanceled  = "nextcloud.migration.canceled"
 	RoutingKeyBannerMaterialize           = "banner.materialize"
 	RoutingKeyBannerClear                 = "banner.clear"
+	RoutingKeyOrgDriveEnsure              = "drive.org_drive.ensure"
+	RoutingKeyOrgDriveReady               = "com.twake.drive.org_drive.ready.v1"
 )
 
 // UserDeletionRequestedMessage is published when a user asks Twake to delete the account linked to the current cozy instance.
