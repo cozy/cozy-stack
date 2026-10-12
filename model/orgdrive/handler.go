@@ -60,16 +60,24 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 	if err != nil {
 		return err
 	}
-	if cmd.State == StateRemoved {
-		return malformed("state removed is not supported yet")
-	}
-
 	inst, err := orgdirectory.FindOrganizationInstance(ctx, cmd.OrganizationID, "")
 	if err != nil {
 		return fmt.Errorf("%s: %w", d.RoutingKey, err)
 	}
 	if inst == nil {
 		return fmt.Errorf("%s: no organization instance for %s", d.RoutingKey, cmd.OrganizationID)
+	}
+
+	if cmd.State == StateRemoved {
+		ok, err := MarkRemoved(inst, cmd)
+		if err != nil {
+			return fmt.Errorf("%s: remove %s/%s on %s: %w", d.RoutingKey, cmd.Reference.Source, cmd.Reference.ID, inst.Domain, err)
+		}
+		if !ok {
+			log.Infof("%s/%s: revision %d is older than the drive, ignored", cmd.Reference.Source, cmd.Reference.ID, cmd.Revision)
+			return nil
+		}
+		return pushRemoval(inst, cmd)
 	}
 
 	drive, skipped, err := Ensure(inst, cmd)
