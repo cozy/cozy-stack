@@ -72,11 +72,11 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 		return fmt.Errorf("%s: no organization instance for %s", d.RoutingKey, cmd.OrganizationID)
 	}
 
-	res, err := Ensure(inst, cmd)
+	drive, err := Ensure(inst, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: %s/%s on %s: %w", d.RoutingKey, cmd.Reference.Source, cmd.Reference.ID, inst.Domain, err)
 	}
-	if res.Drive == nil {
+	if drive == nil {
 		log.Infof("%s/%s: revision %d is older than the drive, ignored", cmd.Reference.Source, cmd.Reference.ID, cmd.Revision)
 		return nil
 	}
@@ -84,7 +84,7 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 	req, err := rabbitmq.NewActivityRequest(inst.ContextName, rabbitmq.RoutingKeyOrgDriveReady, cmd.OrganizationID, ReadyData{
 		Reference: cmd.Reference,
 		Revision:  cmd.Revision,
-		Drive:     DriveRef{ID: res.Drive.SID},
+		Drive:     DriveRef{ID: drive.SID},
 		Skipped:   []Skipped{},
 	})
 	if err != nil {
@@ -93,12 +93,12 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 	if err := h.publisher.Publish(ctx, req); err != nil {
 		return fmt.Errorf("%s: reply for %s/%s: %w", d.RoutingKey, cmd.Reference.Source, cmd.Reference.ID, err)
 	}
-	log.Infof("%s/%s: drive %s ready on %s at revision %d", cmd.Reference.Source, cmd.Reference.ID, res.Drive.SID, inst.Domain, cmd.Revision)
+	log.Infof("%s/%s: drive %s ready on %s at revision %d", cmd.Reference.Source, cmd.Reference.ID, drive.SID, inst.Domain, cmd.Revision)
 
-	if !res.Drive.Reference.Ready {
-		res.Drive.Reference.Ready = true
-		if err := couchdb.UpdateDoc(inst, res.Drive); err != nil {
-			return fmt.Errorf("%s: mark drive %s ready: %w", d.RoutingKey, res.Drive.SID, err)
+	if !drive.Reference.Ready {
+		drive.Reference.Ready = true
+		if err := couchdb.UpdateDoc(inst, drive); err != nil {
+			return fmt.Errorf("%s: mark drive %s ready: %w", d.RoutingKey, drive.SID, err)
 		}
 	}
 	return nil

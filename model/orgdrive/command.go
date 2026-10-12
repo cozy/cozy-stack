@@ -61,6 +61,7 @@ func ParseCommand(body []byte) (*Command, error) {
 	cmd.OrganizationID = strings.TrimSpace(cmd.OrganizationID)
 	cmd.Reference.Source = strings.TrimSpace(cmd.Reference.Source)
 	cmd.Reference.ID = strings.TrimSpace(cmd.Reference.ID)
+	cmd.Name = strings.TrimSpace(cmd.Name)
 	switch {
 	case cmd.OrganizationID == "":
 		return nil, malformed("missing organizationId")
@@ -70,7 +71,7 @@ func ParseCommand(body []byte) (*Command, error) {
 		return nil, malformed("revision must be positive")
 	case cmd.State != StateCreated && cmd.State != StateRemoved:
 		return nil, malformed("unknown state %q", cmd.State)
-	case cmd.State == StateCreated && strings.TrimSpace(cmd.Name) == "":
+	case cmd.State == StateCreated && cmd.Name == "":
 		return nil, malformed("missing name")
 	}
 	for i, m := range cmd.Members {
@@ -82,8 +83,9 @@ func ParseCommand(body []byte) (*Command, error) {
 			return nil, malformed("unknown role %q for %s", m.Role, m.Email)
 		}
 	}
-	for _, g := range cmd.Groups {
-		if strings.TrimSpace(g.ID) == "" {
+	for i, g := range cmd.Groups {
+		cmd.Groups[i].ID = strings.TrimSpace(g.ID)
+		if cmd.Groups[i].ID == "" {
 			return nil, malformed("group without id")
 		}
 		if !validRole(g.Role) {
