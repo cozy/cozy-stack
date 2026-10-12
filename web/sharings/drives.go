@@ -1712,6 +1712,9 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 			if err != nil {
 				return wrapErrors(err)
 			}
+			if !ownerSharing.Active {
+				return jsonapi.Forbidden(middlewares.ErrForbidden)
+			}
 			// The member must be resolved against the owner's instance and
 			// sharing: the recipient-side member would authorize nothing here.
 			ownerMember, err := sharedDriveInteractMember(c, owner, ownerSharing)
