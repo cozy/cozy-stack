@@ -1517,3 +1517,19 @@ GET /tools/pprof/heap HTTP/1.1
 ```http
 HTTP/1.1 200 OK
 ```
+
+### GET /tools/pprof/goroutine
+
+Return the stack traces of all current goroutines as pprof format.
+
+#### Request
+
+```http
+GET /tools/pprof/goroutine HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
