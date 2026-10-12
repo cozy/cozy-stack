@@ -189,8 +189,15 @@ func TestHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 2, "HR")))
+		second := pub.ready(t, 1).Drive.ID
+		assert.NotEqual(t, first.SID, second)
 
-		assert.NotEqual(t, first.SID, pub.ready(t, 1).Drive.ID)
+		trashed, err := org.VFS().DirByID(first.FirstFilesRule().Values[0])
+		require.NoError(t, err)
+		_, err = vfs.RestoreDir(org.VFS(), trashed)
+		require.NoError(t, err)
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 3, "HR")))
+		assert.Equal(t, second, pub.ready(t, 2).Drive.ID)
 	})
 
 	t.Run("FailedReplyFailsTheDeliveryAndLeavesTheDriveNotReady", func(t *testing.T) {

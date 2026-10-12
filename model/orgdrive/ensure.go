@@ -13,17 +13,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-// Result is what applying a command left: the drive, and whether the command
-// changed anything. A command with the revision already applied changes
-// nothing, but its reply is published again.
-type Result struct {
-	Drive   *sharing.Sharing
-	Applied bool
-}
-
 // Ensure makes the drive of the reference match a created command. It returns
-// a nil drive when the command is older than the last one applied.
-func Ensure(inst *instance.Instance, cmd *Command) (*Result, error) {
+// a nil drive when the command is older than the last one applied, and the
+// drive unchanged when its revision was already applied, so that the reply is
+// published again.
+func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
 	all, err := sharing.FindByReference(inst, cmd.Reference.Source, cmd.Reference.ID)
 	if err != nil {
 		return nil, err
@@ -34,27 +28,25 @@ func Ensure(inst *instance.Instance, cmd *Command) (*Result, error) {
 		if s.Reference.Revision > last {
 			last = s.Reference.Revision
 		}
-		if drive == nil {
-			if ok, err := alive(inst, s); err != nil {
-				return nil, err
-			} else if ok {
-				drive = s
-			}
+		// A drive replaced after its folder was trashed comes back alive if
+		// the folder is restored. The newest one stays the drive of the
+		// reference.
+		if drive != nil && drive.Reference.Revision >= s.Reference.Revision {
+			continue
+		}
+		if ok, err := alive(inst, s); err != nil {
+			return nil, err
+		} else if ok {
+			drive = s
 		}
 	}
 	switch {
 	case cmd.Revision < last:
-		return &Result{}, nil
+		return nil, nil
 	case cmd.Revision == last && drive != nil:
-		return &Result{Drive: drive}, nil
-	}
-
-	if drive == nil {
-		drive, err = create(inst, cmd)
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Drive: drive, Applied: true}, nil
+		return drive, nil
+	case drive == nil:
+		return create(inst, cmd)
 	}
 
 	drive.Reference.Revision = cmd.Revision
@@ -66,7 +58,7 @@ func Ensure(inst *instance.Instance, cmd *Command) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Drive: drive, Applied: true}, nil
+	return drive, nil
 }
 
 // alive is false for a drive that was revoked, or whose folder was trashed or
@@ -95,13 +87,24 @@ func inTrash(dir *vfs.DirDoc) bool {
 
 func create(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
 	fs := inst.VFS()
-	dir, err := vfs.NewDirDocWithPath(freeName(fs, folderName(cmd.Name)), consts.RootDirID, "/", nil)
+	dir, err := vfs.NewDirDocWithPath(freeName(fs, consts.RootDirID, folderName(cmd.Name)), consts.RootDirID, "/", nil)
 	if err != nil {
 		return nil, err
 	}
 	if err := fs.CreateDir(dir); err != nil {
 		return nil, err
 	}
+	s, err := shareDir(inst, dir, cmd)
+	if err != nil {
+		// Without its sharing, the folder would stay at the root and push the
+		// redelivery to "Name (2)".
+		_ = fs.DestroyDirAndContent(dir, fs.EnsureErased)
+		return nil, err
+	}
+	return s, nil
+}
+
+func shareDir(inst *instance.Instance, dir *vfs.DirDoc, cmd *Command) (*sharing.Sharing, error) {
 	s, err := sharing.CreateDrive(inst, dir.ID(), cmd.Name, "")
 	if err != nil {
 		return nil, err
@@ -125,7 +128,7 @@ func rename(inst *instance.Instance, s *sharing.Sharing, name string) error {
 		return err
 	}
 	if want := folderName(name); dir.DocName != want {
-		newName := freeName(fs, want)
+		newName := freeName(fs, dir.DirID, want)
 		if _, err := vfs.ModifyDirMetadata(fs, dir, &vfs.DocPatch{Name: &newName}); err != nil {
 			return err
 		}
@@ -146,9 +149,9 @@ func folderName(name string) string {
 	return name
 }
 
-func freeName(fs vfs.VFS, name string) string {
-	if exists, err := fs.GetIndexer().DirChildExists(consts.RootDirID, name); err == nil && exists {
-		return vfs.ConflictName(fs, consts.RootDirID, name, false)
+func freeName(fs vfs.VFS, parentID, name string) string {
+	if exists, err := fs.GetIndexer().DirChildExists(parentID, name); err == nil && exists {
+		return vfs.ConflictName(fs, parentID, name, false)
 	}
 	return name
 }
