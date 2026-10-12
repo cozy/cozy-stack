@@ -462,6 +462,24 @@ func TestGroups(t *testing.T) {
 		assert.Equal(t, []int{1}, s.Members[1].Groups)
 	})
 
+	t.Run("AttachGroupKeepsTheRoleOfActiveMembers", func(t *testing.T) {
+		team := createGroup(t, inst, "Attach Group")
+		bob := createContactInGroups(t, inst, "AttachBob", []string{team.ID()})
+		_ = createContactInGroups(t, inst, "AttachCarol", []string{team.ID()})
+		s := createDriveSharingForGroupTest(t, inst, "Attach group")
+		require.NoError(t, s.AddContact(inst, bob.ID(), false))
+
+		require.ErrorIs(t, s.Clone().(*Sharing).AddGroup(inst, team.ID(), true), ErrMemberAlreadyAdded)
+		require.NoError(t, s.AttachGroup(inst, team.ID(), true))
+
+		require.Len(t, s.Members, 3)
+		assert.False(t, s.Members[1].ReadOnly)
+		assert.False(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, []int{0}, s.Members[1].Groups)
+		assert.True(t, s.Members[2].ReadOnly)
+		assert.True(t, s.Members[2].OnlyInGroups)
+	})
+
 	t.Run("RevokeEmptyLastDriveGroupDeletesSharing", func(t *testing.T) {
 		team := createGroup(t, inst, "Empty Drive Group")
 		s := createDriveSharingForGroupTest(t, inst, "Empty drive group revoke")
