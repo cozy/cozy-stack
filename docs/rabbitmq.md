@@ -480,7 +480,9 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
   "reference": { "source": "twake-space", "id": "3b9e2c71-5d4a-4f0e-9c8b-1a2d6e7f8091" },
   "revision": 1791106503000,
   "state": "created",
-  "name": "Product launch"
+  "name": "Product launch",
+  "members": [{ "email": "alice@example.net", "role": "write" }],
+  "groups": [{ "id": "marketing", "role": "read" }]
 }
 ```
 
@@ -490,8 +492,15 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
 - Provisioning is locked per organization and reference. Multiple active
   drives for one reference fail the command without changing any drive or
   publishing a reply; the error lists the conflicting sharing ids.
-- A command with a higher revision than the drive's renames it. A command with
-  the same revision changes nothing, and an older one is ignored.
+- A command with a higher revision than the drive's renames it. An older one
+  is ignored.
+- The members and groups of the drive are made to match the lists: a member is
+  the contact of the organization directory with this email, and a group is
+  the directory group with this id. Those who are no longer listed are
+  revoked, and a role change is applied in place. A person gets write access
+  when their direct role or one of their groups gives it, and read access
+  otherwise. Each command is applied, even with the same revision, so a
+  redelivery finishes what a failure left undone, invitations included.
 - A drive whose sharing was revoked or whose folder was trashed is replaced by
   a new one. Its old sharing stays inactive and retains the reference and
   revision, including after the folder is permanently deleted. An active
@@ -499,8 +508,11 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
   is created.
 - After a created command, the Stack replies on the `activity` exchange with
   `com.twake.drive.org_drive.ready.v1`, carrying the reference, the revision
-  and the drive id (`data.drive.id`, the sharing id). A command with the same
-  revision gets the same reply again. A failed publish fails the delivery.
+  and the drive id (`data.drive.id`, the sharing id). `data.skipped` lists the
+  members (`email`) and groups (`group_id`) that could not be put on the
+  drive, with a `reason`: not in the organization directory, several contacts
+  in it, or too many members. A command with the same revision gets a reply
+  again. A failed publish fails the delivery.
 - A malformed command (no reference, no revision, unknown state or role) goes
   to the dead letter queue at once.
 
