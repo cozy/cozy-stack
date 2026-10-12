@@ -288,6 +288,14 @@ for declaring its queue, binding it to this exchange, and processing the
 messages; if no queue is bound when the Stack publishes, the user receives
 `503` and the tracking document is marked `failed`.
 
+#### `activity` exchange
+
+CloudEvents read by other apps, with the event type as routing key and
+`source` `twake://drive`:
+
+- `com.twake.drive.org_drive.ready.v1`: the reply to `drive.org_drive.ensure`,
+  see below.
+
 ### Handlers
 
 Handlers implement a simple interface:
@@ -300,11 +308,11 @@ type Handler interface {
 
 Returning `nil` acknowledges the message. Returning a non-nil error causes the message to be requeued (subject to broker policies and delivery limits).
 
-A handler does not classify its errors. Every failure is nacked with requeue,
-and the queue's `delivery_limit` is what bounds the retries: once it is reached
-the broker dead letters the message. So a payload that does not parse costs a
-few redeliveries before it lands in the dead letter queue, and a storage failure
-gets those same attempts to succeed.
+A failure is nacked with requeue, and the queue's `delivery_limit` is what
+bounds the retries: once it is reached the broker dead letters the message. A
+handler can return an error wrapping `rabbitmq.ErrMalformed` for a message no
+redelivery can fix: it is nacked without requeue, and goes to the dead letter
+queue at once.
 
 Queue names are mapped to handlers in the stack. For example:
 
@@ -314,6 +322,7 @@ Queue names are mapped to handlers in the stack. For example:
 - `domain.user.deleted` on the `b2b` exchange → removes externally managed organization contacts.
 - `banner.materialize` and `banner.clear` on the `platform` exchange → materializes or clears a platform banner, see [Banners](banners.md).
 - every message of the `twake:contacts:common` fanout exchange → writes a contact, see below.
+- `drive.org_drive.ensure` on the `drive` exchange → creates or updates a shared drive on an organization instance, see below.
 
 Message schemas are JSON and validated in the handler. Example payload for `user.password.updated`:
 
@@ -459,6 +468,36 @@ that already exists locally is not backfilled.
 }
 ```
 
+#### Organization drives
+
+Another app keeps a shared drive on an organization instance in sync with one
+of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
+([ADR 009](adr/009-adr-org-drive-provisioning.md)):
+
+```json
+{
+  "organizationId": "org123",
+  "reference": { "source": "twake-space", "id": "3b9e2c71-5d4a-4f0e-9c8b-1a2d6e7f8091" },
+  "revision": 1791106503000,
+  "state": "created",
+  "name": "Product launch"
+}
+```
+
+- The drive is created on the instance whose slug is `organizationId`, as a
+  folder at its root named after `name` ("Name (2)" when the name is taken),
+  and the reference is stored on its sharing.
+- A command with a higher revision than the drive's renames it. A command with
+  the same revision changes nothing, and an older one is ignored.
+- A drive whose sharing was revoked or whose folder was trashed is replaced by
+  a new one.
+- After a created command, the Stack replies on the `activity` exchange with
+  `com.twake.drive.org_drive.ready.v1`, carrying the reference, the revision
+  and the drive id (`data.drive.id`, the sharing id). A command with the same
+  revision gets the same reply again. A failed publish fails the delivery.
+- A malformed command (no reference, no revision, unknown state or role) goes
+  to the dead letter queue at once.
+
 ### Lifecycle
 
 On startup, if `rabbitmq.enabled` is true:
@@ -513,6 +552,17 @@ Map the queue name to the handler so the manager knows which handler to use. Thi
 switch configQueue.Name {
 case "example.queue":
     handler = NewExampleHandler()
+}
+```
+
+A package that `pkg/rabbitmq` cannot import registers its handler from `init`
+instead. The factory gets the Stack's publisher, for handlers that reply:
+
+```go
+func init() {
+    rabbitmq.RegisterHandler("example.queue", func(p rabbitmq.Publisher) rabbitmq.Handler {
+        return NewExampleHandler(p)
+    })
 }
 ```
 

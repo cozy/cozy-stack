@@ -818,3 +818,22 @@ rabbitmq:
           delivery_limit: 5
           bindings:
             - ""
+    # Commands of other apps on the shared drives of organization instances.
+    # The replies go to the activity exchange, which must exist with a queue
+    # bound by the app, or the publish fails and the command is retried.
+    - name: drive
+      kind: topic
+      durable: true
+      declare_exchange: false
+      queues:
+        - name: stack.drive.commands
+          declare: true
+          declare_dlx: true
+          declare_dlq: true
+          dlx_name: stack.drive.dlx
+          dlq_name: stack.dead.letter.drive.commands
+          dl_routing_key: drive.commands.dead
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - drive.org_drive.ensure
