@@ -4159,6 +4159,7 @@ func TestFiles(t *testing.T) {
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 
 		// Upload files into each folder 10 times.
+		var subsubFileID string
 		for i := 0; i < 10; i++ {
 			name := "file" + strconv.Itoa(i)
 
@@ -4180,14 +4181,16 @@ func TestFiles(t *testing.T) {
 				WithBytes([]byte("foo")).
 				Expect().Status(201)
 
-			e.POST("/files/"+subsubID).
+			subsubFileID = e.POST("/files/"+subsubID).
 				WithQuery("Name", name).
 				WithQuery("Type", "file").
 				WithHeader("Content-Type", "text/plain").
 				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 				WithHeader("Authorization", "Bearer "+token).
 				WithBytes([]byte("foo")).
-				Expect().Status(201)
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
 		}
 
 		// validate the subsub dir
@@ -4228,6 +4231,48 @@ func TestFiles(t *testing.T) {
 		data.ValueEqual("id", parentID)
 		data.Value("attributes").Object().ValueEqual("size", "90")
 		data.Value("attributes").Object().ValueEqual("files_count", 30)
+
+		checkSize := func(dirID, size string, count int) {
+			attrs := e.GET("/files/"+dirID+"/size").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.attributes").Object()
+			attrs.ValueEqual("size", size)
+			attrs.ValueEqual("files_count", count)
+		}
+
+		// A trashed file is no longer counted
+		e.DELETE("/files/"+subsubFileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+		checkSize(subsubID, "27", 9)
+		checkSize(parentID, "87", 29)
+
+		// A file is not a directory
+		e.GET("/files/"+subsubFileID+"/size").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
+
+		// An empty directory
+		emptyID := e.POST("/files/"+parentID).
+			WithQuery("Name", "dirsizeempty").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+		checkSize(emptyID, "0", 0)
+
+		// A file doc without a size is counted with a size of 0
+		noSize := &couchdb.JSONDoc{Type: consts.Files, M: map[string]interface{}{
+			"type":   consts.FileType,
+			"name":   "nosize",
+			"dir_id": emptyID,
+		}}
+		require.NoError(t, couchdb.CreateDoc(testInstance, noSize))
+		checkSize(emptyID, "0", 1)
+		checkSize(parentID, "87", 30)
 	})
 }
 
