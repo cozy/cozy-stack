@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -198,6 +199,22 @@ func TestHandler(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 3, "HR")))
 		assert.Equal(t, second, pub.ready(t, 2).Drive.ID)
+	})
+
+	t.Run("DeletedDriveIsReplaced", func(t *testing.T) {
+		org := newOrgInstance(t)
+		ref := "space-" + utils.RandomString(8)
+		pub := &fakePublisher{}
+		h := NewHandler(pub)
+
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 1, "HR")))
+		first := onlyDrive(t, org)
+		// Removed from CouchDB only: destroying it through the VFS would also
+		// delete the sharing. The folder stays on disk, hence the new name.
+		require.NoError(t, couchdb.DeleteDoc(org, rootDir(t, org, first)))
+
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 2, "People")))
+		assert.NotEqual(t, first.SID, pub.ready(t, 1).Drive.ID)
 	})
 
 	t.Run("FailedReplyFailsTheDeliveryAndLeavesTheDriveNotReady", func(t *testing.T) {
