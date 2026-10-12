@@ -365,7 +365,8 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		if !found {
 			continue
 		}
-		if s.Members[i].ReadOnly != m.ReadOnly {
+		revoked := member.Status == MemberStatusRevoked
+		if s.Members[i].ReadOnly != m.ReadOnly && !revoked {
 			if s.Members[i].OnlyInGroups {
 				return "", -1, ErrMemberAlreadyInGroup
 			} else if len(m.Groups) > 0 {
@@ -380,7 +381,11 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		s.Members[i].Name = m.Name
 		s.Members[i].Instance = m.Instance
 		s.Members[i].ReadOnly = m.ReadOnly
-		s.Members[i].OnlyInGroups = s.Members[i].OnlyInGroups && m.OnlyInGroups
+		if revoked {
+			s.Members[i].OnlyInGroups = m.OnlyInGroups
+		} else {
+			s.Members[i].OnlyInGroups = s.Members[i].OnlyInGroups && m.OnlyInGroups
+		}
 		break
 	}
 	if idx < 1 {
