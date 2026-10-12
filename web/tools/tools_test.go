@@ -40,6 +40,7 @@ func TestGoroutineProfiling(t *testing.T) {
 	// kept as plain strings.
 	gz, err := gzip.NewReader(rec.Body)
 	require.NoError(t, err)
+	defer gz.Close()
 	profile, err := io.ReadAll(gz)
 	require.NoError(t, err)
 	assert.Contains(t, string(profile), "web/tools.parkedGoroutine")
