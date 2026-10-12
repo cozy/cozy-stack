@@ -444,6 +444,24 @@ func TestGroups(t *testing.T) {
 		assert.True(t, found)
 	})
 
+	t.Run("ReaddGroupWithAnotherRole", func(t *testing.T) {
+		team := createGroup(t, inst, "Readd Group")
+		_ = createContactInGroups(t, inst, "ReaddAlice", []string{team.ID()})
+		s := createDriveSharingForGroupTest(t, inst, "Readd group")
+		s.OrgDrive = true
+		require.NoError(t, s.AddGroup(inst, team.ID(), true))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+		require.NoError(t, s.RevokeGroup(inst, 0))
+
+		require.NoError(t, s.AddGroup(inst, team.ID(), false))
+
+		require.Len(t, s.Members, 2)
+		assert.Equal(t, MemberStatusMailNotSent, s.Members[1].Status)
+		assert.False(t, s.Members[1].ReadOnly)
+		assert.True(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, []int{1}, s.Members[1].Groups)
+	})
+
 	t.Run("RevokeEmptyLastDriveGroupDeletesSharing", func(t *testing.T) {
 		team := createGroup(t, inst, "Empty Drive Group")
 		s := createDriveSharingForGroupTest(t, inst, "Empty drive group revoke")
