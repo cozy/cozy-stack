@@ -1520,7 +1520,12 @@ HTTP/1.1 200 OK
 
 ### GET /tools/pprof/goroutine
 
-Return the stack traces of all current goroutines as pprof format.
+Return the stack traces of all current goroutines as pprof format or text format.
+
+An optional `debug` query parameter can be provided:
+- `debug=0` (default): returns the binary pprof profile (as `application/octet-stream`).
+- `debug=1`: returns human-readable stack traces with function names and comments (as `text/plain`).
+- `debug=2`: returns stack traces in Go panic format (as `text/plain`).
 
 #### Request
 
