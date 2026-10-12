@@ -110,6 +110,12 @@ security features. Please do not use this binary as your production server.
 		}
 	}
 
+	rabbitmqSvc, err := rabbitmq.Init(config.GetConfig().RabbitMQ)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
+	}
+	rabbitmq.SetupWorkers(rabbitmqSvc)
+
 	workersList, err := job.GetWorkersList()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get the workers list: %w", err)
@@ -124,12 +130,6 @@ security features. Please do not use this binary as your production server.
 	} else {
 		broker = job.NewMemBroker()
 		schder = job.NewMemScheduler()
-	}
-
-	// Before the jobs start: the workers publish through rabbitmq.Default().
-	rabbitmqSvc, err := rabbitmq.Init(config.GetConfig().RabbitMQ)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
 	}
 
 	if err = job.SystemStart(broker, schder, workersList); err != nil {

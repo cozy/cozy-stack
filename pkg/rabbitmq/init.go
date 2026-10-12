@@ -1,8 +1,6 @@
 package rabbitmq
 
 import (
-	"sync"
-
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -19,38 +17,10 @@ type Service interface {
 	StartManagers() ([]*RabbitMQManager, error)
 }
 
-var (
-	defaultMu      sync.RWMutex
-	defaultService Service = new(NoopService)
-)
-
 func Init(cfg config.RabbitMQ) (Service, error) {
-	var svc Service = new(NoopService)
-	if cfg.Enabled && cfg.Nodes != nil {
-		s, err := NewService(cfg)
-		if err != nil {
-			return nil, err
-		}
-		svc = s
+	if !cfg.Enabled || cfg.Nodes == nil {
+		return new(NoopService), nil
 	}
-	SetDefault(svc)
-	return svc, nil
-}
 
-// Default returns the service built by the last Init. The job workers use it,
-// since they have no access to the stack services.
-func Default() Service {
-	defaultMu.RLock()
-	defer defaultMu.RUnlock()
-	return defaultService
-}
-
-// SetDefault replaces the default service, and returns a func restoring the
-// previous one.
-func SetDefault(s Service) func() {
-	defaultMu.Lock()
-	defer defaultMu.Unlock()
-	prev := defaultService
-	defaultService = s
-	return func() { SetDefault(prev) }
+	return NewService(cfg)
 }

@@ -41,13 +41,12 @@ func TestRegisteredHandlerGetsThePublisher(t *testing.T) {
 	assert.Equal(t, pub, built.publisher)
 }
 
-func TestSetDefaultRestoresThePreviousService(t *testing.T) {
-	previous := rabbitmq.Default()
-	svc := new(rabbitmq.NoopService)
+func TestSetupWorkersGivesThePublisher(t *testing.T) {
+	var got rabbitmq.Publisher
+	rabbitmq.RegisterWorkers(func(p rabbitmq.Publisher) { got = p })
 
-	restore := rabbitmq.SetDefault(svc)
-	assert.Same(t, svc, rabbitmq.Default())
+	pub := nopPublisher{}
+	rabbitmq.SetupWorkers(pub)
 
-	restore()
-	assert.Equal(t, previous, rabbitmq.Default())
+	assert.Equal(t, pub, got)
 }
