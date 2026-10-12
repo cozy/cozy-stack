@@ -517,6 +517,13 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
   again. Failed invitations fail the delivery before the reply is published;
   redelivery retries the unsent invitations. A failed publish also fails the
   delivery.
+- A command with `"state": "removed"` (no name, members or groups needed)
+  closes the drives of the reference at once: their routes answer 403. A
+  background job then revokes the members, moves the folder to the trash, and
+  replies with `com.twake.drive.org_drive.removed.v1` (reference and
+  revision). The folder is deleted from the trash 30 days later, unless it
+  was restored. An older revision is ignored, and a reference without a drive
+  still gets the reply.
 - A malformed command (no reference, no revision, unknown state or role) goes
   to the dead letter queue at once.
 
