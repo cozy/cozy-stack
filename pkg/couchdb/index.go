@@ -87,7 +87,7 @@ var DiskUsageView = &View{
 	Map: `
 function(doc) {
   if (doc.type === 'file') {
-    emit(doc.dir_id, +doc.size);
+    emit(doc.dir_id, +doc.size || 0);
   }
 }
 `,
@@ -95,15 +95,16 @@ function(doc) {
 }
 
 // DirFilesStatsView is the view used for computing the size and the number of
-// files of a directory. It has the same map as DiskUsageView, but a _stats
-// reduce, so that DiskUsageView, used for the quota, is not rebuilt.
+// files of a directory. It is similar to DiskUsageView, but with a _stats
+// reduce, so that DiskUsageView, used for the quota, is not rebuilt. A file
+// without a size is counted with a size of 0.
 var DirFilesStatsView = &View{
 	Name:    "dir-files-stats",
 	Doctype: consts.Files,
 	Map: `
 function(doc) {
   if (doc.type === 'file') {
-    emit(doc.dir_id, +doc.size);
+    emit(doc.dir_id, +doc.size || 0);
   }
 }
 `,
