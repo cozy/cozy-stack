@@ -20,17 +20,30 @@ import (
 // ErrMultipleActiveDrives means a reference needs repair before it can be updated.
 var ErrMultipleActiveDrives = errors.New("multiple active drives for reference")
 
-// Ensure makes the drive of the reference match a created command. It returns
-// a nil drive when the command is older than the last one applied, and the
-// drive unchanged when its revision was already applied, so that the reply is
-// published again.
-func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
+// Ensure makes the drive of the reference match a created command, and returns
+// the members and groups it could not put on it. It returns a nil drive when
+// the command is older than the last one applied. A command with the revision
+// already applied is applied again, since a failure after the revision was
+// stored would otherwise leave the members unsynced.
+func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, []Skipped, error) {
 	mu := config.Lock().LongOperation(inst, fmt.Sprintf("orgdrive/%q/%q/%q", inst.OrgID, cmd.Reference.Source, cmd.Reference.ID))
 	if err := mu.Lock(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer mu.Unlock()
 
+	drive, err := ensureDrive(inst, cmd)
+	if err != nil || drive == nil {
+		return nil, nil, err
+	}
+	skipped, err := syncMembers(inst, drive, cmd)
+	if err != nil {
+		return nil, nil, err
+	}
+	return drive, skipped, nil
+}
+
+func ensureDrive(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
 	all, err := sharing.FindByReference(inst, cmd.Reference.Source, cmd.Reference.ID)
 	if err != nil {
 		return nil, err
@@ -74,10 +87,10 @@ func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
 	if drive == nil {
 		return create(inst, cmd)
 	}
-	if cmd.Revision == drive.Reference.Revision {
+
+	if drive.Reference.Revision == cmd.Revision && drive.Description == cmd.Name {
 		return drive, nil
 	}
-
 	drive.Reference.Revision = cmd.Revision
 	if drive.Description != cmd.Name {
 		err = rename(inst, drive, cmd.Name)

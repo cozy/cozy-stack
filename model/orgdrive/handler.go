@@ -72,7 +72,7 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 		return fmt.Errorf("%s: no organization instance for %s", d.RoutingKey, cmd.OrganizationID)
 	}
 
-	drive, err := Ensure(inst, cmd)
+	drive, skipped, err := Ensure(inst, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: %s/%s on %s: %w", d.RoutingKey, cmd.Reference.Source, cmd.Reference.ID, inst.Domain, err)
 	}
@@ -85,7 +85,7 @@ func (h *Handler) Handle(ctx context.Context, d amqp.Delivery) error {
 		Reference: cmd.Reference,
 		Revision:  cmd.Revision,
 		Drive:     DriveRef{ID: drive.SID},
-		Skipped:   []Skipped{},
+		Skipped:   append([]Skipped{}, skipped...),
 	})
 	if err != nil {
 		return err
