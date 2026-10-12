@@ -41,16 +41,36 @@ See https://go.dev/doc/diagnostics#profiling.
 	Example: "$ cozy-stack tools heap > heap.pprof && go tool pprof heap.pprof",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ac := newAdminClient()
-		heap, err := ac.ProfileHeap()
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(os.Stdout, heap)
-		if errc := heap.Close(); errc != nil && err == nil {
-			err = errc
-		}
-		return err
+		return dumpProfile(ac.ProfileHeap)
 	},
+}
+
+var goroutineCmd = &cobra.Command{
+	Use:   "goroutine",
+	Short: "Dump the stack traces of all current goroutines",
+	Long: `
+This command can be used to look for goroutine leaks. It dumps the stack traces
+of all current goroutines on stdout.
+
+See https://go.dev/doc/diagnostics#profiling.
+`,
+	Example: "$ cozy-stack tools goroutine > goroutine.pprof && go tool pprof goroutine.pprof",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ac := newAdminClient()
+		return dumpProfile(ac.ProfileGoroutine)
+	},
+}
+
+func dumpProfile(fetch func() (io.ReadCloser, error)) error {
+	profile, err := fetch()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(os.Stdout, profile)
+	if errc := profile.Close(); errc != nil && err == nil {
+		err = errc
+	}
+	return err
 }
 
 var unxorDocumentID = &cobra.Command{
@@ -200,6 +220,7 @@ The report includes useful system information.
 
 func init() {
 	toolsCmdGroup.AddCommand(heapCmd)
+	toolsCmdGroup.AddCommand(goroutineCmd)
 	toolsCmdGroup.AddCommand(unxorDocumentID)
 	toolsCmdGroup.AddCommand(encryptRSACmd)
 	toolsCmdGroup.AddCommand(bugCmd)

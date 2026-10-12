@@ -15,7 +15,15 @@ func HeapProfiling(c echo.Context) error {
 	return pprof.WriteHeapProfile(res)
 }
 
+func GoroutineProfiling(c echo.Context) error {
+	res := c.Response()
+	res.Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
+	res.Header().Set(echo.HeaderContentDisposition, `attachment; filename="goroutine.pprof"`)
+	return pprof.Lookup("goroutine").WriteTo(res, 0)
+}
+
 // Routes sets the routing for the tools (like profiling).
 func Routes(router *echo.Group) {
 	router.GET("/pprof/heap", HeapProfiling)
+	router.GET("/pprof/goroutine", GoroutineProfiling)
 }
