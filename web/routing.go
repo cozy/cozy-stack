@@ -11,6 +11,7 @@ import (
 	_ "github.com/cozy/cozy-stack/model/banner" // materializes io.cozy.banners on the quota alert
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	_ "github.com/cozy/cozy-stack/model/orgdrive" // handles the drive.org_drive.ensure commands
 	"github.com/cozy/cozy-stack/model/stack"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
