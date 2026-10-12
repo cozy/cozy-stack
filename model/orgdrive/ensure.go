@@ -4,6 +4,8 @@
 package orgdrive
 
 import (
+	"errors"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -72,7 +74,7 @@ func alive(inst *instance.Instance, s *sharing.Sharing) (bool, error) {
 		return false, nil
 	}
 	dir, err := inst.VFS().DirByID(rule.Values[0])
-	if couchdb.IsNotFoundError(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {
