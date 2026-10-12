@@ -18,6 +18,9 @@ var (
 	ErrPublishReturned = errors.New("rabbitmq publish was returned")
 	// ErrPublishNacked is returned when RabbitMQ negatively acknowledges a publish.
 	ErrPublishNacked = errors.New("rabbitmq publish was nacked")
+	// ErrMalformed is wrapped by a handler for a message that can never be
+	// handled, so that it is dead-lettered without being redelivered.
+	ErrMalformed = errors.New("malformed message")
 )
 
 // PublishRequest describes a single outgoing RabbitMQ message.

@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -178,6 +179,11 @@ func (r *queueRunner) run(ctx context.Context) error {
 				log.Debugf("Processing message #%d for queue %s with handler", messageCount, r.queue.cfg.Name)
 				handleErr = r.queue.Handler.Handle(ctx, d)
 			}()
+			if errors.Is(handleErr, ErrMalformed) {
+				log.Errorf("Message #%d rejected for queue %s: %v, dead-lettering it", messageCount, r.queue.cfg.Name, handleErr)
+				_ = d.Nack(false, false)
+				continue
+			}
 			if handleErr != nil {
 				log.Errorf("Message #%d processing failed for queue %s: %v, nacking message", messageCount, r.queue.cfg.Name, handleErr)
 				_ = d.Nack(false, true)
