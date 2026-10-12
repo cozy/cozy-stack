@@ -19,7 +19,7 @@ func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 			continue
 		}
 
-		manager, err := buildManager(node, cfg.Exchanges, svc)
+		manager, err := svc.buildManager(node, cfg.Exchanges)
 		if err != nil {
 			log.Errorf("Error while building RabbitMQ manager: %v", err)
 			return nil, err
@@ -31,13 +31,13 @@ func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 	return svc, nil
 }
 
-func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange, publisher Publisher) (*RabbitMQManager, error) {
+func (s *RabbitMQService) buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange) (*RabbitMQManager, error) {
 	connection, err := BuildConnection(node)
 	if err != nil {
 		return nil, err
 	}
 
-	exchanges := BuildExchangeSpecs(exchangesCfg, publisher)
+	exchanges := s.BuildExchangeSpecs(exchangesCfg)
 
 	return NewRabbitMQManager(connection, exchanges), nil
 }

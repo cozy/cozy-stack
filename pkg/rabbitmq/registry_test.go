@@ -28,17 +28,17 @@ func TestRegisteredHandlerGetsThePublisher(t *testing.T) {
 		return built
 	})
 
-	pub := nopPublisher{}
-	specs := rabbitmq.BuildExchangeSpecs([]config.RabbitExchange{{
+	svc := new(rabbitmq.RabbitMQService)
+	specs := svc.BuildExchangeSpecs([]config.RabbitExchange{{
 		Name:   "test",
 		Kind:   "topic",
 		Queues: []config.RabbitQueue{{Name: "test.registered"}, {Name: "test.unknown"}},
-	}}, pub)
+	}})
 
 	require.Len(t, specs, 1)
 	require.Len(t, specs[0].Queues, 1, "only the registered queue gets a handler")
 	assert.Same(t, built, specs[0].Queues[0].Handler)
-	assert.Equal(t, pub, built.publisher)
+	assert.Same(t, svc, built.publisher)
 }
 
 func TestSetupWorkersGivesThePublisher(t *testing.T) {
