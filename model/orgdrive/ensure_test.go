@@ -43,7 +43,7 @@ func TestEnsure(t *testing.T) {
 		for range workers {
 			go func() {
 				<-start
-				s, err := Ensure(org, cmd)
+				s, _, err := Ensure(org, cmd)
 				results <- result{s, err}
 			}()
 		}
@@ -68,7 +68,7 @@ func TestEnsure(t *testing.T) {
 		for _, ref := range []Reference{{Source: "app/a", ID: "b"}, {Source: "app", ID: "a/b"}, {Source: "app", ID: "b"}} {
 			cmd := &Command{Reference: ref, Revision: 1, Name: "Independent"}
 			for _, inst := range []*instance.Instance{org, other} {
-				s, err := Ensure(inst, cmd)
+				s, _, err := Ensure(inst, cmd)
 				require.NoError(t, err)
 				assert.False(t, ids[s.SID])
 				ids[s.SID] = true
@@ -113,7 +113,7 @@ func TestEnsure(t *testing.T) {
 	t.Run("FailedDeactivationPreventsReplacement", func(t *testing.T) {
 		org := newOrgInstance(t)
 		cmd := &Command{Reference: Reference{Source: "app", ID: "missing"}, Revision: 1, Name: "Missing"}
-		first, err := Ensure(org, cmd)
+		first, _, err := Ensure(org, cmd)
 		require.NoError(t, err)
 		require.NoError(t, couchdb.DeleteDoc(org, rootDir(t, org, first)))
 		cmd.Revision = 2
@@ -127,11 +127,11 @@ func TestEnsure(t *testing.T) {
 			}
 			return original.RoundTrip(r)
 		})
-		_, err = Ensure(org, cmd)
+		_, _, err = Ensure(org, cmd)
 		require.ErrorContains(t, err, "deactivation failed")
 		assert.Equal(t, first.SID, onlyDrive(t, org).SID)
 		client.Transport = original
-		replacement, err := Ensure(org, cmd)
+		replacement, _, err := Ensure(org, cmd)
 		require.NoError(t, err)
 		assert.NotEqual(t, first.SID, replacement.SID)
 		stored, err := sharing.FindSharing(org, first.SID)
