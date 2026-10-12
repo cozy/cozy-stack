@@ -267,7 +267,7 @@ func SetupWorkers(publisher Publisher) {
 	}
 }
 
-func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange, publisher Publisher) []ExchangeSpec {
+func (s *RabbitMQService) BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 	var exchanges []ExchangeSpec
 
 	for i := range exchangesCfg {
@@ -313,7 +313,7 @@ func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange, publisher Publishe
 				handler = NewCommonContactsHandler()
 			default:
 				if factory, ok := registeredHandlers[configQueue.Name]; ok {
-					handler = factory(publisher)
+					handler = factory(s)
 				}
 			}
 
