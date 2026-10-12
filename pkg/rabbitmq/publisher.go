@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/messaging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -20,25 +21,7 @@ var (
 )
 
 // PublishRequest describes a single outgoing RabbitMQ message.
-type PublishRequest struct {
-	// ContextName selects the configured RabbitMQ node.
-	ContextName string
-	// Exchange is the AMQP exchange name to publish to.
-	Exchange string
-	// RoutingKey is the AMQP routing key used by the exchange to route the
-	RoutingKey string
-	// Payload is the application message body.
-	Payload any
-	// MessageID is an optional stable identifier for deduplication, tracing or
-	// cross-system debugging when a message is observed in broker logs.
-	MessageID string
-	// DeliveryMode overrides the AMQP persistence mode. Zero means "persistent",
-	// which is the safe default for stack messages.
-	DeliveryMode uint8
-	// UnroutableOK disables the AMQP mandatory flag. By default we keep it false
-	// so unroutable messages are returned as errors instead of being dropped.
-	UnroutableOK bool
-}
+type PublishRequest = messaging.PublishRequest
 
 // PublishReturnedError reports an unroutable publish returned by RabbitMQ.
 type PublishReturnedError struct {
@@ -70,7 +53,7 @@ func (e *PublishNackedError) Unwrap() error {
 	return ErrPublishNacked
 }
 
-func (r PublishRequest) validate() error {
+func validatePublishRequest(r PublishRequest) error {
 	switch {
 	case r.Exchange == "":
 		return errors.New("rabbitmq publish: exchange is required")
@@ -83,7 +66,7 @@ func (r PublishRequest) validate() error {
 	}
 }
 
-func (r PublishRequest) marshalPayload() ([]byte, error) {
+func marshalPublishPayload(r PublishRequest) ([]byte, error) {
 	body, err := json.Marshal(r.Payload)
 	if err != nil {
 		return nil, fmt.Errorf("rabbitmq publish json: %w", err)
@@ -91,7 +74,7 @@ func (r PublishRequest) marshalPayload() ([]byte, error) {
 	return body, nil
 }
 
-func (r PublishRequest) toAMQPPublishing(body []byte) amqp.Publishing {
+func toAMQPPublishing(r PublishRequest, body []byte) amqp.Publishing {
 	deliveryMode := r.DeliveryMode
 	if deliveryMode == 0 {
 		deliveryMode = amqp.Persistent
@@ -186,10 +169,10 @@ func waitForPublishResult(
 //   - a negative confirm, which means the broker did not accept the publish;
 //   - a context cancellation or connection/channel failure.
 func (m *RabbitMQManager) Publish(ctx context.Context, req PublishRequest) error {
-	if err := req.validate(); err != nil {
+	if err := validatePublishRequest(req); err != nil {
 		return err
 	}
-	body, err := req.marshalPayload()
+	body, err := marshalPublishPayload(req)
 	if err != nil {
 		return err
 	}
@@ -211,7 +194,7 @@ func (m *RabbitMQManager) Publish(ctx context.Context, req PublishRequest) error
 	confirms := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
 	returns := ch.NotifyReturn(make(chan amqp.Return, 1))
 
-	if err := ch.PublishWithContext(ctx, req.Exchange, req.RoutingKey, !req.UnroutableOK, false, req.toAMQPPublishing(body)); err != nil {
+	if err := ch.PublishWithContext(ctx, req.Exchange, req.RoutingKey, !req.UnroutableOK, false, toAMQPPublishing(req, body)); err != nil {
 		return fmt.Errorf("rabbitmq publish: send %s/%s: %w", req.Exchange, req.RoutingKey, err)
 	}
 

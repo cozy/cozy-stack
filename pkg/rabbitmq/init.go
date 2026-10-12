@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/messaging"
 )
 
 var log = logger.WithNamespace("rabbitmq")
@@ -13,7 +14,7 @@ var log = logger.WithNamespace("rabbitmq")
 // - [RabbitMQService] interacts with the RabbitMQ nodes
 // - [NoopService] when no config is setup
 type Service interface {
-	Publisher
+	messaging.Publisher
 	StartManagers() ([]*RabbitMQManager, error)
 }
 

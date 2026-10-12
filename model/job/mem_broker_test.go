@@ -77,6 +77,7 @@ func TestMemBroker(t *testing.T) {
 	t.Run("InMemoryJobs", func(t *testing.T) {
 		n := 10
 		v := 100
+		pub := new(taskContextPublisher)
 
 		var w sync.WaitGroup
 
@@ -84,7 +85,9 @@ func TestMemBroker(t *testing.T) {
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
+				Publisher:   pub,
 				WorkerFunc: func(ctx *job.TaskContext) error {
+					assert.Same(t, pub, ctx.Publisher)
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					if !assert.NoError(t, err) {

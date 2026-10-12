@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/messaging"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/sync/errgroup"
 )
@@ -235,13 +236,8 @@ func BuildConnection(node config.RabbitMQNode) (*RabbitMQConnection, error) {
 	return connection, nil
 }
 
-// Publisher publishes a message on RabbitMQ.
-type Publisher interface {
-	Publish(ctx context.Context, req PublishRequest) error
-}
-
 // HandlerFactory builds the handler of a queue with the publisher of the stack.
-type HandlerFactory func(Publisher) Handler
+type HandlerFactory func(messaging.Publisher) Handler
 
 var registeredHandlers = map[string]HandlerFactory{}
 
@@ -249,22 +245,6 @@ var registeredHandlers = map[string]HandlerFactory{}
 // packages that this one cannot import without an import cycle.
 func RegisterHandler(queue string, factory HandlerFactory) {
 	registeredHandlers[queue] = factory
-}
-
-var workerSetups []func(Publisher)
-
-// RegisterWorkers adds a setup that registers job workers publishing on
-// RabbitMQ. It is called from init, like RegisterHandler, and the stack runs
-// the setups with its publisher before the job workers start.
-func RegisterWorkers(setup func(Publisher)) {
-	workerSetups = append(workerSetups, setup)
-}
-
-// SetupWorkers runs the setups given to RegisterWorkers.
-func SetupWorkers(publisher Publisher) {
-	for _, setup := range workerSetups {
-		setup(publisher)
-	}
 }
 
 func (s *RabbitMQService) BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {

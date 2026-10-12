@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/messaging"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -61,6 +62,7 @@ type (
 		WorkerInit   WorkerInitFunc
 		WorkerStart  WorkerStartFunc
 		WorkerFunc   WorkerFunc
+		Publisher    messaging.Publisher
 		WorkerCommit WorkerCommit
 		WorkerType   string
 		BeforeHook   WorkerBeforeHook
@@ -87,12 +89,13 @@ type (
 	// execution and contains specific values from the job.
 	TaskContext struct {
 		context.Context
-		Instance *instance.Instance
-		job      *Job
-		log      logger.Logger
-		id       string
-		cookie   interface{}
-		noRetry  bool
+		Instance  *instance.Instance
+		Publisher messaging.Publisher
+		job       *Job
+		log       logger.Logger
+		id        string
+		cookie    interface{}
+		noRetry   bool
 	}
 )
 
@@ -162,12 +165,13 @@ func (c *TaskContext) NoRetry() bool {
 
 func (c *TaskContext) clone() *TaskContext {
 	return &TaskContext{
-		Context:  c.Context,
-		Instance: c.Instance,
-		job:      c.job,
-		log:      c.log,
-		id:       c.id,
-		cookie:   c.cookie,
+		Context:   c.Context,
+		Instance:  c.Instance,
+		Publisher: c.Publisher,
+		job:       c.job,
+		log:       c.log,
+		id:        c.id,
+		cookie:    c.cookie,
 	}
 }
 
@@ -305,6 +309,7 @@ func (w *Worker) work(workerID string) {
 func (w *Worker) runTask(inst *instance.Instance, workerID string, job *Job) {
 	taskCtx, cancel := NewTaskContext(workerID, job, inst)
 	defer cancel()
+	taskCtx.Publisher = w.Conf.Publisher
 	if err := job.AckConsumed(); err != nil {
 		taskCtx.Logger().Errorf("error acking consume job: %s",
 			err.Error())
