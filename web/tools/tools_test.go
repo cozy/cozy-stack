@@ -46,6 +46,26 @@ func TestGoroutineProfiling(t *testing.T) {
 	assert.Contains(t, string(profile), "web/tools.parkedGoroutine")
 }
 
+func TestGoroutineProfilingText(t *testing.T) {
+	started := make(chan struct{})
+	done := make(chan struct{})
+	defer close(done)
+	go parkedGoroutine(started, done)
+	<-started
+
+	e := echo.New()
+	Routes(e.Group("/tools"))
+
+	req := httptest.NewRequest(http.MethodGet, "/tools/pprof/goroutine?debug=2", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, echo.MIMETextPlainCharsetUTF8, rec.Header().Get(echo.HeaderContentType))
+	assert.Empty(t, rec.Header().Get(echo.HeaderContentDisposition))
+	assert.Contains(t, rec.Body.String(), "web/tools.parkedGoroutine")
+}
+
 func TestHeapProfiling(t *testing.T) {
 	e := echo.New()
 	Routes(e.Group("/tools"))

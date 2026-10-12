@@ -3,6 +3,7 @@ package tools
 import (
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
@@ -16,10 +17,15 @@ func HeapProfiling(c echo.Context) error {
 }
 
 func GoroutineProfiling(c echo.Context) error {
+	debug, _ := strconv.Atoi(c.QueryParam("debug"))
 	res := c.Response()
-	res.Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
-	res.Header().Set(echo.HeaderContentDisposition, `attachment; filename="goroutine.pprof"`)
-	return pprof.Lookup("goroutine").WriteTo(res, 0)
+	if debug > 0 {
+		res.Header().Set(echo.HeaderContentType, echo.MIMETextPlainCharsetUTF8)
+	} else {
+		res.Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
+		res.Header().Set(echo.HeaderContentDisposition, `attachment; filename="goroutine.pprof"`)
+	}
+	return pprof.Lookup("goroutine").WriteTo(res, debug)
 }
 
 // Routes sets the routing for the tools (like profiling).

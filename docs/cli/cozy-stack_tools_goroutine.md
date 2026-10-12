@@ -24,7 +24,8 @@ $ cozy-stack tools goroutine > goroutine.pprof && go tool pprof goroutine.pprof
 ### Options
 
 ```
-  -h, --help   help for goroutine
+      --debug int   pprof debug mode (0: binary pprof, 1: text format with comments, 2: plain stack traces)
+  -h, --help        help for goroutine
 ```
 
 ### Options inherited from parent commands

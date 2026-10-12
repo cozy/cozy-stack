@@ -45,6 +45,8 @@ See https://go.dev/doc/diagnostics#profiling.
 	},
 }
 
+var flagGoroutineDebug int
+
 var goroutineCmd = &cobra.Command{
 	Use:   "goroutine",
 	Short: "Dump the stack traces of all current goroutines",
@@ -57,7 +59,9 @@ See https://go.dev/doc/diagnostics#profiling.
 	Example: "$ cozy-stack tools goroutine > goroutine.pprof && go tool pprof goroutine.pprof",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ac := newAdminClient()
-		return dumpProfile(ac.ProfileGoroutine)
+		return dumpProfile(func() (io.ReadCloser, error) {
+			return ac.ProfileGoroutine(flagGoroutineDebug)
+		})
 	},
 }
 
@@ -219,6 +223,7 @@ The report includes useful system information.
 }
 
 func init() {
+	goroutineCmd.Flags().IntVar(&flagGoroutineDebug, "debug", 0, "pprof debug mode (0: binary pprof, 1: text format with comments, 2: plain stack traces)")
 	toolsCmdGroup.AddCommand(heapCmd)
 	toolsCmdGroup.AddCommand(goroutineCmd)
 	toolsCmdGroup.AddCommand(unxorDocumentID)
