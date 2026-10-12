@@ -235,7 +235,6 @@ func BuildConnection(node config.RabbitMQNode) (*RabbitMQConnection, error) {
 	return connection, nil
 }
 
-// Publisher publishes a message on RabbitMQ.
 type Publisher interface {
 	Publish(ctx context.Context, req PublishRequest) error
 }

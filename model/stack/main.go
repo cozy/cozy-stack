@@ -126,6 +126,12 @@ security features. Please do not use this binary as your production server.
 		schder = job.NewMemScheduler()
 	}
 
+	// Before the jobs start: the workers publish through rabbitmq.Default().
+	rabbitmqSvc, err := rabbitmq.Init(config.GetConfig().RabbitMQ)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
+	}
+
 	if err = job.SystemStart(broker, schder, workersList); err != nil {
 		return nil, nil, fmt.Errorf("failed to start the jobs: %w", err)
 	}
@@ -135,11 +141,6 @@ security features. Please do not use this binary as your production server.
 	emailerSvc := emailer.Init()
 	instanceSvc := instance.Init()
 	clouderySvc := cloudery.Init(config.GetConfig().Clouderies)
-
-	rabbitmqSvc, err := rabbitmq.Init(config.GetConfig().RabbitMQ)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
-	}
 
 	services := Services{
 		Emailer:  emailerSvc,

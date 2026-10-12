@@ -1,7 +1,6 @@
 package rabbitmq
 
 import (
-	"context"
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -16,8 +15,8 @@ var log = logger.WithNamespace("rabbitmq")
 // - [RabbitMQService] interacts with the RabbitMQ nodes
 // - [NoopService] when no config is setup
 type Service interface {
+	Publisher
 	StartManagers() ([]*RabbitMQManager, error)
-	Publish(ctx context.Context, req PublishRequest) error
 }
 
 var (
@@ -26,15 +25,13 @@ var (
 )
 
 func Init(cfg config.RabbitMQ) (Service, error) {
-	if !cfg.Enabled || cfg.Nodes == nil {
-		svc := new(NoopService)
-		SetDefault(svc)
-		return svc, nil
-	}
-
-	svc, err := NewService(cfg)
-	if err != nil {
-		return nil, err
+	var svc Service = new(NoopService)
+	if cfg.Enabled && cfg.Nodes != nil {
+		s, err := NewService(cfg)
+		if err != nil {
+			return nil, err
+		}
+		svc = s
 	}
 	SetDefault(svc)
 	return svc, nil
