@@ -398,52 +398,22 @@ func (s *Sharing) DelegateRemoveMemberFromGroup(inst *instance.Instance, groupIn
 	cozyURL := contact.PrimaryCozyURL()
 
 	for i, m := range s.Members {
-		if m.Email != "" && m.Email == email {
-			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
-		}
-		if m.Instance != "" && m.Instance == cozyURL {
-			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
+		if (m.Email != "" && m.Email == email) || (m.Instance != "" && m.Instance == cozyURL) {
+			return s.sendDelegationRequest(inst, http.MethodDelete, fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, i))
 		}
 	}
 	return ErrMemberNotFound
 }
 
-func (s *Sharing) SendRemoveMemberFromGroup(inst *instance.Instance, groupIndex, memberIndex int) error {
-	u, err := url.Parse(s.Members[0].Instance)
-	if err != nil {
-		return err
-	}
-	c := &s.Credentials[0]
-	if c.AccessToken == nil {
-		return ErrInvalidSharing
-	}
-	opts := &request.Options{
-		Method: http.MethodDelete,
-		Scheme: u.Scheme,
-		Domain: u.Host,
-		Path:   fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, memberIndex),
-		Headers: request.Headers{
-			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
-		},
-		ParseError: ParseRequestError,
-	}
-	res, err := request.Req(opts)
-	if res != nil && ShouldRefreshToken(res.StatusCode) {
-		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
-	}
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusNoContent {
-		return ErrInternalServerError
-	}
-	return nil
-}
-
 // DelegateRevokeGroup is used by a recipient to ask the sharer to revoke a
 // whole group of members of the sharing.
 func (s *Sharing) DelegateRevokeGroup(inst *instance.Instance, groupIndex int) error {
+	return s.sendDelegationRequest(inst, http.MethodDelete, fmt.Sprintf("/sharings/%s/groups/%d", s.SID, groupIndex))
+}
+
+// sendDelegationRequest sends a request to the sharing owner to take action on
+// behalf of the requesting member.
+func (s *Sharing) sendDelegationRequest(inst *instance.Instance, verb, path string) error {
 	u, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		return err
@@ -456,10 +426,10 @@ func (s *Sharing) DelegateRevokeGroup(inst *instance.Instance, groupIndex int) e
 		return ErrInvalidSharing
 	}
 	opts := &request.Options{
-		Method: http.MethodDelete,
+		Method: verb,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   fmt.Sprintf("/sharings/%s/groups/%d", s.SID, groupIndex),
+		Path:   path,
 		Headers: request.Headers{
 			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
