@@ -69,23 +69,24 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	Triggers      Triggers  `json:"triggers"`
-	Drive         bool      `json:"drive,omitempty"`
-	DriveRootType string    `json:"drive_root_type,omitempty"`
-	OrgDrive      bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
-	Active        bool      `json:"active,omitempty"`
-	Owner         bool      `json:"owner,omitempty"`
-	Open          bool      `json:"open_sharing,omitempty"`
-	AccessMode    string    `json:"access_mode,omitempty"` // additive (default) | limited_access (reserved)
-	Description   string    `json:"description,omitempty"`
-	AppSlug       string    `json:"app_slug"`
-	PreviewPath   string    `json:"preview_path,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	NbFiles       int       `json:"initial_number_of_files_to_sync,omitempty"`
-	Initial       bool      `json:"initial_sync,omitempty"`
-	ShortcutID    string    `json:"shortcut_id,omitempty"`
-	MovedFrom     string    `json:"moved_from,omitempty"`
+	Triggers      Triggers   `json:"triggers"`
+	Drive         bool       `json:"drive,omitempty"`
+	DriveRootType string     `json:"drive_root_type,omitempty"`
+	OrgDrive      bool       `json:"org_drive,omitempty"` // True for drives created on an organization instance
+	Active        bool       `json:"active,omitempty"`
+	Owner         bool       `json:"owner,omitempty"`
+	Open          bool       `json:"open_sharing,omitempty"`
+	AccessMode    string     `json:"access_mode,omitempty"` // additive (default) | limited_access (reserved)
+	Description   string     `json:"description,omitempty"`
+	AppSlug       string     `json:"app_slug"`
+	PreviewPath   string     `json:"preview_path,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	NbFiles       int        `json:"initial_number_of_files_to_sync,omitempty"`
+	Initial       bool       `json:"initial_sync,omitempty"`
+	ShortcutID    string     `json:"shortcut_id,omitempty"`
+	MovedFrom     string     `json:"moved_from,omitempty"`
+	Reference     *Reference `json:"reference,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
