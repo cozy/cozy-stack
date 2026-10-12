@@ -236,7 +236,7 @@ func CreateNestedSharedDriveHandler(c echo.Context, owner *instance.Instance, pa
 }
 
 // createDriveFromMembers accepts resolved recipients after proxy has authorized the member.
-func createDriveFromMembers(c echo.Context, owner *instance.Instance, parent *sharing.Sharing) error {
+func createDriveForMember(c echo.Context, owner *instance.Instance, parent *sharing.Sharing) error {
 	var req delegatedDriveRequest
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
 		return jsonapi.BadJSON()
