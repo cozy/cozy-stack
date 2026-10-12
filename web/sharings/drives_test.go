@@ -3140,9 +3140,10 @@ func TestSharedDriveDeletedRecipientAddedGroup(t *testing.T) {
 		// Betty deletes the group on her instance: the share-group worker
 		// processes the deletion event on her instance.
 		require.NoError(t, couchdb.DeleteDoc(env.betty, group))
-		require.NoError(t, sharing.UpdateGroups(env.betty, job.ShareGroupMessage{
-			DeletedGroupID: group.ID(),
-		}))
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.acme, sharingID)
+			return err == nil && s.Groups[groupIndex].Revoked
+		}, 10*time.Second, 50*time.Millisecond, "group should be revoked on the owner")
 
 		// Owner: the group is revoked and Carol, only in that group, too.
 		ownerSharing, err = sharing.FindSharing(env.acme, sharingID)
@@ -3226,13 +3227,14 @@ func TestSharedDriveDeletedRecipientAddedGroup(t *testing.T) {
 		group := createGroupOnInstance(t, env.betty, "Betty Race Team")
 		addRecipientGroup(t, eBetty, env.bettyToken, sharingID, env.betty, group, "Fay", "fay@example.net")
 		require.NoError(t, couchdb.DeleteDoc(env.betty, group))
-		require.NoError(t, sharing.UpdateGroups(env.betty, job.ShareGroupMessage{
-			DeletedGroupID: group.ID(),
-		}))
 
 		// Owner: the group is revoked and Fay, only in that group, too.
 		groupIndex := findGroupIndex(env.acme, sharingID, group.ID())
 		require.NotEqual(t, -1, groupIndex)
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.acme, sharingID)
+			return err == nil && s.Groups[groupIndex].Revoked
+		}, 10*time.Second, 50*time.Millisecond, "group should be revoked on the owner")
 		ownerSharing, err := sharing.FindSharing(env.acme, sharingID)
 		require.NoError(t, err)
 		assert.True(t, ownerSharing.Groups[groupIndex].Revoked)
