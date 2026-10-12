@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/messaging"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
@@ -12,18 +13,14 @@ import (
 )
 
 type registeredHandler struct {
-	publisher rabbitmq.Publisher
+	publisher messaging.Publisher
 }
 
 func (h *registeredHandler) Handle(context.Context, amqp.Delivery) error { return nil }
 
-type nopPublisher struct{}
-
-func (nopPublisher) Publish(context.Context, rabbitmq.PublishRequest) error { return nil }
-
 func TestRegisteredHandlerGetsThePublisher(t *testing.T) {
 	var built *registeredHandler
-	rabbitmq.RegisterHandler("test.registered", func(p rabbitmq.Publisher) rabbitmq.Handler {
+	rabbitmq.RegisterHandler("test.registered", func(p messaging.Publisher) rabbitmq.Handler {
 		built = &registeredHandler{publisher: p}
 		return built
 	})
@@ -39,14 +36,4 @@ func TestRegisteredHandlerGetsThePublisher(t *testing.T) {
 	require.Len(t, specs[0].Queues, 1, "only the registered queue gets a handler")
 	assert.Same(t, built, specs[0].Queues[0].Handler)
 	assert.Same(t, svc, built.publisher)
-}
-
-func TestSetupWorkersGivesThePublisher(t *testing.T) {
-	var got rabbitmq.Publisher
-	rabbitmq.RegisterWorkers(func(p rabbitmq.Publisher) { got = p })
-
-	pub := nopPublisher{}
-	rabbitmq.SetupWorkers(pub)
-
-	assert.Equal(t, pub, got)
 }

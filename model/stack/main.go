@@ -114,11 +114,13 @@ security features. Please do not use this binary as your production server.
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
 	}
-	rabbitmq.SetupWorkers(rabbitmqSvc)
 
 	workersList, err := job.GetWorkersList()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get the workers list: %w", err)
+	}
+	for _, conf := range workersList {
+		conf.Publisher = rabbitmqSvc
 	}
 
 	var broker job.Broker
