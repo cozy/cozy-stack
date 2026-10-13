@@ -442,10 +442,13 @@ groups). `x-twake-workplace-fqdn` fills `cozy` when it is empty. A message that
 changes nothing writes nothing. `DELETE` removes the document.
 
 When a sharing by email creates a contact, and `common_contacts` is set, the
-Stack publishes it on the `twake:contacts:collected` fanout exchange without
-waiting. It comes back on `twake:contacts:common` and takes its path. Only
-contacts created by the sharing are published: a contact that already exists
-locally is not backfilled.
+Stack publishes it on the `twake:contacts:collected` fanout exchange. The
+request does not wait: it pushes a job for the `share-collected-contacts`
+worker, which retries a failed publish. The contacts created by a request go
+in a single message, even when the request fails after creating them, since
+they stay on the instance. Each one comes back on `twake:contacts:common` and
+takes its path. Only contacts created by the sharing are published: a contact
+that already exists locally is not backfilled.
 
 ```json
 {
