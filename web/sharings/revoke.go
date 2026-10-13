@@ -118,7 +118,8 @@ func authorizeRevokeRecipient(c echo.Context, s *sharing.Sharing) error {
 	return nil
 }
 
-// RevokeGroup is used by the owner to revoke a group
+// RevokeGroup is used by the owner to revoke a group, or by a recipient of a
+// drive sharing with write permissions, like for a direct member.
 func RevokeGroup(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
@@ -126,16 +127,12 @@ func RevokeGroup(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
 	index, err := strconv.Atoi(c.Param("index"))
 	if err != nil {
 		return jsonapi.InvalidParameter("index", err)
 	}
-	if index >= len(s.Groups) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+	if err = authorizeRevokeRecipient(c, s); err != nil {
+		return err
 	}
 	if err = s.RevokeGroup(inst, index); err != nil {
 		return wrapErrors(err)

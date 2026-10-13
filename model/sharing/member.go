@@ -480,6 +480,20 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 		return err
 	}
 
+	// The sharer replicates the updated sharing document to this instance
+	// asynchronously: track the delegated groups on the local copy right
+	// away, so that deleting a group before that replication can still
+	// delegate its revocation to the sharer.
+	selfIndex := 0
+	if self := s.MemberFor(inst); self != nil {
+		for j := range s.Members {
+			if s.Members[j].Same(*self) {
+				selfIndex = j
+				break
+			}
+		}
+	}
+
 	// We can have conflicts when updating the sharing document, so we are
 	// retrying when it is the case.
 	maxRetries := 3
@@ -506,6 +520,19 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 			}
 			if !found {
 				s.Members = append(s.Members, m)
+			}
+		}
+		for _, g := range api.groups {
+			found := false
+			for _, group := range s.Groups {
+				if group.ID == g.ID && !group.Revoked {
+					found = true
+					break
+				}
+			}
+			if !found {
+				g.AddedBy = selfIndex
+				s.Groups = append(s.Groups, g)
 			}
 		}
 		if err := couchdb.UpdateDoc(inst, s); err == nil {
@@ -628,7 +655,7 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL, sho
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
@@ -1025,7 +1052,7 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
@@ -1058,7 +1085,7 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1173,7 +1200,7 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, body)
 	}
 	if err != nil {
@@ -1229,7 +1256,7 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1268,7 +1295,7 @@ func (s *Sharing) DelegateRevokeRecipient(inst *instance.Instance, index int) er
 	}
 	res, err := request.Req(opts)
 	preRefreshRes, preRefreshErr := res, err
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
@@ -1418,7 +1445,7 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, m, c, opts, nil)
 	}
 	if err != nil {
@@ -1536,7 +1563,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			ParseError: ParseRequestError,
 		}
 		res, err := request.Req(opts)
-		if res != nil && res.StatusCode/100 == 4 {
+		if res != nil && ShouldRefreshToken(res.StatusCode) {
 			res, err = RefreshToken(inst, res, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {

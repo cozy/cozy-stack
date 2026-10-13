@@ -3,14 +3,17 @@ package sharing
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/permission"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -70,6 +73,62 @@ func TestPreserveDelegatedResponseError(t *testing.T) {
 		require.Equal(t, http.StatusForbidden, apiErr.Status)
 		require.Equal(t, "read only", apiErr.Detail)
 	})
+}
+
+// TestSendDelegatedReaddsRevokedGroup checks that a group revoked on the
+// local copy is re-added by SendDelegated, as the sharer does in AddGroup,
+// so that the group indexes stay aligned between the two sides.
+func TestSendDelegatedReaddsRevokedGroup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance()
+
+	// safehttp blocks loopback addresses outside dev mode; enable it so the
+	// in-memory httptest server is reachable.
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	defer srv.Close()
+
+	now := time.Now()
+	s := &Sharing{
+		Active: true,
+		Members: []Member{
+			{Status: MemberStatusOwner, Instance: srv.URL},
+			{Status: MemberStatusReady, Instance: "https://" + inst.Domain},
+		},
+		Credentials: []Credentials{{
+			AccessToken: &auth.AccessToken{AccessToken: "test-token"},
+		}},
+		Groups: []Group{{
+			ID:      "team-id",
+			Name:    "Team",
+			AddedBy: 1,
+			Revoked: true,
+		}},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, s))
+
+	api := &APIDelegateAddContacts{groups: []Group{{ID: "team-id", Name: "Team"}}}
+	require.NoError(t, s.SendDelegated(inst, api))
+
+	require.Len(t, s.Groups, 2)
+	assert.True(t, s.Groups[0].Revoked)
+	assert.Equal(t, "team-id", s.Groups[1].ID)
+	assert.False(t, s.Groups[1].Revoked)
+	assert.Equal(t, 1, s.Groups[1].AddedBy)
 }
 
 func TestReadOnlyFlagRejectsBrokenRecipientCredentials(t *testing.T) {

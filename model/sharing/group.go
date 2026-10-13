@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/orgdirectory"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -73,10 +74,18 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 }
 
 // RevokeGroup revokes a group of members on the sharer Cozy. After that, the
-// sharing is disabled if there are no longer any active recipient.
+// sharing is disabled if there are no longer any active recipient. Revoking
+// an already revoked group is a no-op. It returns ErrInvalidGroupIndex if the
+// index does not refer to a group of the sharing.
 func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing
+	}
+	if index < 0 || index >= len(s.Groups) {
+		return ErrInvalidGroupIndex
+	}
+	if s.Groups[index].Revoked {
+		return nil
 	}
 
 	var errm error
@@ -193,15 +202,29 @@ func revokeDeletedGroup(inst *instance.Instance, groupID string) error {
 
 	var errm error
 	for _, s := range sharings {
-		if !s.Owner {
-			continue
-		}
 		for idx, group := range s.Groups {
 			if group.ID != groupID || group.Revoked {
 				continue
 			}
-			if err := s.RevokeGroup(inst, idx); err != nil {
+			if s.Owner {
+				if err := s.RevokeGroup(inst, idx); err != nil {
+					errm = multierror.Append(errm, err)
+				}
+			} else if s.OrgDrive && orgdirectory.IsManagedDirectoryGroupID(groupID) {
+				// SyncGroupDeleted deletes an org group on every instance of
+				// the organization, including the owner of an org drive: the
+				// owner gets the same delete event and revokes the group
+				// itself. Delegating here would revoke it twice.
+				continue
+			} else if err := s.DelegateRevokeGroup(inst, idx); err != nil {
 				errm = multierror.Append(errm, err)
+			} else {
+				// Mark the group revoked locally so a retry of the share-group
+				// job does not delegate the same revocation again.
+				s.Groups[idx].Revoked = true
+				if err := couchdb.UpdateDoc(inst, s); err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 	}
@@ -375,37 +398,45 @@ func (s *Sharing) DelegateRemoveMemberFromGroup(inst *instance.Instance, groupIn
 	cozyURL := contact.PrimaryCozyURL()
 
 	for i, m := range s.Members {
-		if m.Email != "" && m.Email == email {
-			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
-		}
-		if m.Instance != "" && m.Instance == cozyURL {
-			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
+		if (m.Email != "" && m.Email == email) || (m.Instance != "" && m.Instance == cozyURL) {
+			return s.sendDelegationRequest(inst, http.MethodDelete, fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, i))
 		}
 	}
 	return ErrMemberNotFound
 }
 
-func (s *Sharing) SendRemoveMemberFromGroup(inst *instance.Instance, groupIndex, memberIndex int) error {
+// DelegateRevokeGroup is used by a recipient to ask the sharer to revoke a
+// whole group of members of the sharing.
+func (s *Sharing) DelegateRevokeGroup(inst *instance.Instance, groupIndex int) error {
+	return s.sendDelegationRequest(inst, http.MethodDelete, fmt.Sprintf("/sharings/%s/groups/%d", s.SID, groupIndex))
+}
+
+// sendDelegationRequest sends a request to the sharing owner to take action on
+// behalf of the requesting member.
+func (s *Sharing) sendDelegationRequest(inst *instance.Instance, verb, path string) error {
 	u, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		return err
+	}
+	if len(s.Credentials) == 0 {
+		return ErrInvalidSharing
 	}
 	c := &s.Credentials[0]
 	if c.AccessToken == nil {
 		return ErrInvalidSharing
 	}
 	opts := &request.Options{
-		Method: http.MethodDelete,
+		Method: verb,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, memberIndex),
+		Path:   path,
 		Headers: request.Headers{
 			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
@@ -519,7 +550,7 @@ func (s *Sharing) DelegateAddInvitation(inst *instance.Instance, memberIndex int
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
-	if res != nil && res.StatusCode/100 == 4 {
+	if res != nil && ShouldRefreshToken(res.StatusCode) {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {

@@ -80,6 +80,12 @@ func GroupDocID(organizationID, externalID string) string {
 	return "b2b-group-" + hex.EncodeToString(sum[:16])
 }
 
+// IsManagedDirectoryGroupID reports whether a group document ID was generated
+// by GroupDocID for a replicated B2B organization directory group.
+func IsManagedDirectoryGroupID(id string) bool {
+	return strings.HasPrefix(id, "b2b-group-")
+}
+
 // SyncGroupCreated replicates a B2B group and its initial members to every
 // instance in the organization.
 func SyncGroupCreated(ctx context.Context, msg GroupCreatedMessage) error {
