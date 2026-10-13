@@ -73,6 +73,7 @@ var flagOnboardingPermissions string
 var flagOnboardingState string
 var flagPath string
 var flagCleanOAuthClientsDryRun bool
+var flagCleanOAuthClientsDomain string
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -926,14 +927,15 @@ var findOauthClientCmd = &cobra.Command{
 }
 
 var cleanOAuthClientsCmd = &cobra.Command{
-	Use:     "clean-oauth-clients <software_id>",
-	Short:   "Delete OAuth clients by software ID",
-	Example: "$ cozy-stack instances clean-oauth-clients twake-admin-panel --dry-run",
+	Use:   "clean-oauth-clients <software_id>",
+	Short: "Delete OAuth clients by software ID",
+	Example: `  $ cozy-stack instances clean-oauth-clients twake-admin-panel --dry-run
+  $ cozy-stack instances clean-oauth-clients twake-admin-panel --domain cozy.localhost:8080 --dry-run`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 || args[0] == "" {
 			return cmd.Usage()
 		}
-		return cleanOAuthClients(args[0], flagCleanOAuthClientsDryRun)
+		return cleanOAuthClients(args[0], flagCleanOAuthClientsDomain, flagCleanOAuthClientsDryRun)
 	},
 }
 
@@ -943,10 +945,14 @@ type oauthClientCleanupReport struct {
 	Count  int
 }
 
-func cleanOAuthClients(softwareID string, dryRun bool) error {
+func cleanOAuthClients(softwareID, domain string, dryRun bool) error {
+	return cleanOAuthClientsWithWriter(os.Stdout, softwareID, domain, dryRun)
+}
+
+func cleanOAuthClientsWithWriter(out io.Writer, softwareID, domain string, dryRun bool) error {
 	var reports []oauthClientCleanupReport
 	total := 0
-	err := instance.ForeachInstances(func(inst *instance.Instance) error {
+	cleanInst := func(inst *instance.Instance) error {
 		clients, err := findOAuthClientsBySoftwareID(inst, softwareID)
 		if err != nil {
 			return fmt.Errorf("%s: %w", inst.Domain, err)
@@ -968,20 +974,32 @@ func cleanOAuthClients(softwareID string, dryRun bool) error {
 		reports = append(reports, oauthClientCleanupReport{User: user, Domain: inst.Domain, Count: len(clients)})
 		total += len(clients)
 		return nil
-	})
-	if err != nil {
-		return err
+	}
+
+	domain = strings.TrimSpace(domain)
+	if domain != "" {
+		inst, err := instance.Get(domain)
+		if err != nil {
+			return fmt.Errorf("%s: %w", domain, err)
+		}
+		if err := cleanInst(inst); err != nil {
+			return err
+		}
+	} else {
+		if err := instance.ForeachInstances(cleanInst); err != nil {
+			return err
+		}
 	}
 
 	action := "deleted"
 	if dryRun {
 		action = "would delete"
 	}
-	fmt.Fprintf(os.Stdout, "software_id: %s\n", softwareID)
+	fmt.Fprintf(out, "software_id: %s\n", softwareID)
 	for _, report := range reports {
-		fmt.Fprintf(os.Stdout, "%s (%s): %d clients\n", report.User, report.Domain, report.Count)
+		fmt.Fprintf(out, "%s (%s): %d clients\n", report.User, report.Domain, report.Count)
 	}
-	fmt.Fprintf(os.Stdout, "total: %d clients %s\n", total, action)
+	fmt.Fprintf(out, "total: %d clients %s\n", total, action)
 	return nil
 }
 
@@ -1263,6 +1281,7 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	cleanOAuthClientsCmd.Flags().BoolVar(&flagCleanOAuthClientsDryRun, "dry-run", false, "Only report matching clients")
+	cleanOAuthClientsCmd.Flags().StringVar(&flagCleanOAuthClientsDomain, "domain", "", "Specify the domain name of the instance")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
 	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingSecret, "onboarding-secret", "", "Specify an OnboardingSecret")
 	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingApp, "onboarding-app", "", "Specify an OnboardingApp")

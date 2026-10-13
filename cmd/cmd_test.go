@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -30,8 +31,10 @@ func TestExecCommand(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	_, _, err := stack.Start()
-	require.NoError(t, err)
+	if job.SystemUnsafe() == nil {
+		_, _, err := stack.Start()
+		require.NoError(t, err)
+	}
 
 	tempDir := t.TempDir()
 
