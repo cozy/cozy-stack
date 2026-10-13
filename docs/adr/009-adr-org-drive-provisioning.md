@@ -18,7 +18,7 @@ These apps have no token for the organization instance, so they ask over RabbitM
 
 - The stack consumes one command, `drive.org_drive.ensure`, that states what a drive should look like: its name, its members and groups with their rights, and whether it exists at all. It knows nothing about the app sending it.
 - The app names the drive with a `reference` (`source` and `id`). The stack stores it on the drive sharing and finds the drive by it, so the same command can be sent any number of times.
-- Each command carries a `revision`. The stack ignores a command whose revision is lower than the one it last applied, and only replies again to one with the same revision.
+- Each command carries a `revision`. The stack ignores a command whose revision is lower than the one it last applied, and applies one with the same revision again, so a redelivery after a failure finishes the work.
 - After applying a command, the stack replies on the `activity` exchange with the reference and the drive id. The app maps the reference back to its own object.
 - Removal is the same command with `state: removed`. The stack cuts access in one write, then revokes members and cleans up in a background job, in pages.
 - Only the app's commands delete, move or rename its drives. The stack refuses these API calls on a drive that has a reference, whoever makes them.
@@ -49,7 +49,7 @@ Routing key `drive.org_drive.ensure` on the `drive` exchange:
 {
   "organizationId": "org123",
   "reference": { "source": "twake-space", "id": "3b9e2c71-5d4a-4f0e-9c8b-1a2d6e7f8091" },
-  "revision": 1791106503000,
+  "revision": 42,
   "state": "created",
   "name": "Product launch",
   "members": [
@@ -65,7 +65,7 @@ Routing key `drive.org_drive.ensure` on the `drive` exchange:
 
 - `organizationId`: the organization. The drive lives on its organization instance, the instance whose slug is the organization id.
 - `reference`: required. `source` names the app, `id` is the app's own id. The pair is unique per organization.
-- `revision`: required, a positive number that increases for each reference.
+- `revision`: required, a positive number that increases for each reference. It is a counter the app keeps per reference, not a timestamp. Clocks differ between machines, and with events out of order, the time of the event behind a command can be lower than a revision already applied, so the stack would drop the command and its change.
 - `state`: `created` or `removed`.
 - `name`: required when `state` is `created`.
 - `members`, `groups`: optional, `role` is `read` or `write`. Together they are the complete list: a member or group on the drive that is in neither is removed.
@@ -83,9 +83,7 @@ sequenceDiagram
   S->>O: find the drive sharing by reference
   alt revision lower than the stored one
     S->>R: ack, nothing to do
-  else same revision
-    S->>R: activity exchange, the same ready reply again
-  else newer revision
+  else same or newer revision
     opt no drive
       S->>O: folder at the root, drive sharing with the reference
     end
@@ -163,7 +161,7 @@ Both replies are CloudEvents on the `activity` exchange, published by the stack 
   "twakeorg": "org123",
   "data": {
     "reference": { "source": "twake-space", "id": "3b9e2c71-5d4a-4f0e-9c8b-1a2d6e7f8091" },
-    "revision": 1791106503000,
+    "revision": 42,
     "drive": { "id": "a1f0c3e2d4b5" },
     "skipped": [{ "email": "carol@example.com", "reason": "not in the organization directory" }]
   }
@@ -188,21 +186,21 @@ The stack publishes the replies with publisher confirms, and stores on the shari
 
 - Publish `drive.org_drive.ensure` with the space's full state after each space event it handles (created, updated, member and group changes, deleted), once its own transaction is committed.
 - On `twake.space.synced`, send `ensure` for the space, and on `twake.space.sync.completed`, send `state: removed` for the drives of the spaces that are not listed.
+- Keep a revision per space in a row that is never deleted, increment it in the transaction that applies each change to the space, and send the new value as `revision`, for `removed` too. The row lock makes the handlers of one space take turns, so a higher revision always carries a newer state.
 - Map `viewer` to `read`, and `editor` and `admin` to `write`.
 - Consume `com.twake.drive.org_drive.ready.v1` and `removed.v1`, and map `reference.id` back to the space.
 
 ## Consequences
 
 - No app-specific code in the stack. A new app gets drives by choosing a `reference.source`.
-- Renames, member changes and removal come from the same command, and redeliveries and reordering are safe.
+- Renames, member changes and removal come from the same command, and redeliveries and reordering are safe, apart from the `removed` that comes first in the open questions.
 - Removing a large drive does not block a delivery, and its cost is spread over a job.
 - The app is the source of truth for who is on the drive. Members and groups added or removed from the Drive app are overwritten by the next command.
 - Apps depend on the stack's reply to learn the drive id, and must handle duplicates.
 
 ## Open questions
 
-- What does TwakeSpace use as `revision`? It keeps a timestamp per changed key, not a counter. Is the space's latest change time, in milliseconds, increasing enough?
 - Is the group id TwakeSpace receives with `twake.space.group.linked` the same id `b2b.group.*` events carry?
 - A person can be both a member and in a group with another role. Which role wins, the higher one?
-- A `removed` command for a reference that has no drive yet stores nothing, so a `created` with a lower revision that arrives after it creates the drive. A `created` with the same revision as the `removed` does too. Should the stack keep the last revision and state of each reference in a document of its own, never deleted, with `removed` winning a tie? Its id, derived from the reference, would also stop two stacks from applying commands for the same reference at once.
+- A `removed` command for a reference that has no drive yet stores nothing, so a `created` with a lower revision that arrives after it creates the drive. Should the stack keep the last revision and state of each reference in a document of its own, never deleted? Its id, derived from the reference, would also stop two stacks from applying commands for the same reference at once.
 - Should the command also carry the drive's sharing policy ([ADR 003](003-adr-org-drive-sharing-policy.md)), or does the organization admin set it from the Drive app?
