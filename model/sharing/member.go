@@ -30,7 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/labstack/echo/v4"
 )
 
@@ -155,15 +154,23 @@ type Credentials struct {
 }
 
 // AddGroupsAndContacts adds a list of contacts on the sharer cozy
-func (s *Sharing) AddGroupsAndContacts(inst *instance.Instance, rmq rabbitmq.Service, groupIDs, contactIDs, emails []string, readOnly bool) error {
+func (s *Sharing) AddGroupsAndContacts(inst *instance.Instance, groupIDs, contactIDs, emails []string, readOnly bool) error {
+	// Created contacts are kept on failure, so always publish them.
+	var collected []string
+	defer func() { EnqueueCollectedContacts(inst, collected) }()
+
 	for _, id := range contactIDs {
 		if err := s.AddContact(inst, id, readOnly); err != nil {
 			return err
 		}
 	}
 	for _, email := range emails {
-		if err := s.AddEmail(inst, rmq, email, readOnly); err != nil {
+		created, err := s.AddEmail(inst, email, readOnly)
+		if err != nil {
 			return err
+		}
+		if created != "" {
+			collected = append(collected, created)
 		}
 	}
 	for _, id := range groupIDs {
@@ -252,24 +259,23 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	return err
 }
 
-// AddEmail adds the person with the given email address. A contact created
-// for it is published to Sabre once the member is added.
-func (s *Sharing) AddEmail(inst *instance.Instance, rmq rabbitmq.Service, email string, readOnly bool) error {
+// AddEmail adds a member by email, and returns it if a contact was created.
+func (s *Sharing) AddEmail(inst *instance.Instance, email string, readOnly bool) (string, error) {
 	c, created, err := FindContactByEmail(inst, email)
 	if err != nil {
-		return err
+		return "", err
 	}
 	_, _, err = s.addMember(inst, buildMemberFromContact(c, readOnly))
 	if err != nil {
 		if created {
 			_ = couchdb.DeleteDoc(inst, c)
 		}
-		return err
+		return "", err
 	}
 	if created {
-		publishCollected(inst, rmq, email)
+		return email, nil
 	}
-	return nil
+	return "", nil
 }
 
 // FindContactByEmail looks the email up on the org instance, then on the
@@ -295,44 +301,6 @@ func FindContactByEmail(inst *instance.Instance, email string) (*contact.Contact
 	}
 	c, err := contact.Create(inst, contact.CreateOptions{Email: email, External: true})
 	return c, err == nil, err
-}
-
-// publishCollected sends a contact created by a sharing to Sabre, in the
-// background.
-func publishCollected(inst *instance.Instance, rmq rabbitmq.Service, email string) {
-	req, ok := collectedRequest(inst, email)
-	if !ok {
-		return
-	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := rmq.Publish(ctx, req); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Warnf("Cannot publish the collected contact %s: %s", email, err)
-		}
-	}()
-}
-
-// collectedRequest builds the message for a collected contact. Nothing is
-// published without common contacts or an email to own the contact.
-func collectedRequest(inst *instance.Instance, email string) (rabbitmq.PublishRequest, bool) {
-	if !inst.HasCommonContacts() || inst.Email == "" {
-		return rabbitmq.PublishRequest{}, false
-	}
-	card := map[string]interface{}{
-		"@type":  "Card",
-		"emails": map[string]interface{}{"e1": map[string]interface{}{"address": email}},
-	}
-	return rabbitmq.PublishRequest{
-		ContextName: inst.ContextName,
-		Exchange:    rabbitmq.ExchangeContactsCollected,
-		Fanout:      true,
-		Payload: rabbitmq.CollectedContactsMessage{
-			UserEmail:         inst.Email,
-			CollectedContacts: []map[string]interface{}{card},
-		},
-	}, true
 }
 
 func findContactByEmail(db prefixer.Prefixer, email string) (*contact.Contact, error) {
@@ -469,11 +437,14 @@ var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
 // DelegateAddContactsAndGroups adds a list of contacts and groups on a
 // recipient cozy. Part of the work is delegated to owner cozy, but the
 // invitation mail is still sent from the recipient cozy.
-func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, rmq rabbitmq.Service, groupIDs, contactIDs, emails []string, readOnly bool) error {
+func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs, contactIDs, emails []string, readOnly bool) error {
 	api := &APIDelegateAddContacts{}
 	api.sid = s.SID
 
+	// Created contacts are kept on failure, so always publish them.
 	var collected []string
+	defer func() { EnqueueCollectedContacts(inst, collected) }()
+
 	for _, email := range emails {
 		c, created, err := FindContactByEmail(inst, email)
 		if err != nil {
@@ -538,13 +509,7 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, rmq rabb
 		}
 	}
 
-	if err := s.SendDelegated(inst, api); err != nil {
-		return err
-	}
-	for _, email := range collected {
-		publishCollected(inst, rmq, email)
-	}
-	return nil
+	return s.SendDelegated(inst, api)
 }
 
 // SendDelegated calls the delegated endpoint on the sharer to adds

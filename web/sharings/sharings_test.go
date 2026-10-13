@@ -418,6 +418,88 @@ func TestSharings(t *testing.T) {
 		assert.ErrorIs(t, err, contact.ErrNotFound)
 	})
 
+	t.Run("EmailRecipientsArePublishedByAJob", func(t *testing.T) {
+		conf := config.GetConfig()
+		const collectedContext = "collected-contacts-test"
+		if conf.Contexts == nil {
+			conf.Contexts = make(map[string]interface{})
+		}
+		previous, hadPrevious := conf.Contexts[collectedContext]
+		conf.Contexts[collectedContext] = map[string]interface{}{"common_contacts": true}
+		originalContext, originalEmail := aliceInstance.ContextName, aliceInstance.Email
+		aliceInstance.ContextName = collectedContext
+		if aliceInstance.Email == "" {
+			aliceInstance.Email = "alice@example.net"
+		}
+		require.NoError(t, instance.Update(aliceInstance))
+		t.Cleanup(func() {
+			if hadPrevious {
+				conf.Contexts[collectedContext] = previous
+			} else {
+				delete(conf.Contexts, collectedContext)
+			}
+			aliceInstance.ContextName, aliceInstance.Email = originalContext, originalEmail
+			if err := instance.Update(aliceInstance); err != nil {
+				t.Errorf("cannot restore Alice context: %s", err)
+			}
+		})
+
+		eA := httpexpect.Default(t, tsA.URL)
+		suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		recipients := func(emails ...string) string {
+			refs := make([]string, 0, len(emails))
+			for _, email := range emails {
+				refs = append(refs, `{"type": "`+consts.Contacts+`", "email": "`+email+`"}`)
+			}
+			return `"relationships": {"recipients": {"data": [` + strings.Join(refs, ",") + `]}}`
+		}
+		create := func(emails ...string) *httpexpect.Response {
+			return eA.POST("/sharings/").
+				WithHeader("Authorization", "Bearer "+aliceAppToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description": "this is a test with collected contacts",
+            "rules": [{
+                "title": "test collected",
+                "doctype": "` + iocozytests + `",
+                "values": ["000004"],
+                "add": "sync"
+              }]
+          },
+          ` + recipients(emails...) + `
+        }
+      }`)).
+				Expect()
+		}
+
+		// Charlie is already a contact, so only Frank is published.
+		frank := "frank-" + suffix + "@example.net"
+		obj := create("charlie@example.net", frank).Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		id := obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+		waitForCollectedContactsJob(t, aliceInstance, frank)
+
+		// Adding a recipient publishes its new contact too.
+		grace := "grace-" + suffix + "@example.net"
+		eA.POST("/sharings/"+id+"/recipients").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{"data": {"type": "` + consts.Sharings + `", ` + recipients(grace) + `}}`)).
+			Expect().Status(200)
+		waitForCollectedContactsJob(t, aliceInstance, grace)
+
+		// The request fails, but Heidi's contact is kept and published.
+		heidi := "heidi-" + suffix + "@example.net"
+		create(heidi, "dup").Status(422)
+		_, err := contact.FindByEmail(aliceInstance, heidi)
+		require.NoError(t, err)
+		waitForCollectedContactsJob(t, aliceInstance, heidi)
+	})
+
 	t.Run("CreateSharingWithPreview", func(t *testing.T) {
 		bobContact := createBobContact(t, aliceInstance)
 		require.NotEmpty(t, aliceAppToken)
@@ -2105,6 +2187,28 @@ func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*shar
 
 func createBobContact(t *testing.T, instance *instance.Instance) *contact.Contact {
 	return createContact(t, instance, "Bob", "bob@example.net")
+}
+
+// waitForCollectedContactsJob waits for a job with exactly these emails.
+func waitForCollectedContactsJob(t *testing.T, inst *instance.Instance, emails ...string) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		var jobs []job.Job
+		if err := couchdb.GetAllDocs(inst, consts.Jobs, &couchdb.AllDocsRequest{}, &jobs); err != nil {
+			return false
+		}
+		for _, j := range jobs {
+			var msg sharing.CollectedContactsMsg
+			if j.WorkerType != sharing.CollectedContactsWorker || json.Unmarshal(j.Message, &msg) != nil {
+				continue
+			}
+			if assert.ObjectsAreEqual(emails, msg.Emails) {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 25*time.Millisecond, "no job publishes %v as collected contacts", emails)
 }
 
 func createContact(t *testing.T, inst *instance.Instance, name, email string) *contact.Contact {

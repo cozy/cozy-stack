@@ -348,13 +348,14 @@ in the config file, via the `fs.auto_clean_trashed_after` parameter.
 
 ## share workers
 
-The stack have 5 workers to power the sharings (internal usage only):
+The stack have 6 workers to power the sharings (internal usage only):
 
 1. `share-group`, to add/remove members to a sharing
 2. `share-track`, to update the `io.cozy.shared` database
 3. `share-replicate`, to start a replicator for most documents
 4. `share-upload`, to upload files
 5. `share-autoaccept`, to automatically accept a sharing for trusted members
+6. `share-collected-contacts`, to publish the contacts created by a sharing
 
 ### Share-group
 
@@ -381,6 +382,13 @@ recipient. When the job runs on the recipient Cozy it calls the owner's
 sharing credentials payload in
 [PUT /sharings/:sharing-id](sharing.md#put-sharingssharing-id)) to perform the
 acceptance flow without user interaction.
+
+### Share-collected-contacts
+
+The message is composed of the emails for which a sharing created a contact.
+The worker publishes them on the `twake:contacts:collected` exchange (see
+[RabbitMQ](rabbitmq.md)), and is retried when the publish fails, except when
+RabbitMQ is not configured.
 
 ## notes-save
 
