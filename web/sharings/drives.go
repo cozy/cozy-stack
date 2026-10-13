@@ -197,8 +197,8 @@ func prepareDelegatedDriveRequest(c echo.Context, inst *instance.Instance, paren
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
-	rwGroupIDs, rwContactIDs := extractRecipientIDs(obj, "recipients")
-	roGroupIDs, roContactIDs := extractRecipientIDs(obj, "read_only_recipients")
+	rwGroupIDs, rwContactIDs, _ := extractRecipients(obj, "recipients")
+	roGroupIDs, roContactIDs, _ := extractRecipients(obj, "read_only_recipients")
 	if req.Members, err = sharing.MembersFromContacts(inst, rwGroupIDs, rwContactIDs, false); err != nil {
 		return wrapErrors(err)
 	}
