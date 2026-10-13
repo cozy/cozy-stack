@@ -21,6 +21,7 @@ These apps have no token for the organization instance, so they ask over RabbitM
 - Each command carries a `revision`. The stack ignores a command whose revision is lower than the one it last applied, and only replies again to one with the same revision.
 - After applying a command, the stack replies on the `activity` exchange with the reference and the drive id. The app maps the reference back to its own object.
 - Removal is the same command with `state: removed`. The stack cuts access in one write, then revokes members and cleans up in a background job, in pages.
+- Only the app's commands delete, move or rename its drives. The stack refuses these API calls on a drive that has a reference, whoever makes them.
 - TwakeSpace sends the command from the space events it already consumes. The stack does not consume space events.
 - For Drive, this replaces what [ADR 005](https://github.com/linagora/twake-space-architecture/blob/d8b85ecbe0cfffba446a410ab999e49ba949d621/ADR005.md) asks of each app: consuming the space events, the `twake.space.synced` reconciliation and `com.twake.drive.space.provisioned.v1`. Its other rules still hold: 30 days of retention after removal, and no activity on a drive before its reply is confirmed.
 
@@ -100,7 +101,20 @@ sequenceDiagram
 - Groups are looked up among the organization's groups the stack already replicates from `b2b.group.*`. The drive is shared with the group, so people joining or leaving the group join or leave the drive without a new command, as for any group sharing.
 - A member or group that cannot be added (unknown email or group, several matches) is skipped. The others still get the drive, and the reply lists the skipped ones.
 - Members can't change who is on the drive from the Drive app: the next command would undo it. Their right to create links and invitations stays under the drive's sharing policy ([ADR 003](003-adr-org-drive-sharing-policy.md)).
-- If the drive was lost (its sharing revoked from elsewhere, its folder trashed), the command creates a new drive, and the reply carries its new id.
+- If the drive was lost all the same (its sharing or its folder removed by an operator), the command creates a new drive, and the reply carries its new id.
+
+### Locked drives
+
+A drive with a reference belongs to the app that sent it. The stack answers 403 to:
+
+- trash, delete, move or rename its root folder, through `/files` on the organization instance or `/sharings/drives/:id` for a member
+- change the description of its sharing, or revoke the whole sharing, through `/sharings/:id`
+
+The files and folders inside the drive stay editable, under each member's rights.
+
+The stack sets the reference only from a command. It drops a `reference` sent to `POST /sharings` or `PUT /sharings/:id`, and `/data` already refuses `io.cozy.sharings`.
+
+Without the lock, trashing the root folder revokes the sharing and deletes its document, so the stored revision goes with it and a late command creates the drive again. A rename would only last until the next command.
 
 ### Applying a `removed` command
 
@@ -127,7 +141,7 @@ sequenceDiagram
 ```
 
 - Revoking a drive sharing in one call costs one HTTP call and one full sharing write per member, then one update per shared file. For a large drive that does not fit in a delivery, hence the job.
-- Marking the drive inactive cuts every member's access at once, because the drive routes refuse an inactive sharing. The handler does nothing else, so it finishes quickly whatever the size of the drive.
+- Marking the drive inactive cuts every member's access at once, because the drive routes refuse an inactive sharing, also when the organization and the member are on the same stack. The handler does nothing else, so it finishes quickly whatever the size of the drive.
 - The job saves its progress in the sharing at the end of each page. A job that crashes starts again from the next page.
 - The folder goes to the trash, and an `@in` trigger set by the job deletes it 30 days after the removal, whatever the trash cleanup setting of the context. Nothing deletes the files inline.
 - When a whole organization goes, each drive is its own command and its own job. The queue prefetch and the job workers cap how much runs at once.
@@ -167,7 +181,7 @@ The stack publishes the replies with publisher confirms, and stores on the shari
 - Malformed command, or unknown `state` or `role`: sent to the dead letter queue at once.
 - No organization instance, or CouchDB unavailable: the message is redelivered up to the queue's `delivery_limit`, then dead-lettered.
 - A crash after the drive was created but before the reply: the redelivery finds the drive by its reference, so no second drive is created.
-- Commands out of order: the revision check drops the older one.
+- Commands out of order: the revision check drops the older one, once the reference has a drive (see the open questions for a `removed` that comes first).
 - Replies are published after the work is saved. A failed publish fails the delivery, and the redelivery publishes the same reply again. The app must accept a reply twice.
 
 ### What TwakeSpace needs to do
@@ -190,5 +204,5 @@ The stack publishes the replies with publisher confirms, and stores on the shari
 - What does TwakeSpace use as `revision`? It keeps a timestamp per changed key, not a counter. Is the space's latest change time, in milliseconds, increasing enough?
 - Is the group id TwakeSpace receives with `twake.space.group.linked` the same id `b2b.group.*` events carry?
 - A person can be both a member and in a group with another role. Which role wins, the higher one?
-- The drive routes take a shortcut when the organization and the member are on the same stack, and that shortcut checks only the member's copy of the sharing, not the organization's. It needs that check for "mark inactive" to cut access on the same stack.
+- A `removed` command for a reference that has no drive yet stores nothing, so a `created` with a lower revision that arrives after it creates the drive. A `created` with the same revision as the `removed` does too. Should the stack keep the last revision and state of each reference in a document of its own, never deleted, with `removed` winning a tie? Its id, derived from the reference, would also stop two stacks from applying commands for the same reference at once.
 - Should the command also carry the drive's sharing policy ([ADR 003](003-adr-org-drive-sharing-policy.md)), or does the organization admin set it from the Drive app?
