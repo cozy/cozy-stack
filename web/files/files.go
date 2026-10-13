@@ -52,6 +52,20 @@ type docPatch struct {
 	vfs.DocPatch
 }
 
+func (p *docPatch) movesOrDeletes() bool {
+	return p.Trash || p.Delete || p.Name != nil || p.DirID != nil
+}
+
+// CheckProvisionedRoot refuses with a 403 to delete, move or rename the root
+// of a drive managed by another app.
+func CheckProvisionedRoot(c echo.Context, dir *vfs.DirDoc) error {
+	err := sharing.CheckProvisionedRoot(middlewares.GetInstance(c), dir)
+	if errors.Is(err, sharing.ErrProvisionedDrive) {
+		return jsonapi.Forbidden(err)
+	}
+	return err
+}
+
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
@@ -779,6 +793,12 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		return err
 	}
 
+	if patch.movesOrDeletes() {
+		if err = CheckProvisionedRoot(c, dir); err != nil {
+			return err
+		}
+	}
+
 	if err = checkMoveDestination(c, fs, patch, dir, file); err != nil {
 		return err
 	}
@@ -837,6 +857,15 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 		}
 		if err = checkPerm(c, permission.PATCH, dir, file); err != nil {
 			return
+		}
+		if patch.movesOrDeletes() {
+			if errp := CheckProvisionedRoot(c, dir); errp != nil {
+				jsonapiError := wrapVfsErrorJSONAPI(errp)
+				jsonapiError.Source.Parameter = "_id"
+				jsonapiError.Source.Pointer = patch.docID
+				errors = append(errors, jsonapiError)
+				continue
+			}
 		}
 		if err = checkMoveDestination(c, fs, patch, dir, file); err != nil {
 			return
@@ -1504,6 +1533,10 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 
 	err = checkPerm(c, permission.PATCH, dir, file)
 	if err != nil {
+		return err
+	}
+
+	if err := CheckProvisionedRoot(c, dir); err != nil {
 		return err
 	}
 

@@ -151,6 +151,16 @@ func MoveHandler(c echo.Context) error {
 
 	moveDirectory := req.Source.DirID != ""
 
+	if moveDirectory && !req.Copy && sourceInstance != nil {
+		dir, err := sourceInstance.VFS().DirByID(req.Source.DirID)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
+		if err := sharing.CheckProvisionedRoot(sourceInstance, dir); err != nil {
+			return wrapErrors(err)
+		}
+	}
+
 	if req.Source.Instance != "" && req.Dest.Instance != "" {
 		sourceSharing, err := checkSharedDrivePermission(inst, req.Source.SharingID)
 		if err != nil {

@@ -88,4 +88,7 @@ var (
 	ErrFileInTrash = errors.New("Cannot share trashed file")
 	// ErrSystemFolder is used when trying to share a system folder
 	ErrSystemFolder = errors.New("Cannot share system folder")
+	// ErrProvisionedDrive is used when trying to delete, move or rename a drive
+	// that another app manages through drive.org_drive.ensure.
+	ErrProvisionedDrive = errors.New("This drive is managed by another app")
 )

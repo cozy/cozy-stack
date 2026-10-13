@@ -553,6 +553,11 @@ func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *shari
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
+	if s.Provisioned() && (patch.Delete || patch.Name != nil || patch.DirID != nil) {
+		if rootID, err := s.DriveRootID(); err == nil && c.Param("file-id") == rootID {
+			return jsonapi.Forbidden(sharing.ErrProvisionedDrive)
+		}
+	}
 	if patch.Delete {
 		if rootID, err := s.DriveRootID(); err == nil && c.Param("file-id") == rootID {
 			if member := GetSharedDriveMember(c); member != nil {
