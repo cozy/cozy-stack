@@ -549,26 +549,20 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, s.DriveTargetURL(instance).String())
 	}
 
-	if s.Drive || strings.ToLower(c.QueryParam("shortcut")) == "true" {
+	if s.Drive {
+		if err := s.AcceptDrive(instance, params.state); err != nil {
+			return handleAuthorizeSharingError(c, err)
+		}
+		return c.Redirect(http.StatusSeeOther, s.DriveTargetURL(instance).String())
+	}
+
+	if strings.ToLower(c.QueryParam("shortcut")) == "true" {
 		if err := s.AddShortcut(instance, params.state); err != nil {
 			return handleAuthorizeSharingError(c, err)
 		}
-
-		if s.Drive && !isMemberReady(s, params.state) {
-			if params.state == "" {
-				return renderError(c, http.StatusBadRequest, "Error No state parameter")
-			}
-			if err := s.SendAnswer(instance, params.state); err != nil && !errors.Is(err, sharing.ErrAlreadyAccepted) {
-				return handleAuthorizeSharingError(c, err)
-			}
-		}
 		u := instance.SubDomain(consts.DriveSlug)
-		if s.Drive {
-			u = s.DriveTargetURL(instance)
-		} else {
-			u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
-			u.Fragment = "/folder/" + consts.SharedWithMeDirID
-		}
+		u.RawQuery = url.Values{"sharing": {s.SID}}.Encode()
+		u.Fragment = "/folder/" + consts.SharedWithMeDirID
 		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 
@@ -606,15 +600,6 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		"CSRF":         c.Get("csrf"),
 		"TargetType":   targetType,
 	})
-}
-
-func isMemberReady(s *sharing.Sharing, state string) bool {
-	if state != "" {
-		if member, err := s.FindMemberByState(state); err == nil {
-			return member.Status == sharing.MemberStatusReady
-		}
-	}
-	return false
 }
 
 func renderInvalidAuthorizeSharing(c echo.Context) error {
