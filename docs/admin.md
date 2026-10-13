@@ -935,11 +935,15 @@ Content-Type: application/json
 
 ### POST /instances/checks/emails
 
-Compare the email of every instance with its settings email. Organization
-instances are skipped. Drifts are logged as warnings and counted in the
-response, never fixed. Instances without settings are listed in
-`missing_settings`, as with `POST /instances/fixers/emails`, and are not
-errors.
+Compare the email of every instance with its settings email. Drifts are
+logged as warnings and counted in the response, never fixed. Instances
+without settings are listed in `missing_settings`, as with
+`POST /instances/fixers/emails`, and are not errors.
+
+Organization instances are not compared, as their email is never synced.
+Those holding an email are logged as warnings and listed in
+`orgs_with_email`: the email has to be removed by hand from the instance
+document.
 
 #### Request
 
@@ -958,6 +962,7 @@ Content-Type: application/json
 {
   "scanned": 3,
   "missing_settings": [],
+  "orgs_with_email": [],
   "drifts": 1,
   "errors": []
 }

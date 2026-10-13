@@ -113,6 +113,7 @@ func BackfillEmails(insts []*instance.Instance, dryRun bool) *EmailsReport {
 type EmailsCheck struct {
 	Scanned         int      `json:"scanned"`
 	MissingSettings []string `json:"missing_settings"`
+	OrgsWithEmail   []string `json:"orgs_with_email"`
 	Drifts          int      `json:"drifts"`
 	Errors          []string `json:"errors"`
 }
@@ -120,11 +121,22 @@ type EmailsCheck struct {
 // CheckEmails logs the instances whose email differs from
 // their settings email, without fixing them.
 func CheckEmails() (*EmailsCheck, error) {
-	check := &EmailsCheck{MissingSettings: []string{}, Errors: []string{}}
+	check := &EmailsCheck{MissingSettings: []string{}, OrgsWithEmail: []string{}, Errors: []string{}}
 	log := logger.WithNamespace("email")
 	err := instance.ForeachInstances(func(inst *instance.Instance) error {
 		check.Scanned++
 		if inst.IsOrganizationInstance() {
+			// Organization instances keep no email: report those holding one.
+			if inst.Email != "" {
+				check.OrgsWithEmail = append(check.OrgsWithEmail, inst.Domain)
+				log.WithFields(logger.Fields{
+					"domain":      inst.Domain,
+					"instance_id": inst.ID(),
+					"email":       inst.Email,
+					"context":     inst.ContextName,
+					"org_domain":  inst.OrgDomain,
+				}).Warnf("organization instance holds an email")
+			}
 			return nil
 		}
 		email, err := inst.SettingsEMail()
@@ -154,10 +166,10 @@ func CheckEmails() (*EmailsCheck, error) {
 		return nil, err
 	}
 	logf := log.Infof
-	if check.Drifts > 0 || len(check.Errors) > 0 {
+	if check.Drifts > 0 || len(check.OrgsWithEmail) > 0 || len(check.Errors) > 0 {
 		logf = log.Errorf
 	}
-	logf("emails checked: %d scanned, %d missing settings, %d drifts, %d errors",
-		check.Scanned, len(check.MissingSettings), check.Drifts, len(check.Errors))
+	logf("emails checked: %d scanned, %d missing settings, %d orgs with email, %d drifts, %d errors",
+		check.Scanned, len(check.MissingSettings), len(check.OrgsWithEmail), check.Drifts, len(check.Errors))
 	return check, nil
 }
