@@ -118,8 +118,8 @@ func authorizeRevokeRecipient(c echo.Context, s *sharing.Sharing) error {
 	return nil
 }
 
-// RevokeGroup is used by the owner to revoke a group, or by a recipient to
-// revoke a group they added to a drive sharing.
+// RevokeGroup is used by the owner to revoke a group, or by a recipient of a
+// drive sharing with write permissions, like for a direct member.
 func RevokeGroup(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
@@ -131,7 +131,7 @@ func RevokeGroup(c echo.Context) error {
 	if err != nil {
 		return jsonapi.InvalidParameter("index", err)
 	}
-	if err = authorizeRevokeGroup(c, s, index); err != nil {
+	if err = authorizeRevokeRecipient(c, s); err != nil {
 		return err
 	}
 	if err = s.RevokeGroup(inst, index); err != nil {
@@ -139,36 +139,6 @@ func RevokeGroup(c echo.Context) error {
 	}
 	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
-}
-
-// authorizeRevokeGroup allows the sharer to revoke any group of the sharing,
-// and a recipient of a drive sharing to revoke a group they added themselves.
-// For the sharer, an invalid index is left to the model to reject.
-func authorizeRevokeGroup(c echo.Context, s *sharing.Sharing, index int) error {
-	if _, err := checkCreatePermissions(c, s); err == nil {
-		return nil
-	}
-	if !s.Owner || !s.Drive {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-	if err := hasSharingWritePermissions(c); err != nil {
-		return err
-	}
-	member, err := requestMember(c, s)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	memberIndex := -1
-	for i, m := range s.Members {
-		if m.Instance == member.Instance {
-			memberIndex = i
-		}
-	}
-	if memberIndex == -1 || index < 0 || index >= len(s.Groups) ||
-		s.Groups[index].AddedBy != memberIndex {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-	return nil
 }
 
 // getBearerToken extracts the Bearer token from the Authorization header

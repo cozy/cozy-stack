@@ -3175,7 +3175,7 @@ func TestSharedDriveDeletedRecipientAddedGroup(t *testing.T) {
 		}, 10*time.Second, 100*time.Millisecond, "revocation should be propagated to Betty")
 	})
 
-	t.Run("GroupAddedByAnotherRecipientCannotBeRevoked", func(t *testing.T) {
+	t.Run("GroupAddedByAnotherRecipientCanBeRevoked", func(t *testing.T) {
 		_, _, eDave := env.createClients(t)
 		sharingID := setupDrive(t, "Foreign Recipient Group Drive")
 
@@ -3204,17 +3204,16 @@ func TestSharedDriveDeletedRecipientAddedGroup(t *testing.T) {
 			return false
 		}, 10*time.Second, 100*time.Millisecond, "Dave's group should be propagated to Betty")
 
-		// Betty cannot revoke the group added by Dave.
-		err = sharing.UpdateGroups(env.betty, job.ShareGroupMessage{
+		// Betty can revoke the group added by Dave, like a direct member.
+		require.NoError(t, sharing.UpdateGroups(env.betty, job.ShareGroupMessage{
 			DeletedGroupID: group.ID(),
-		})
-		require.Error(t, err)
+		}))
 
 		ownerSharing, err = sharing.FindSharing(env.acme, sharingID)
 		require.NoError(t, err)
-		assert.False(t, ownerSharing.Groups[groupIndex].Revoked)
+		assert.True(t, ownerSharing.Groups[groupIndex].Revoked)
 		erin := findSharingMemberByEmail(t, env.acme, sharingID, "erin@example.net")
-		require.NotEqual(t, sharing.MemberStatusRevoked, erin.Status)
+		require.Equal(t, sharing.MemberStatusRevoked, erin.Status)
 	})
 
 	t.Run("DeletedBeforeCreationIsPropagated", func(t *testing.T) {
