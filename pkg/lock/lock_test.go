@@ -201,3 +201,27 @@ func hammerRW(t *testing.T, l ErrorRWLocker) {
 	HammerRWMutex(l, 10, 10, nb)
 	HammerRWMutex(l, 10, 5, nb)
 }
+
+func TestInMemoryLockIsScopedByPrefix(t *testing.T) {
+	client := NewInMemory()
+	alice := prefixer.NewPrefixer(0, "alice.cozy.local", "alice.cozy.local")
+	bob := prefixer.NewPrefixer(0, "bob.cozy.local", "bob.cozy.local")
+
+	aliceLock := client.ReadWrite(alice, "vfs")
+	require.NoError(t, aliceLock.Lock())
+	defer aliceLock.Unlock()
+
+	locked := make(chan struct{})
+	go func() {
+		bobLock := client.ReadWrite(bob, "vfs")
+		_ = bobLock.Lock()
+		bobLock.Unlock()
+		close(locked)
+	}()
+
+	select {
+	case <-locked:
+	case <-time.After(time.Second):
+		t.Fatal("lock on bob's prefix is blocked by alice's lock")
+	}
+}
