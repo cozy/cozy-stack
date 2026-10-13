@@ -223,7 +223,7 @@ func prepareDelegatedDriveRequest(c echo.Context, inst *instance.Instance, paren
 // CreateNestedSharedDriveHandler runs on the owner for both app tokens and forwarded member tokens.
 func CreateNestedSharedDriveHandler(c echo.Context, owner *instance.Instance, parent *sharing.Sharing) error {
 	if GetSharedDriveMember(c) != nil {
-		return createDriveFromMembers(c, owner, parent)
+		return createDriveForMember(c, owner, parent)
 	}
 	var attrs struct {
 		Description string `json:"description"`
@@ -235,7 +235,7 @@ func CreateNestedSharedDriveHandler(c echo.Context, owner *instance.Instance, pa
 	return createDriveFromContacts(c, owner, obj, c.Param("file-id"), attrs.Description)
 }
 
-// createDriveFromMembers accepts resolved recipients after proxy has authorized the member.
+// createDriveForMember accepts resolved recipients after proxy has authorized the member.
 func createDriveForMember(c echo.Context, owner *instance.Instance, parent *sharing.Sharing) error {
 	var req delegatedDriveRequest
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
