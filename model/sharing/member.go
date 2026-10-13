@@ -228,6 +228,23 @@ func MembersFromContacts(inst *instance.Instance, groupIDs, contactIDs []string,
 	return members, nil
 }
 
+// MembersFromEmails resolves emails to members and lists the contacts it created.
+func MembersFromEmails(inst *instance.Instance, emails []string, readOnly bool) ([]Member, []string, error) {
+	var members []Member
+	var created []string
+	for _, email := range emails {
+		c, isNew, err := FindContactByEmail(inst, email)
+		if err != nil {
+			return nil, created, err
+		}
+		if isNew {
+			created = append(created, email)
+		}
+		members = append(members, buildMemberFromContact(c, readOnly))
+	}
+	return members, created, nil
+}
+
 func (s *Sharing) inviteAddedMembers(inst *instance.Instance) error {
 	var err error
 	var perms *permission.Permission
@@ -445,16 +462,12 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 	var collected []string
 	defer func() { EnqueueCollectedContacts(inst, collected) }()
 
-	for _, email := range emails {
-		c, created, err := FindContactByEmail(inst, email)
-		if err != nil {
-			return err
-		}
-		if created {
-			collected = append(collected, email)
-		}
-		api.members = append(api.members, buildMemberFromContact(c, readOnly))
+	members, created, err := MembersFromEmails(inst, emails, readOnly)
+	collected = created
+	if err != nil {
+		return err
 	}
+	api.members = append(api.members, members...)
 
 	for _, id := range contactIDs {
 		c, err := contact.Find(inst, id)

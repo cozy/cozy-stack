@@ -197,16 +197,27 @@ func prepareDelegatedDriveRequest(c echo.Context, inst *instance.Instance, paren
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
-	rwGroupIDs, rwContactIDs, _ := extractRecipients(obj, "recipients")
-	roGroupIDs, roContactIDs, _ := extractRecipients(obj, "read_only_recipients")
-	if req.Members, err = sharing.MembersFromContacts(inst, rwGroupIDs, rwContactIDs, false); err != nil {
-		return wrapErrors(err)
+	// Created contacts are kept on failure, so always publish them.
+	var collected []string
+	defer func() { sharing.EnqueueCollectedContacts(inst, collected) }()
+
+	// Members sent by the client are ignored: only resolved recipients count.
+	req.Members = nil
+	for _, rel := range []string{"recipients", "read_only_recipients"} {
+		readOnly := rel == "read_only_recipients"
+		groupIDs, contactIDs, emails := extractRecipients(obj, rel)
+		members, err := sharing.MembersFromContacts(inst, groupIDs, contactIDs, readOnly)
+		if err != nil {
+			return wrapErrors(err)
+		}
+		req.Members = append(req.Members, members...)
+		members, created, err := sharing.MembersFromEmails(inst, emails, readOnly)
+		collected = append(collected, created...)
+		if err != nil {
+			return wrapErrors(err)
+		}
+		req.Members = append(req.Members, members...)
 	}
-	roMembers, err := sharing.MembersFromContacts(inst, roGroupIDs, roContactIDs, true)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	req.Members = append(req.Members, roMembers...)
 
 	body, err := json.Marshal(req)
 	if err != nil {
