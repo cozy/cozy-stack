@@ -632,6 +632,10 @@ func TestLifecycle(t *testing.T) {
 		// SetEmail skips organization instances, but older ones may hold one.
 		org.Email = "org@" + suffix
 		require.NoError(t, instance.Update(org))
+		bare := create("bare", "bare@"+suffix)
+		settings, err := bare.SettingsDocument()
+		require.NoError(t, err)
+		require.NoError(t, couchdb.DeleteDoc(bare, settings))
 
 		oldHooks := logrus.StandardLogger().ReplaceHooks(make(logrus.LevelHooks))
 		t.Cleanup(func() { logrus.StandardLogger().ReplaceHooks(oldHooks) })
@@ -640,6 +644,10 @@ func TestLifecycle(t *testing.T) {
 		check, err := lifecycle.CheckEmails()
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, check.Drifts, 1)
+		assert.Contains(t, check.MissingSettings, bare.Domain)
+		for _, e := range check.Errors {
+			assert.NotContains(t, e, bare.Domain)
+		}
 
 		logged, summary := map[string]logrus.Fields{}, false
 		for _, entry := range hook.AllEntries() {

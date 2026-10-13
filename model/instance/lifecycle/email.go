@@ -111,15 +111,16 @@ func BackfillEmails(insts []*instance.Instance, dryRun bool) *EmailsReport {
 
 // EmailsCheck sums up a check of the emails.
 type EmailsCheck struct {
-	Scanned int      `json:"scanned"`
-	Drifts  int      `json:"drifts"`
-	Errors  []string `json:"errors"`
+	Scanned         int      `json:"scanned"`
+	MissingSettings []string `json:"missing_settings"`
+	Drifts          int      `json:"drifts"`
+	Errors          []string `json:"errors"`
 }
 
 // CheckEmails logs the instances whose email differs from
 // their settings email, without fixing them.
 func CheckEmails() (*EmailsCheck, error) {
-	check := &EmailsCheck{Errors: []string{}}
+	check := &EmailsCheck{MissingSettings: []string{}, Errors: []string{}}
 	log := logger.WithNamespace("email")
 	err := instance.ForeachInstances(func(inst *instance.Instance) error {
 		check.Scanned++
@@ -127,6 +128,10 @@ func CheckEmails() (*EmailsCheck, error) {
 			return nil
 		}
 		email, err := inst.SettingsEMail()
+		if couchdb.IsNotFoundError(err) {
+			check.MissingSettings = append(check.MissingSettings, inst.Domain)
+			return nil
+		}
 		if err != nil {
 			check.Errors = append(check.Errors, fmt.Sprintf("%s: %s", inst.Domain, err))
 			return nil
@@ -152,7 +157,7 @@ func CheckEmails() (*EmailsCheck, error) {
 	if check.Drifts > 0 || len(check.Errors) > 0 {
 		logf = log.Errorf
 	}
-	logf("emails checked: %d scanned, %d drifts, %d errors",
-		check.Scanned, check.Drifts, len(check.Errors))
+	logf("emails checked: %d scanned, %d missing settings, %d drifts, %d errors",
+		check.Scanned, len(check.MissingSettings), check.Drifts, len(check.Errors))
 	return check, nil
 }
