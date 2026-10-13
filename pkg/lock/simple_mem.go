@@ -14,8 +14,8 @@ func NewInMemory() *InMemoryLockGetter {
 	return &InMemoryLockGetter{locks: new(sync.Map)}
 }
 
-func (i *InMemoryLockGetter) ReadWrite(_ prefixer.Prefixer, name string) ErrorRWLocker {
-	lock, _ := i.locks.LoadOrStore(name, &memLock{})
+func (i *InMemoryLockGetter) ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker {
+	lock, _ := i.locks.LoadOrStore(db.DBPrefix()+"/"+name, &memLock{})
 
 	return lock.(*memLock)
 }
