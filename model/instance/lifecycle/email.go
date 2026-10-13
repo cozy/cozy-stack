@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -106,4 +107,52 @@ func BackfillEmails(insts []*instance.Instance, dryRun bool) *EmailsReport {
 		report.Updated++
 	}
 	return report
+}
+
+// EmailsCheck sums up a check of the emails.
+type EmailsCheck struct {
+	Scanned int      `json:"scanned"`
+	Drifts  int      `json:"drifts"`
+	Errors  []string `json:"errors"`
+}
+
+// CheckEmails logs the instances whose email differs from
+// their settings email, without fixing them.
+func CheckEmails() (*EmailsCheck, error) {
+	check := &EmailsCheck{Errors: []string{}}
+	log := logger.WithNamespace("email")
+	err := instance.ForeachInstances(func(inst *instance.Instance) error {
+		check.Scanned++
+		if inst.IsOrganizationInstance() {
+			return nil
+		}
+		email, err := inst.SettingsEMail()
+		if err != nil {
+			check.Errors = append(check.Errors, fmt.Sprintf("%s: %s", inst.Domain, err))
+			return nil
+		}
+		if utils.NormalizeEmail(email) == inst.Email {
+			return nil
+		}
+		check.Drifts++
+		log.WithFields(logger.Fields{
+			"domain":         inst.Domain,
+			"instance_id":    inst.ID(),
+			"email":          inst.Email,
+			"settings_email": email,
+			"context":        inst.ContextName,
+			"org_domain":     inst.OrgDomain,
+		}).Warnf("email differs from the settings email")
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	logf := log.Infof
+	if check.Drifts > 0 || len(check.Errors) > 0 {
+		logf = log.Errorf
+	}
+	logf("emails checked: %d scanned, %d drifts, %d errors",
+		check.Scanned, check.Drifts, len(check.Errors))
+	return check, nil
 }
