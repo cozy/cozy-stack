@@ -116,6 +116,7 @@ func PutSharing(c echo.Context) error {
 	s.SID = obj.ID
 	s.Reference = nil
 	s.ShortcutID = ""
+	s.Reference = nil
 
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)
@@ -202,6 +203,9 @@ func PatchSharing(c echo.Context) error {
 	}
 	if _, err = checkCreatePermissions(c, s); err != nil {
 		return wrapErrors(err)
+	}
+	if s.Provisioned() {
+		return wrapErrors(sharing.ErrProvisionedDrive)
 	}
 
 	req := sharing.APISharing{}
@@ -1317,6 +1321,8 @@ func wrapErrors(err error) error {
 		return jsonapi.InvalidParameter("index", err)
 	case sharing.ErrFolderAlreadyShared:
 		return jsonapi.Conflict(err)
+	case sharing.ErrProvisionedDrive:
+		return jsonapi.Forbidden(err)
 	case sharing.ErrNotADirectory, sharing.ErrSystemFolder:
 		return jsonapi.InvalidParameter("folder_id", err)
 	}

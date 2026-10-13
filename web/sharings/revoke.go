@@ -26,6 +26,9 @@ func RevokeSharing(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
+	if s.Provisioned() {
+		return wrapErrors(sharing.ErrProvisionedDrive)
+	}
 	if err = s.Revoke(inst); err != nil {
 		return wrapErrors(err)
 	}

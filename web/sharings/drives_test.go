@@ -1407,6 +1407,57 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 			WithHeader("Authorization", "Bearer "+bettyAppToken).
 			Expect().Status(403)
 	})
+
+	t.Run("ProvisionedDriveIsLocked", func(t *testing.T) {
+		s, err := sharing.FindSharing(ownerInstance, sharingID)
+		require.NoError(t, err)
+		s.Reference = &sharing.Reference{Source: "twake-space", ID: "space-1", Revision: 1}
+		require.NoError(t, couchdb.UpdateDoc(ownerInstance, s))
+		t.Cleanup(func() {
+			s.Reference = nil
+			_ = couchdb.UpdateDoc(ownerInstance, s)
+		})
+		rename := func(id, name string) []byte {
+			return []byte(`{"data": {"type": "io.cozy.files", "id": "` + id + `", "attributes": {"name": "` + name + `"}}}`)
+		}
+
+		eOwner.DELETE("/files/"+productID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(403)
+		eOwner.PATCH("/files/"+productID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes(rename(productID, "Renamed")).
+			Expect().Status(403)
+		eBetty.PATCH("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes(rename(productID, "Renamed")).
+			Expect().Status(403)
+		eOwner.PATCH("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{"data": {"type": "io.cozy.sharings", "attributes": {"description": "Renamed"}}}`)).
+			Expect().Status(403)
+		eOwner.DELETE("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(403)
+
+		dir, err := ownerInstance.VFS().DirByID(productID)
+		require.NoError(t, err)
+		require.Equal(t, "/Product team", dir.Fullpath)
+		s, err = sharing.FindSharing(ownerInstance, sharingID)
+		require.NoError(t, err)
+		require.True(t, s.Active)
+		require.Equal(t, "Drive for the product team", s.Description)
+
+		// The content of the drive is not locked.
+		eOwner.PATCH("/files/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes(rename(meetingsID, "Meetings 2026")).
+			Expect().Status(200)
+	})
 }
 
 // TestCoreSharedDrivesWithBothMethods runs core shared drive tests with both

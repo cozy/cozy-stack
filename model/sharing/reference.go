@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -15,6 +16,38 @@ type Reference struct {
 	Revision int64  `json:"revision"`
 	// Ready is set once the broker confirmed the reply announcing the drive.
 	Ready bool `json:"ready,omitempty"`
+}
+
+// Provisioned is true for a drive that another app manages through
+// drive.org_drive.ensure. Only its commands may delete, move or rename it.
+func (s *Sharing) Provisioned() bool {
+	return s.Reference != nil
+}
+
+// CheckProvisionedRoot returns ErrProvisionedDrive when dir is the root of a
+// provisioned drive, removed ones included: trashing the root of a drive
+// deletes its sharing, and with it the revision that keeps late commands
+// from bringing it back.
+func CheckProvisionedRoot(db prefixer.Prefixer, dir *vfs.DirDoc) error {
+	if dir == nil {
+		return nil
+	}
+	for _, ref := range dir.ReferencedBy {
+		if ref.Type != consts.Sharings {
+			continue
+		}
+		s, err := FindSharing(db, ref.ID)
+		if couchdb.IsNotFoundError(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if s.Owner && s.Provisioned() {
+			return ErrProvisionedDrive
+		}
+	}
+	return nil
 }
 
 // FindByReference returns the sharings provisioned for this object, the
