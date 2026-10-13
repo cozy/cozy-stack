@@ -935,8 +935,11 @@ Content-Type: application/json
 
 ### POST /instances/checks/emails
 
-Compare the email of every instance with its settings email. Drifts
-are logged as errors and counted in the response, never fixed.
+Compare the email of every instance with its settings email. Organization
+instances are skipped. Drifts are logged as warnings and counted in the
+response, never fixed. Instances without settings are listed in
+`missing_settings`, as with `POST /instances/fixers/emails`, and are not
+errors.
 
 #### Request
 
@@ -954,6 +957,7 @@ Content-Type: application/json
 ```json
 {
   "scanned": 3,
+  "missing_settings": [],
   "drifts": 1,
   "errors": []
 }

@@ -251,11 +251,14 @@ settings email. The drifts are logged by the stack, not fixed.
 		if err := json.NewDecoder(res.Body).Decode(&check); err != nil {
 			return err
 		}
+		for _, domain := range check.MissingSettings {
+			fmt.Fprintf(os.Stdout, "Missing settings: %s\n", domain)
+		}
 		for _, e := range check.Errors {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", e)
 		}
-		fmt.Fprintf(os.Stdout, "Scanned: %d\nDrifts: %d\nErrors: %d\n",
-			check.Scanned, check.Drifts, len(check.Errors))
+		fmt.Fprintf(os.Stdout, "Scanned: %d\nMissing settings: %d\nDrifts: %d\nErrors: %d\n",
+			check.Scanned, len(check.MissingSettings), check.Drifts, len(check.Errors))
 		if check.Drifts > 0 || len(check.Errors) > 0 {
 			return fmt.Errorf("%d drifts and %d errors", check.Drifts, len(check.Errors))
 		}
