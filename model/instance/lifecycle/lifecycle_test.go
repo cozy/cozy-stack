@@ -625,13 +625,19 @@ func TestLifecycle(t *testing.T) {
 		synced := create("synced", "Synced@"+suffix)
 		drifted := create("drifted", "new@"+suffix)
 		require.NoError(t, instance.SetEmail(drifted, "old@"+suffix))
-		orgSlug := "org-" + strings.TrimSuffix(suffix, ".example")
-		org, err := lifecycle.Create(&lifecycle.Options{Domain: orgSlug + ".example", OrgID: orgSlug})
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = lifecycle.Destroy(org.Domain) })
+		createOrg := func(slug string) *instance.Instance {
+			t.Helper()
+			slug += "-" + strings.TrimSuffix(suffix, ".example")
+			org, err := lifecycle.Create(&lifecycle.Options{Domain: slug + ".example", OrgID: slug})
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = lifecycle.Destroy(org.Domain) })
+			return org
+		}
+		org := createOrg("org")
 		// SetEmail skips organization instances, but older ones may hold one.
 		org.Email = "org@" + suffix
 		require.NoError(t, instance.Update(org))
+		emptyOrg := createOrg("emptyorg")
 		bare := create("bare", "bare@"+suffix)
 		settings, err := bare.SettingsDocument()
 		require.NoError(t, err)
@@ -645,22 +651,31 @@ func TestLifecycle(t *testing.T) {
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, check.Drifts, 1)
 		assert.Contains(t, check.MissingSettings, bare.Domain)
+		assert.Contains(t, check.OrgsWithEmail, org.Domain)
+		assert.NotContains(t, check.OrgsWithEmail, emptyOrg.Domain)
 		for _, e := range check.Errors {
 			assert.NotContains(t, e, bare.Domain)
 		}
 
-		logged, summary := map[string]logrus.Fields{}, false
+		logged, orgs, summary := map[string]logrus.Fields{}, map[string]logrus.Fields{}, false
 		for _, entry := range hook.AllEntries() {
 			if entry.Data["nspace"] != "email" {
 				continue
 			}
 			if entry.Level == logrus.WarnLevel {
-				logged[entry.Data["domain"].(string)] = entry.Data
+				byDomain := logged
+				if strings.HasPrefix(entry.Message, "organization instance") {
+					byDomain = orgs
+				}
+				byDomain[entry.Data["domain"].(string)] = entry.Data
 			}
 			summary = summary || strings.HasPrefix(entry.Message, "emails checked:")
 		}
 		assert.NotContains(t, logged, synced.Domain)
 		assert.NotContains(t, logged, org.Domain)
+		assert.NotContains(t, orgs, emptyOrg.Domain)
+		require.Contains(t, orgs, org.Domain)
+		assert.Equal(t, "org@"+suffix, orgs[org.Domain]["email"])
 		require.Contains(t, logged, drifted.Domain)
 		assert.Equal(t, "old@"+suffix, logged[drifted.Domain]["email"])
 		assert.Equal(t, "new@"+suffix, logged[drifted.Domain]["settings_email"])

@@ -254,13 +254,17 @@ settings email. The drifts are logged by the stack, not fixed.
 		for _, domain := range check.MissingSettings {
 			fmt.Fprintf(os.Stdout, "Missing settings: %s\n", domain)
 		}
+		for _, domain := range check.OrgsWithEmail {
+			fmt.Fprintf(os.Stdout, "Org with email: %s\n", domain)
+		}
 		for _, e := range check.Errors {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", e)
 		}
-		fmt.Fprintf(os.Stdout, "Scanned: %d\nMissing settings: %d\nDrifts: %d\nErrors: %d\n",
-			check.Scanned, len(check.MissingSettings), check.Drifts, len(check.Errors))
-		if check.Drifts > 0 || len(check.Errors) > 0 {
-			return fmt.Errorf("%d drifts and %d errors", check.Drifts, len(check.Errors))
+		fmt.Fprintf(os.Stdout, "Scanned: %d\nMissing settings: %d\nOrgs with email: %d\nDrifts: %d\nErrors: %d\n",
+			check.Scanned, len(check.MissingSettings), len(check.OrgsWithEmail), check.Drifts, len(check.Errors))
+		if check.Drifts > 0 || len(check.OrgsWithEmail) > 0 || len(check.Errors) > 0 {
+			return fmt.Errorf("%d drifts, %d orgs with email and %d errors",
+				check.Drifts, len(check.OrgsWithEmail), len(check.Errors))
 		}
 		return nil
 	},
