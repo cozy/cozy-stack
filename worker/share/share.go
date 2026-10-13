@@ -2,11 +2,13 @@
 package share
 
 import (
+	"errors"
 	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 )
 
 func init() {
@@ -70,6 +72,16 @@ func init() {
 		Timeout:      30 * time.Second,
 		WorkerFunc:   WorkerUpdate,
 	})
+
+	job.AddWorker(&job.WorkerConfig{
+		WorkerType:   sharing.CollectedContactsWorker,
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 5,
+		Reserved:     true,
+		RetryDelay:   time.Second,
+		Timeout:      30 * time.Second,
+		WorkerFunc:   WorkerCollectedContacts,
+	})
 }
 
 // WorkerGroup is used to update the list of members of sharings for a group
@@ -109,6 +121,22 @@ func WorkerAutoAccept(ctx *job.TaskContext) error {
 	ctx.Instance.Logger().WithNamespace("share").
 		Debugf("AutoAccept drive sharing %s", msg.SharingID)
 	return sharing.HandleAutoAccept(ctx.Instance, &msg)
+}
+
+// WorkerCollectedContacts publishes the contacts created by a sharing.
+func WorkerCollectedContacts(ctx *job.TaskContext) error {
+	var msg sharing.CollectedContactsMsg
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	ctx.Instance.Logger().WithNamespace("share").
+		Debugf("CollectedContacts %d contacts", len(msg.Emails))
+	err := sharing.PublishCollectedContacts(ctx, ctx.Instance, ctx.Publisher, msg.Emails)
+	// No retry: RabbitMQ is not configured.
+	if errors.Is(err, rabbitmq.ErrNotConfigured) {
+		ctx.SetNoRetry()
+	}
+	return err
 }
 
 // WorkerReplicate is used for the replication of documents to the other

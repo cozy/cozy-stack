@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/messaging"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
@@ -749,24 +751,34 @@ func TestFindContactByEmail(t *testing.T) {
 	_, err = contact.FindByEmail(alice, "dup")
 	assert.ErrorIs(t, err, contact.ErrNotFound)
 
+	// AddEmail returns the email only when it created the contact.
+	s := &Sharing{Members: []Member{{Status: MemberStatusOwner}}}
+	collected, err := s.AddEmail(alice, "frank@unknown.example", false)
+	require.NoError(t, err)
+	assert.Equal(t, "frank@unknown.example", collected)
+	collected, err = s.AddEmail(alice, "carol@friends.example", false)
+	require.NoError(t, err)
+	assert.Empty(t, collected)
+
 	full := &Sharing{Members: make([]Member, maxNumberOfMembers(alice))}
-	err = full.AddEmail(alice, new(rabbitmq.NoopService), "erin@unknown.example", false)
+	collected, err = full.AddEmail(alice, "erin@unknown.example", false)
 	assert.ErrorIs(t, err, ErrTooManyMembers)
+	assert.Empty(t, collected)
 	_, err = contact.FindByEmail(alice, "erin@unknown.example")
 	assert.ErrorIs(t, err, contact.ErrNotFound, "the contact created for a failed add must be removed")
 }
 
-type fakeRabbitMQ struct {
-	rabbitmq.NoopService
-	published chan rabbitmq.PublishRequest
+type fakePublisher struct {
+	requests []messaging.PublishRequest
+	err      error
 }
 
-func (f *fakeRabbitMQ) Publish(_ context.Context, req rabbitmq.PublishRequest) error {
-	f.published <- req
-	return nil
+func (f *fakePublisher) Publish(_ context.Context, req messaging.PublishRequest) error {
+	f.requests = append(f.requests, req)
+	return f.err
 }
 
-func TestPublishCollected(t *testing.T) {
+func TestPublishCollectedContacts(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -782,32 +794,44 @@ func TestPublishCollected(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { _ = lifecycle.Destroy(inst.Domain) })
 		if email != "" {
-			require.NoError(t, lifecycle.SetEmail(inst, email))
+			require.NoError(t, instance.SetEmail(inst, email))
 		}
 		return inst
 	}
 
 	alice := newInstance("alice", "collected-on", "alice-"+suffix+"@acme.example")
-	fake := &fakeRabbitMQ{published: make(chan rabbitmq.PublishRequest, 1)}
-	publishCollected(alice, fake, "dave@unknown.example")
-	select {
-	case req := <-fake.published:
-		assert.Equal(t, rabbitmq.ExchangeContactsCollected, req.Exchange)
-		assert.True(t, req.Fanout)
-		assert.Empty(t, req.RoutingKey)
-		msg := req.Payload.(rabbitmq.CollectedContactsMessage)
-		assert.Equal(t, alice.Email, msg.UserEmail)
-		require.Len(t, msg.CollectedContacts, 1)
-		assert.Equal(t, "dave@unknown.example", msg.CollectedContacts[0]["emails"].(map[string]interface{})["e1"].(map[string]interface{})["address"])
-	case <-time.After(5 * time.Second):
-		t.Fatal("the collected contact was not published")
+	ctx := context.Background()
+	address := func(card map[string]interface{}) interface{} {
+		return card["emails"].(map[string]interface{})["e1"].(map[string]interface{})["address"]
 	}
+	// The contacts created by a request go in a single message.
+	fake := &fakePublisher{}
+	require.NoError(t, PublishCollectedContacts(ctx, alice, fake, []string{"dave@unknown.example", "erin@unknown.example"}))
+	require.Len(t, fake.requests, 1)
+	req := fake.requests[0]
+	assert.Equal(t, alice.ContextName, req.ContextName)
+	assert.Equal(t, rabbitmq.ExchangeContactsCollected, req.Exchange)
+	assert.True(t, req.Fanout)
+	assert.Empty(t, req.RoutingKey)
+	msg := req.Payload.(rabbitmq.CollectedContactsMessage)
+	assert.Equal(t, alice.Email, msg.UserEmail)
+	require.Len(t, msg.CollectedContacts, 2)
+	assert.Equal(t, "dave@unknown.example", address(msg.CollectedContacts[0]))
+	assert.Equal(t, "erin@unknown.example", address(msg.CollectedContacts[1]))
 
-	// Nothing is published without common contacts, or without an email.
+	// A publish error is returned, so the job can retry.
+	failing := &fakePublisher{err: errors.New("broker down")}
+	err := PublishCollectedContacts(ctx, alice, failing, []string{"dave@unknown.example"})
+	assert.ErrorIs(t, err, failing.err)
+	err = PublishCollectedContacts(ctx, alice, nil, []string{"dave@unknown.example"})
+	assert.ErrorIs(t, err, errNoCollectedPublisher)
+
+	// Nothing is published without contacts, common contacts or an email.
+	silent := &fakePublisher{}
+	require.NoError(t, PublishCollectedContacts(ctx, alice, silent, nil))
 	standalone := newInstance("bob", "", "bob-"+suffix+"@acme.example")
-	_, ok := collectedRequest(standalone, "erin@unknown.example")
-	assert.False(t, ok)
+	require.NoError(t, PublishCollectedContacts(ctx, standalone, silent, []string{"erin@unknown.example"}))
 	noEmail := newInstance("carol", "collected-on", "")
-	_, ok = collectedRequest(noEmail, "erin@unknown.example")
-	assert.False(t, ok)
+	require.NoError(t, PublishCollectedContacts(ctx, noEmail, silent, []string{"erin@unknown.example"}))
+	assert.Empty(t, silent.requests)
 }
