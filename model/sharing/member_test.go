@@ -760,6 +760,20 @@ func TestFindContactByEmail(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, collected)
 
+	// MembersFromEmails resolves the emails and lists the contacts it created.
+	members, newContacts, err := MembersFromEmails(alice, []string{"bob@acme.example", "gina@unknown.example"}, true)
+	require.NoError(t, err)
+	require.Len(t, members, 2)
+	assert.Equal(t, "https://bob.acme.example", members[0].Instance)
+	assert.True(t, members[0].ReadOnly)
+	assert.Equal(t, "gina@unknown.example", members[1].Email)
+	assert.Equal(t, []string{"gina@unknown.example"}, newContacts)
+
+	// A contact created before a failure is still listed.
+	_, newContacts, err = MembersFromEmails(alice, []string{"hank@unknown.example", "dup"}, false)
+	assert.ErrorIs(t, err, ErrInvalidEmail)
+	assert.Equal(t, []string{"hank@unknown.example"}, newContacts)
+
 	full := &Sharing{Members: make([]Member, maxNumberOfMembers(alice))}
 	collected, err = full.AddEmail(alice, "erin@unknown.example", false)
 	assert.ErrorIs(t, err, ErrTooManyMembers)

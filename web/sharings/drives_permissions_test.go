@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -1702,6 +1703,75 @@ func runCreateNestedSharedDriveTests(t *testing.T, sameStack bool) {
 		members.Value(1).Object().NotContainsKey("read_only")
 		members.Value(2).Object().Value("email").String().IsEqual("erin@example.net")
 		members.Value(2).Object().Value("read_only").Boolean().IsTrue()
+	})
+
+	emailRefs := func(email string) map[string]interface{} {
+		return map[string]interface{}{
+			"data": []map[string]interface{}{{"type": consts.Contacts, "email": email}},
+		}
+	}
+
+	t.Run("MemberInvitesByEmail", func(t *testing.T) {
+		dirID := createDirectory(t, f.eOwner, f.productID, "nested-by-email", f.ownerAppToken)
+
+		created := create(eBetty, bettyToken, f.sharingID, dirID, payload(map[string]interface{}{
+			"recipients":           emailRefs("grace@example.net"),
+			"read_only_recipients": emailRefs("heidi@example.net"),
+		})).Status(http.StatusCreated).
+			JSON(httpexpect.ContentOpts{MediaType: jsonAPIContentType}).
+			Object()
+
+		members := created.Path("$.data.attributes.members").Array()
+		members.Length().IsEqual(3)
+		members.Value(1).Object().Value("email").String().IsEqual("grace@example.net")
+		members.Value(1).Object().NotContainsKey("read_only")
+		members.Value(2).Object().Value("email").String().IsEqual("heidi@example.net")
+		members.Value(2).Object().Value("read_only").Boolean().IsTrue()
+
+		// The contacts are created on the member's instance only.
+		_, err := contact.FindByEmail(f.env.betty, "grace@example.net")
+		require.NoError(t, err)
+		_, err = contact.FindByEmail(f.env.acme, "grace@example.net")
+		require.ErrorIs(t, err, contact.ErrNotFound)
+	})
+
+	t.Run("MemberEmailContactsArePublished", func(t *testing.T) {
+		conf := config.GetConfig()
+		const collectedContext = "nested-collected-contacts-test"
+		if conf.Contexts == nil {
+			conf.Contexts = make(map[string]interface{})
+		}
+		conf.Contexts[collectedContext] = map[string]interface{}{"common_contacts": true}
+		originalContext, originalEmail := f.env.betty.ContextName, f.env.betty.Email
+		f.env.betty.ContextName = collectedContext
+		if f.env.betty.Email == "" {
+			f.env.betty.Email = "betty@example.net"
+		}
+		require.NoError(t, instance.Update(f.env.betty))
+		t.Cleanup(func() {
+			delete(conf.Contexts, collectedContext)
+			f.env.betty.ContextName, f.env.betty.Email = originalContext, originalEmail
+			if err := instance.Update(f.env.betty); err != nil {
+				t.Errorf("cannot restore Betty context: %s", err)
+			}
+		})
+
+		dirID := createDirectory(t, f.eOwner, f.productID, "nested-published", f.ownerAppToken)
+		create(eBetty, bettyToken, f.sharingID, dirID, payload(map[string]interface{}{
+			"recipients": emailRefs("ivan@example.net"),
+		})).Status(http.StatusCreated)
+		waitForCollectedContactsJob(t, f.env.betty, "ivan@example.net")
+	})
+
+	t.Run("InvalidEmailDoesNotCreateTheDrive", func(t *testing.T) {
+		dirID := createDirectory(t, f.eOwner, f.productID, "nested-invalid-email", f.ownerAppToken)
+		create(eBetty, bettyToken, f.sharingID, dirID, payload(map[string]interface{}{
+			"recipients": emailRefs("dup"),
+		})).Status(http.StatusUnprocessableEntity)
+
+		dir, err := f.env.acme.VFS().DirByID(dirID)
+		require.NoError(t, err)
+		require.Empty(t, dir.ReferencedBy)
 	})
 
 	t.Run("UnknownContactDoesNotCreateTheDrive", func(t *testing.T) {
