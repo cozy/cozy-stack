@@ -184,12 +184,19 @@ func TestHandler(t *testing.T) {
 		pub := &fakePublisher{}
 		h := NewHandler(pub)
 
-		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 1, "HR")))
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 2, "HR")))
 		first := onlyDrive(t, org)
 		_, err := vfs.TrashDir(org.VFS(), rootDir(t, org, first))
 		require.NoError(t, err)
 
-		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 2, "HR")))
+		retained, err := sharing.FindSharing(org, first.SID)
+		require.NoError(t, err)
+		assert.False(t, retained.Active)
+		assert.Equal(t, first.Reference, retained.Reference)
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 1, "Outdated")))
+		assert.Len(t, pub.requests, 1)
+
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 3, "HR")))
 		second := pub.ready(t, 1).Drive.ID
 		assert.NotEqual(t, first.SID, second)
 
@@ -197,8 +204,12 @@ func TestHandler(t *testing.T) {
 		require.NoError(t, err)
 		_, err = vfs.RestoreDir(org.VFS(), trashed)
 		require.NoError(t, err)
-		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 3, "HR")))
+		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 4, "HR")))
 		assert.Equal(t, second, pub.ready(t, 2).Drive.ID)
+		assert.Equal(t, second, onlyDrive(t, org).SID)
+		retained, err = sharing.FindSharing(org, first.SID)
+		require.NoError(t, err)
+		assert.False(t, retained.Active)
 	})
 
 	t.Run("DeletedDriveIsReplaced", func(t *testing.T) {
@@ -209,13 +220,43 @@ func TestHandler(t *testing.T) {
 
 		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 1, "HR")))
 		first := onlyDrive(t, org)
-		// Removed from CouchDB only: destroying it through the VFS would also
-		// delete the sharing. The folder stays on disk, hence the new name.
+		// Simulate a missing folder without the normal revocation hook.
 		require.NoError(t, couchdb.DeleteDoc(org, rootDir(t, org, first)))
 
 		require.NoError(t, h.Handle(ctx, ensure(t, org, ref, 2, "People")))
 		assert.NotEqual(t, first.SID, pub.ready(t, 1).Drive.ID)
+		retained, err := sharing.FindSharing(org, first.SID)
+		require.NoError(t, err)
+		assert.False(t, retained.Active)
+		assert.Equal(t, pub.ready(t, 1).Drive.ID, onlyDrive(t, org).SID)
 	})
+
+	for name, remove := range map[string]func(*instance.Instance, *sharing.Sharing) error{
+		"RevokedDriveKeepsRevision": func(org *instance.Instance, s *sharing.Sharing) error {
+			return s.Revoke(org)
+		},
+		"DestroyedDriveKeepsRevision": func(org *instance.Instance, s *sharing.Sharing) error {
+			fs := org.VFS()
+			return fs.DestroyDirAndContent(rootDir(t, org, s), fs.EnsureErased)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			org := newOrgInstance(t)
+			pub := &fakePublisher{}
+			h := NewHandler(pub)
+			require.NoError(t, h.Handle(ctx, ensure(t, org, "retained", 5, "Current")))
+			first := onlyDrive(t, org)
+			require.NoError(t, remove(org, first))
+			retained, err := sharing.FindSharing(org, first.SID)
+			require.NoError(t, err)
+			assert.False(t, retained.Active)
+			assert.Equal(t, first.Reference, retained.Reference)
+			require.NoError(t, h.Handle(ctx, ensure(t, org, "retained", 4, "Outdated")))
+			assert.Len(t, pub.requests, 1)
+			require.NoError(t, h.Handle(ctx, ensure(t, org, "retained", 6, "Replacement")))
+			assert.NotEqual(t, first.SID, onlyDrive(t, org).SID)
+		})
+	}
 
 	t.Run("FailedReplyFailsTheDeliveryAndLeavesTheDriveNotReady", func(t *testing.T) {
 		org := newOrgInstance(t)

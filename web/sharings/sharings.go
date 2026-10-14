@@ -49,6 +49,7 @@ func CreateSharing(c echo.Context) error {
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
+	s.Reference = nil
 
 	slug, err := checkCreatePermissions(c, &s)
 	if err != nil {
@@ -113,6 +114,7 @@ func PutSharing(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 	s.SID = obj.ID
+	s.Reference = nil
 	s.ShortcutID = ""
 
 	if err := s.CreateRequest(inst); err != nil {

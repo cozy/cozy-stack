@@ -28,10 +28,20 @@ func FindByReference(db prefixer.Prefixer, source, id string) ([]*Sharing, error
 		),
 		Limit: 100,
 	}
-	var res []*Sharing
-	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
-	if couchdb.IsNoDatabaseError(err) {
-		return nil, nil
+	var all []*Sharing
+	for {
+		var page []*Sharing
+		res, err := couchdb.FindDocsRaw(db, consts.Sharings, req, &page)
+		if couchdb.IsNoDatabaseError(err) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, page...)
+		if len(page) < req.Limit {
+			return all, nil
+		}
+		req.Bookmark = res.Bookmark
 	}
-	return res, err
 }

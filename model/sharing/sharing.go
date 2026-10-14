@@ -1037,7 +1037,7 @@ func (s *Sharing) hasRemainingRecipients() bool {
 }
 
 func (s *Sharing) deleteRevokedDriveSharing(inst *instance.Instance) error {
-	if !s.Drive || s.OrgDrive {
+	if !s.Drive || s.OrgDrive || (s.Owner && s.Reference != nil) {
 		return nil
 	}
 	err := couchdb.DeleteDoc(inst, s)

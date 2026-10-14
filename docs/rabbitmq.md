@@ -487,10 +487,16 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
 - The drive is created on the instance whose slug is `organizationId`, as a
   folder at its root named after `name` ("Name (2)" when the name is taken),
   and the reference is stored on its sharing.
+- Provisioning is locked per organization and reference. Multiple active
+  drives for one reference fail the command without changing any drive or
+  publishing a reply; the error lists the conflicting sharing ids.
 - A command with a higher revision than the drive's renames it. A command with
   the same revision changes nothing, and an older one is ignored.
 - A drive whose sharing was revoked or whose folder was trashed is replaced by
-  a new one.
+  a new one. Its old sharing stays inactive and retains the reference and
+  revision, including after the folder is permanently deleted. An active
+  sharing whose folder is missing is marked inactive before its replacement
+  is created.
 - After a created command, the Stack replies on the `activity` exchange with
   `com.twake.drive.org_drive.ready.v1`, carrying the reference, the revision
   and the drive id (`data.drive.id`, the sharing id). A command with the same
