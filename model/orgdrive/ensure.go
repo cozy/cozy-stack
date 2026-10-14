@@ -5,50 +5,77 @@ package orgdrive
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
+
+// ErrMultipleActiveDrives means a reference needs repair before it can be updated.
+var ErrMultipleActiveDrives = errors.New("multiple active drives for reference")
 
 // Ensure makes the drive of the reference match a created command. It returns
 // a nil drive when the command is older than the last one applied, and the
 // drive unchanged when its revision was already applied, so that the reply is
 // published again.
 func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
+	mu := config.Lock().LongOperation(inst, fmt.Sprintf("orgdrive/%q/%q/%q", inst.OrgID, cmd.Reference.Source, cmd.Reference.ID))
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
+	defer mu.Unlock()
+
 	all, err := sharing.FindByReference(inst, cmd.Reference.Source, cmd.Reference.ID)
 	if err != nil {
 		return nil, err
 	}
 	var last int64
 	var drive *sharing.Sharing
+	var activeIDs []string
 	for _, s := range all {
+		if !s.Owner || !s.Drive {
+			continue
+		}
 		if s.Reference.Revision > last {
 			last = s.Reference.Revision
 		}
-		// A drive replaced after its folder was trashed comes back alive if
-		// the folder is restored. The newest one stays the drive of the
-		// reference.
-		if drive != nil && drive.Reference.Revision >= s.Reference.Revision {
-			continue
-		}
-		if ok, err := alive(inst, s); err != nil {
-			return nil, err
-		} else if ok {
+		if s.Active {
+			activeIDs = append(activeIDs, s.SID)
 			drive = s
 		}
 	}
-	switch {
-	case cmd.Revision < last:
+	if len(activeIDs) > 1 {
+		return nil, fmt.Errorf("%w: organization %s reference %q/%q: %s", ErrMultipleActiveDrives,
+			inst.OrgID, cmd.Reference.Source, cmd.Reference.ID, strings.Join(activeIDs, ", "))
+	}
+	if cmd.Revision < last {
 		return nil, nil
-	case cmd.Revision == last && drive != nil:
-		return drive, nil
-	case drive == nil:
+	}
+	if drive != nil {
+		ok, err := alive(inst, drive)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			// A restored folder must not reactivate a drive we have replaced.
+			drive.Active = false
+			if err := couchdb.UpdateDoc(inst, drive); err != nil {
+				return nil, err
+			}
+			drive = nil
+		}
+	}
+	if drive == nil {
 		return create(inst, cmd)
+	}
+	if cmd.Revision == drive.Reference.Revision {
+		return drive, nil
 	}
 
 	drive.Reference.Revision = cmd.Revision
