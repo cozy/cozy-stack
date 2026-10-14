@@ -375,10 +375,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return err
 	}
 
-	s.ShortcutID = fileDoc.DocID
-	if err := couchdb.UpdateDoc(inst, s); err != nil {
-		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
-	}
+	s.saveShortcutID(inst, fileDoc.DocID)
 
 	if !seen {
 		return s.SendShortcutNotification(inst, fileDoc, driveURL)
@@ -463,15 +460,25 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		return err
 	}
 
-	s.ShortcutID = fileDoc.DocID
-	if err := couchdb.UpdateDoc(inst, s); err != nil {
-		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
-	}
+	s.saveShortcutID(inst, fileDoc.DocID)
 
 	if !seen {
 		return s.SendShortcutNotification(inst, fileDoc, previewURL)
 	}
 	return nil
+}
+
+// The auto-accept job can update the sharing concurrently, hence the retry on
+// conflict.
+func (s *Sharing) saveShortcutID(inst *instance.Instance, shortcutID string) {
+	s.ShortcutID = shortcutID
+	err := updateSharingWithConflictRetry(inst, s, 3, func(latest *Sharing) bool {
+		latest.ShortcutID = shortcutID
+		return false
+	})
+	if err != nil {
+		inst.Logger().Warnf("Cannot save shortcut id %s: %s", shortcutID, err)
+	}
 }
 
 func (s *Sharing) createOrUpdateShortcut(inst *instance.Instance, fileDoc *vfs.FileDoc, body []byte) (*vfs.FileDoc, error) {

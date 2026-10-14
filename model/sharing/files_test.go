@@ -225,6 +225,36 @@ func TestFiles(t *testing.T) {
 		assert.Equal(t, legacyDir.DocID, updated.DirID)
 	})
 
+	t.Run("CreateDriveShortcutKeepsShortcutIDOnConflict", func(t *testing.T) {
+		stale := Sharing{
+			Drive: true,
+			Rules: []Rule{
+				{
+					Title:   "Conflicting drive",
+					DocType: consts.Files,
+					Values:  []string{uuidv7()},
+				},
+			},
+			Members: []Member{
+				{Instance: "https://owner.example.net/"},
+			},
+		}
+		require.NoError(t, couchdb.CreateDoc(inst, &stale))
+
+		accepted, err := FindSharing(inst, stale.SID)
+		require.NoError(t, err)
+		accepted.Active = true
+		require.NoError(t, couchdb.UpdateDoc(inst, accepted))
+
+		require.NoError(t, stale.CreateDriveShortcut(inst, true))
+		require.NotEmpty(t, stale.ShortcutID)
+
+		saved, err := FindSharing(inst, stale.SID)
+		require.NoError(t, err)
+		assert.Equal(t, stale.ShortcutID, saved.ShortcutID)
+		assert.True(t, saved.Active)
+	})
+
 	t.Run("SharingDir", func(t *testing.T) {
 		s := Sharing{
 			SID: uuidv7(),
