@@ -2102,7 +2102,8 @@ func (filter *changesFilter) SharedDriveChange(change *couchdb.Change) *couchdb.
 		return nil
 	}
 
-	path := change.Doc.M["path"].(string)
+	// The path of a file is missing when its parent directory can't be read
+	path, _ := change.Doc.M["path"].(string)
 	sharedDirPath := utils.EnsureHasSuffix(filter.SharedDir.Fullpath, "/")
 	if strings.HasPrefix(path, sharedDirPath) {
 		change.Doc.M["driveId"] = filter.SharedDir.SharingID()
@@ -2122,7 +2123,10 @@ func (filter *changesFilter) Stream(
 		return err
 	}
 	alreadyWroteAnElement := false
-	fp := vfs.NewFilePatherWithCache(inst.VFS())
+	// The parent directories are read without the VFS lock: the feed has
+	// already been fetched, and waiting for the lock while another request
+	// holds it would make the paths fail.
+	fp := vfs.NewFilePatherWithCache(vfs.NewCouchdbIndexer(inst))
 	for _, result := range results.Results {
 		if filter.IncludePath && result.Doc.M != nil && result.Doc.M["type"] == "file" {
 			dirID, _ := result.Doc.M["dir_id"].(string)
