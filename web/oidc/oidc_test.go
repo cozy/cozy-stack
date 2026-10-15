@@ -678,6 +678,90 @@ func TestOidc(t *testing.T) {
 	})
 }
 
+func TestBitwardenRedirectInstanceContext(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance(&lifecycle.Options{ContextName: "cozy_twake_default", OIDCID: "shared-sub"})
+
+	idp := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/token":
+			_, _ = w.Write([]byte(`{"access_token":"login-token"}`))
+		case "/userinfo":
+			if r.Header.Get("Authorization") != "Bearer login-token" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			_, _ = w.Write([]byte(`{"sub":"shared-sub","domain":"` + inst.Domain + `"}`))
+		}
+	}))
+	t.Cleanup(idp.Close)
+	otherIdP := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(otherIdP.Close)
+
+	oidcConf := func(userinfoURL string) map[string]interface{} {
+		return map[string]interface{}{"oidc": map[string]interface{}{
+			"client_id":               "client",
+			"client_secret":           "secret",
+			"scope":                   "openid",
+			"redirect_uri":            "http://oauthcallback.example.com/oidc/redirect",
+			"authorize_url":           idp.URL + "/authorize",
+			"token_url":               idp.URL + "/token",
+			"userinfo_url":            userinfoURL,
+			"userinfo_instance_field": "domain",
+		}}
+	}
+
+	exchange := func(t *testing.T) *httptest.ResponseRecorder {
+		e := echo.New()
+		state := newStateHolder("", "cozypass://login", "", "twake_default", oidcprovider.GenericProvider)
+		require.NoError(t, getStorage().Add(state))
+		redirect := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/oidc/redirect?code=idp-code&state="+state.id, nil)
+		require.NoError(t, Redirect(e.NewContext(req, redirect)))
+		require.Equal(t, http.StatusSeeOther, redirect.Code)
+		location, err := url.Parse(redirect.Header().Get(echo.HeaderLocation))
+		require.NoError(t, err)
+		require.Equal(t, inst.Domain, location.Query().Get("instance"))
+
+		res := httptest.NewRecorder()
+		form := url.Values{"code": {location.Query().Get("code")}, "password": {"wrong"}}
+		req = httptest.NewRequest(http.MethodPost, "/oidc/bitwarden/unused", strings.NewReader(form.Encode()))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+		c := e.NewContext(req, res)
+		middlewares.SetInstance(c, inst)
+		require.NoError(t, BitwardenExchange(c))
+		return res
+	}
+
+	t.Run("instance context trusts the same identity provider", func(t *testing.T) {
+		config.GetConfig().Authentication = map[string]interface{}{
+			"twake_default":      oidcConf(idp.URL + "/userinfo"),
+			"cozy_twake_default": oidcConf(idp.URL + "/userinfo"),
+		}
+		res := exchange(t)
+		require.Equal(t, http.StatusUnauthorized, res.Code)
+		require.JSONEq(t, `{"error":"invalid password"}`, res.Body.String())
+	})
+
+	t.Run("instance context does not trust the identity provider", func(t *testing.T) {
+		config.GetConfig().Authentication = map[string]interface{}{
+			"twake_default":      oidcConf(idp.URL + "/userinfo"),
+			"cozy_twake_default": oidcConf(otherIdP.URL + "/userinfo"),
+		}
+		res := exchange(t)
+		require.Equal(t, http.StatusBadRequest, res.Code)
+		require.JSONEq(t, `{"error":"invalid code"}`, res.Body.String())
+	})
+}
+
 func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
