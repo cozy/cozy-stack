@@ -23,7 +23,7 @@ These apps have no token for the organization instance, so they ask over RabbitM
 - Removal is the same command with `state: removed`. The stack cuts access in one write, then revokes members and cleans up in a background job, in pages.
 - Only the app's commands delete, move or rename its drives. The stack refuses these API calls on a drive that has a reference, whoever makes them.
 - TwakeSpace sends the command from the space events it already consumes. The stack does not consume space events.
-- For Drive, this replaces what [ADR 005](https://github.com/linagora/twake-space-architecture/blob/d8b85ecbe0cfffba446a410ab999e49ba949d621/ADR005.md) asks of each app: consuming the space events, the `twake.space.synced` reconciliation and `com.twake.drive.space.provisioned.v1`. Its other rules still hold: 30 days of retention after removal, and no activity on a drive before its reply is confirmed.
+- For Drive, this replaces what [ADR 005](https://github.com/linagora/twake-space-architecture/blob/d8b85ecbe0cfffba446a410ab999e49ba949d621/ADR005.md) asks of each app: consuming the space events, the `twake.space.synced` reconciliation and `com.twake.drive.space.provisioned.v1`. There is no activity on a drive before its reply is confirmed. Removed folders use the stack's normal per-context trash-retention policy.
 
 ### Architecture
 
@@ -132,14 +132,12 @@ sequenceDiagram
   O->>O: remove sharing credentials, triggers, references and permissions
   J->>O: folder to the trash
   J->>R: activity exchange, com.twake.drive.org_drive.removed.v1
-  Note over J,O: 30 days later
-  J->>O: delete the folder from the trash
 ```
 
 - Revoking a drive sharing in one call costs one HTTP call and one full sharing write per member, then one update per shared file. For a large drive that does not fit in a delivery, hence the job.
 - Marking the drive inactive cuts every member's access at once, because the drive routes refuse an inactive sharing, also when the organization and the member are on the same stack. The handler does nothing else, so it finishes quickly whatever the size of the drive.
 - The job uses the existing `Sharing.Revoke()` method. Each revoked member is saved by that method, so a retry skips members already revoked. There is no separate revocation or batching implementation for provisioned drives.
-- The folder goes to the trash, and an `@in` trigger set by the job deletes it 30 days after the removal, whatever the trash cleanup setting of the context. Nothing deletes the files inline.
+- The folder goes to the trash through `vfs.TrashDir`. Cleanup is scheduled with the same helper as HTTP trash, using `clean-old-trashed` and the context setting `fs.auto_clean_trashed_after`. Without that setting, there is no automatic purge. There is no separate purge timer for these drives.
 - When a whole organization goes, each drive is its own command and its own job. The queue prefetch and the job workers cap how much runs at once.
 - A later `created` command with a higher revision creates a new drive. It does not restore the trashed folder.
 

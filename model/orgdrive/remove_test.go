@@ -2,7 +2,6 @@ package orgdrive
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -73,7 +71,7 @@ func TestRemoval(t *testing.T) {
 		assert.Empty(t, s.Triggers.TrackIDs)
 		dir := rootDir(t, org, s)
 		assert.True(t, inTrash(dir))
-		assert.Equal(t, []string{dir.ID()}, purgeTriggers(t, org))
+		assertNoRemovalTriggers(t, org)
 
 		require.Len(t, pub.requests, 1)
 		assert.Equal(t, rabbitmq.RoutingKeyOrgDriveRemoved, pub.requests[0].RoutingKey)
@@ -86,7 +84,7 @@ func TestRemoval(t *testing.T) {
 			markRemoved(t, org, "sp", 2)
 			require.NoError(t, remove(ctx, pub, org, msg))
 			assert.Len(t, pub.requests, 2)
-			assert.Equal(t, []string{dir.ID()}, purgeTriggers(t, org))
+			assertNoRemovalTriggers(t, org)
 		})
 	})
 
@@ -131,24 +129,35 @@ func TestRemoval(t *testing.T) {
 		assert.Len(t, pub.requests, 1)
 	})
 
-	t.Run("PurgeKeepsARestoredFolder", func(t *testing.T) {
-		org := newOrgInstance(t)
-		require.NoError(t, NewHandler(&fakePublisher{}).Handle(ctx, ensure(t, org, "sp", 1, "Space")))
-		require.NoError(t, remove(ctx, &fakePublisher{}, org, markRemoved(t, org, "sp", 2)))
-		fs := org.VFS()
-		dir := rootDir(t, org, driveOf(t, org, "sp"))
-
-		restored, err := vfs.RestoreDir(fs, dir)
-		require.NoError(t, err)
-		require.NoError(t, purge(org, dir.ID()))
-		_, err = fs.DirByID(restored.ID())
-		require.NoError(t, err)
-
-		_, err = vfs.TrashDir(fs, restored)
-		require.NoError(t, err)
-		require.NoError(t, purge(org, dir.ID()))
-		_, err = fs.DirByID(dir.ID())
-		assert.ErrorIs(t, err, os.ErrNotExist)
+	t.Run("UsesNormalTrashRetention", func(t *testing.T) {
+		cfg := config.GetConfig()
+		previous := cfg.Fs.AutoCleanTrashedAfter
+		t.Cleanup(func() { cfg.Fs.AutoCleanTrashedAfter = previous })
+		for _, after := range []string{"", "7d"} {
+			t.Run("retention="+after, func(t *testing.T) {
+				org := newOrgInstance(t)
+				cfg.Fs.AutoCleanTrashedAfter = map[string]string{org.ContextName: after}
+				for _, id := range []string{"first", "second"} {
+					require.NoError(t, NewHandler(&fakePublisher{}).Handle(ctx, ensure(t, org, id, 1, id)))
+					require.NoError(t, remove(ctx, &fakePublisher{}, org, markRemoved(t, org, id, 2)))
+					assert.True(t, inTrash(rootDir(t, org, driveOf(t, org, id))))
+				}
+				triggers, err := job.System().GetAllTriggers(org)
+				require.NoError(t, err)
+				count := 0
+				for _, trigger := range triggers {
+					if trigger.Infos().WorkerType == "clean-old-trashed" {
+						count++
+					}
+				}
+				if after == "" {
+					assert.Zero(t, count)
+				} else {
+					assert.Equal(t, 1, count)
+				}
+				assertNoRemovalTriggers(t, org)
+			})
+		}
 	})
 }
 
@@ -188,19 +197,11 @@ func markRemoved(t *testing.T, org *instance.Instance, ref string, revision int6
 	return &RemovalMessage{OrganizationID: org.OrgID, Reference: cmd.Reference, Revision: revision}
 }
 
-func purgeTriggers(t *testing.T, org *instance.Instance) []string {
+func assertNoRemovalTriggers(t *testing.T, org *instance.Instance) {
 	t.Helper()
 	triggers, err := job.System().GetAllTriggers(org)
 	require.NoError(t, err)
-	var dirs []string
 	for _, trigger := range triggers {
-		infos := trigger.Infos()
-		if infos.WorkerType != WorkerRemoval {
-			continue
-		}
-		var msg RemovalMessage
-		require.NoError(t, infos.Message.Unmarshal(&msg))
-		dirs = append(dirs, msg.PurgeDirID)
+		assert.NotEqual(t, WorkerRemoval, trigger.Infos().WorkerType)
 	}
-	return dirs
 }
