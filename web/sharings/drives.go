@@ -720,7 +720,8 @@ func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing
 	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
 		return err
 	}
-	return files.Create(c, s)
+	_, err := files.Create(c, s)
+	return err
 }
 
 // DestroyFileHandler handles DELETE requests to clear one element from the
@@ -732,7 +733,8 @@ func DestroyFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Shar
 // OverwriteFileContentHandler handles PUT requests to overwrite the content of
 // a file given its identifier.
 func OverwriteFileContentHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.OverwriteFileContent(c, s)
+	_, err := files.OverwriteFileContent(c, s)
+	return err
 }
 
 // RestoreTrashFileHandler handles POST requests to restore a file or directory
@@ -744,7 +746,8 @@ func RestoreTrashFileHandler(c echo.Context, inst *instance.Instance, s *sharing
 // TrashHandler handles all DELETE requests to move the file or directory with
 // the specified file-id to the trash.
 func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.Trash(c, s)
+	_, err := files.Trash(c, s)
+	return err
 }
 
 // UploadMetadataHandler accepts a metadata objet and persists it, so that it
