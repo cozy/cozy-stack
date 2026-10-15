@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1049,6 +1050,23 @@ func waitForDriveSharingActiveOnRecipient(t *testing.T, recipientInstance *insta
 		recipientSharing, err := sharing.FindSharing(recipientInstance, sharingID)
 		return err == nil && recipientSharing.Active
 	}, 10*time.Second, 250*time.Millisecond, "Drive sharing did not become active on recipient side")
+}
+
+// requireSameDriveCredentials checks that the owner kept the credentials of
+// the answer that the recipient saved.
+func requireSameDriveCredentials(t *testing.T, ownerInstance *instance.Instance, recipientSharing *sharing.Sharing) {
+	t.Helper()
+
+	ownerSharing, err := sharing.FindSharing(ownerInstance, recipientSharing.SID)
+	require.NoError(t, err)
+	ownerClientIDs := make([]string, 0, len(ownerSharing.Credentials))
+	for _, c := range ownerSharing.Credentials {
+		if c.Client != nil {
+			ownerClientIDs = append(ownerClientIDs, c.Client.ClientID)
+		}
+	}
+	require.Contains(t, ownerClientIDs, recipientSharing.Credentials[0].InboundClientID,
+		"owner and recipient must keep the credentials of the same answer")
 }
 
 // acceptSharedDrive performs the acceptance flow on the recipient side.
@@ -2298,6 +2316,8 @@ func TestRevokedSharedDriveInvitationAuthorizeShowsErrorPage(t *testing.T) {
 		HasContentType("text/html", "utf-8").
 		Body()
 	assertInvalidSharingUnavailableErrorPage(t, body)
+	_, err := env.betty.VFS().FileByPath("/Revoked invitation drive.url")
+	require.Error(t, err, "the shortcut of a revoked drive must not be recreated")
 
 	body = eRecipient.POST("/auth/authorize/sharing").
 		WithFormField("sharing_id", sharingID).
@@ -2507,6 +2527,126 @@ func TestSharedDriveAcceptance(t *testing.T) {
 		eD.GET("/sharings/"+newSharingID).
 			WithHeader("Authorization", "Bearer "+env.daveToken).
 			Expect().Status(200)
+	})
+
+	t.Run("AcceptNewDriveViaAPI", func(t *testing.T) {
+		newSharingID, _, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Drive for Dave API acceptance",
+			"Testing API acceptance flow",
+			nil,
+		)
+		eA, _, _ := env.createClients(t)
+		prepareSharingAuthorizeLink(t, env.acme, "Dave", newSharingID, eA, env.tsD.URL)
+		FakeOwnerInstanceForSharing(t, env.dave, env.tsA.URL, newSharingID)
+
+		statuses := make(chan int, 2)
+		var wg sync.WaitGroup
+		for range 2 {
+			wg.Go(func() {
+				req, _ := http.NewRequest(http.MethodPost, env.tsD.URL+"/sharings/drives/"+newSharingID+"/accept", nil)
+				req.Header.Set("Authorization", "Bearer "+env.daveToken)
+				res, err := http.DefaultClient.Do(req)
+				if err != nil {
+					statuses <- 0
+					return
+				}
+				res.Body.Close()
+				statuses <- res.StatusCode
+			})
+		}
+		wg.Wait()
+		close(statuses)
+		for status := range statuses {
+			require.Equal(t, http.StatusOK, status)
+		}
+
+		s, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+		require.True(t, s.Active)
+		shortcut, err := env.dave.VFS().FileByID(s.ShortcutID)
+		require.NoError(t, err)
+		require.Equal(t, "seen", shortcut.Metadata["sharing"].(map[string]interface{})["status"])
+
+		requireSameDriveCredentials(t, env.acme, s)
+	})
+
+	t.Run("AcceptDriveViaAPIAgainAfterUnsavedAcceptance", func(t *testing.T) {
+		newSharingID, _, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Drive for Dave API retry",
+			"Testing API acceptance retry",
+			nil,
+		)
+		eA, _, eD := env.createClients(t)
+		prepareSharingAuthorizeLink(t, env.acme, "Dave", newSharingID, eA, env.tsD.URL)
+		FakeOwnerInstanceForSharing(t, env.dave, env.tsA.URL, newSharingID)
+		notAccepted, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+
+		eD.POST("/sharings/drives/"+newSharingID+"/accept").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		// The owner has the answer, but the recipient lost it
+		accepted, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+		notAccepted.SetRev(accepted.Rev())
+		require.NoError(t, couchdb.UpdateDoc(env.dave, notAccepted))
+
+		eD.POST("/sharings/drives/"+newSharingID+"/accept").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		s, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+		require.True(t, s.Active)
+		requireSameDriveCredentials(t, env.acme, s)
+	})
+
+	t.Run("AcceptDriveViaAPIWithUnreachableOwnerFails", func(t *testing.T) {
+		newSharingID, _, _ := createSharedDrive(
+			t,
+			DriveCreationMethodLegacy,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			"Drive for Dave unreachable owner",
+			"Testing API acceptance failure",
+			nil,
+		)
+		eA, _, eD := env.createClients(t)
+		prepareSharingAuthorizeLink(t, env.acme, "Dave", newSharingID, eA, env.tsD.URL)
+		FakeOwnerInstanceForSharing(t, env.dave, "http://127.0.0.1:1", newSharingID)
+		invitation, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+		require.NoError(t, invitation.CreateDriveShortcut(env.dave, false))
+
+		eD.POST("/sharings/drives/"+newSharingID+"/accept").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(http.StatusBadGateway)
+
+		s, err := sharing.FindSharing(env.dave, newSharingID)
+		require.NoError(t, err)
+		require.False(t, s.Active)
+		shortcut, err := env.dave.VFS().FileByID(s.ShortcutID)
+		require.NoError(t, err)
+		require.Equal(t, "new", shortcut.Metadata["sharing"].(map[string]interface{})["status"])
+	})
+
+	t.Run("AcceptDriveViaAPIAsOwnerFails", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		eA.POST("/sharings/drives/"+env.firstSharingID+"/accept").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(400)
 	})
 }
 

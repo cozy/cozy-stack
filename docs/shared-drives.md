@@ -332,6 +332,35 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/drives/:id/accept
+
+Accepts a shared drive on the recipient's instance, without going through the
+`/auth/authorize/sharing` page. Once the owner's instance has acknowledged
+the answer, its shortcut is marked as seen and points to the shared drive. If
+the shared drive was already accepted, for example by auto-accept, only the
+shortcut is updated. If the owner's instance cannot be reached, the route
+answers `502 Bad Gateway` and the shortcut is left untouched.
+
+The calling app needs the same permissions as for revoking itself from the
+sharing (`DELETE /sharings/:id/recipients/self`).
+
+#### Request
+
+```http
+POST /sharings/drives/aae62886e79611ef8381fb83ff72e425/accept HTTP/1.1
+Host: bob.example.net
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+The response body is the sharing, as for `GET /sharings/:id`.
+
 ## Files and directories
 
 Unless stated otherwise, a permission on the whole `io.cozy.files` doctype is

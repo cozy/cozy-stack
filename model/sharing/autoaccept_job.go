@@ -1,8 +1,6 @@
 package sharing
 
 import (
-	"errors"
-
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 )
@@ -46,12 +44,11 @@ func HandleAutoAccept(inst *instance.Instance, msg *AutoAcceptMsg) error {
 		return err
 	}
 
-	// Send the acceptance answer using the state provided by the owner
-	if err := s.SendAnswer(inst, msg.State); err != nil {
-		if errors.Is(err, ErrAlreadyAccepted) {
-			return nil // Already accepted, not an error
-		}
+	unlock, err := s.lockAcceptance(inst)
+	if err != nil {
 		return err
 	}
-	return nil
+	defer unlock()
+
+	return s.sendAnswerIfInactive(inst, msg.State)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -396,6 +397,35 @@ func updateSharingWithConflictRetry(
 	}
 }
 
+// lockAcceptance serializes the acceptances of the sharing and reloads it
+// under the lock: two concurrent answers would leave different credentials on
+// the owner and the recipient. The returned function releases the lock.
+func (s *Sharing) lockAcceptance(inst *instance.Instance) (func(), error) {
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/accept")
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
+	latest, err := FindSharing(inst, s.SID)
+	if err != nil {
+		mu.Unlock()
+		return nil, err
+	}
+	*s = *latest
+	return mu.Unlock, nil
+}
+
+// sendAnswerIfInactive sends the answer unless the sharing is already active.
+// It must be called under lockAcceptance.
+func (s *Sharing) sendAnswerIfInactive(inst *instance.Instance, state string) error {
+	if s.Active {
+		return nil
+	}
+	if err := s.SendAnswer(inst, state); err != nil && !errors.Is(err, ErrAlreadyAccepted) {
+		return err
+	}
+	return nil
+}
+
 // SendAnswer says to the sharer's Cozy that the sharing has been accepted, and
 // materialize that by an exchange of credentials.
 func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
@@ -458,7 +488,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		Body: bytes.NewReader(body),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrRequestFailed, err)
 	}
 	defer res.Body.Close()
 

@@ -64,6 +64,31 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+// AcceptSharedDrive accepts a shared drive on the recipient's instance.
+// POST /sharings/drives/:id/accept
+func AcceptSharedDrive(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if _, err := checkCreatePermissions(c, s); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if s.Owner || len(s.Credentials) == 0 || s.Credentials[0].State == "" {
+		return wrapErrors(sharing.ErrInvalidSharing)
+	}
+	if err := s.AcceptDrive(inst, s.Credentials[0].State); err != nil {
+		if errors.Is(err, sharing.ErrRequestFailed) {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Cannot accept shared drive %s: %s", s.SID, err)
+			err = sharing.ErrRequestFailed
+		}
+		return wrapErrors(err)
+	}
+	return jsonapiSharingWithDocs(c, s)
+}
+
 // CreateSharedDrive creates a new shared drive from an existing folder or
 // creates a new folder for it at the instance root.
 // POST /sharings/drives
@@ -1567,6 +1592,8 @@ func drivesRoutes(router *echo.Group) {
 	group.POST("/move", MoveHandler)
 
 	drive := group.Group("/:id")
+
+	drive.POST("/accept", AcceptSharedDrive)
 
 	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler, true))
 	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler, true))
