@@ -1718,6 +1718,9 @@ func Destroy(c echo.Context, sharedDrive *sharing.Sharing) error {
 			return err
 		}
 	}
+	if err := CheckProvisionedRoot(c, dir); err != nil {
+		return err
+	}
 
 	// Check antivirus status for files
 	if file != nil {

@@ -1424,6 +1424,9 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 		eOwner.DELETE("/files/"+productID).
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			Expect().Status(403)
+		eOwner.DELETE("/files/trash/"+productID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(403)
 		eOwner.PATCH("/files/"+productID).
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
