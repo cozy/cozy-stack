@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
 // ErrMultipleActiveDrives means a reference needs repair before it can be updated.
@@ -26,7 +27,7 @@ var ErrMultipleActiveDrives = errors.New("multiple active drives for reference")
 // already applied is applied again, since a failure after the revision was
 // stored would otherwise leave the members unsynced.
 func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, []Skipped, error) {
-	mu := config.Lock().LongOperation(inst, fmt.Sprintf("orgdrive/%q/%q/%q", inst.OrgID, cmd.Reference.Source, cmd.Reference.ID))
+	mu := referenceLock(inst, cmd.Reference)
 	if err := mu.Lock(); err != nil {
 		return nil, nil, err
 	}
@@ -41,6 +42,10 @@ func Ensure(inst *instance.Instance, cmd *Command) (*sharing.Sharing, []Skipped,
 		return nil, nil, err
 	}
 	return drive, skipped, nil
+}
+
+func referenceLock(inst *instance.Instance, ref Reference) lock.ErrorLocker {
+	return config.Lock().LongOperation(inst, fmt.Sprintf("orgdrive/%q/%q/%q", inst.OrgID, ref.Source, ref.ID))
 }
 
 func ensureDrive(inst *instance.Instance, cmd *Command) (*sharing.Sharing, error) {
