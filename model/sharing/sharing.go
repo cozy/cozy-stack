@@ -1607,23 +1607,23 @@ func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
 	}
 }
 
-// AcceptDrive accepts a shared drive on the recipient's instance and marks its
-// shortcut as seen. It is a no-op for the answer if the drive is already
-// active, for example after an auto-accept.
+// AcceptDrive accepts a shared drive on the recipient's instance and, once the
+// owner has acknowledged it, marks its shortcut as seen. The answer is not sent
+// again if the drive is already active, for example after an auto-accept.
 func (s *Sharing) AcceptDrive(inst *instance.Instance, state string) error {
 	if !s.Drive {
 		return ErrInvalidSharing
 	}
-	if err := s.CreateDriveShortcut(inst, true); err != nil {
+	unlock, err := s.lockAcceptance(inst)
+	if err != nil {
 		return err
 	}
-	if s.Active {
-		return nil
-	}
-	if err := s.SendAnswer(inst, state); err != nil && !errors.Is(err, ErrAlreadyAccepted) {
+	defer unlock()
+
+	if err := s.sendAnswerIfInactive(inst, state); err != nil {
 		return err
 	}
-	return nil
+	return s.CreateDriveShortcut(inst, true)
 }
 
 // CountNewShortcuts returns the number of shortcuts to a sharing that have not
