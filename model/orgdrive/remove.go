@@ -49,6 +49,12 @@ type RemovedData struct {
 // the drive routes refuse an inactive sharing, and stores the revision. It
 // returns false for a command older than the last one applied.
 func MarkRemoved(inst *instance.Instance, cmd *Command) (bool, error) {
+	mu := referenceLock(inst, cmd.Reference)
+	if err := mu.Lock(); err != nil {
+		return false, err
+	}
+	defer mu.Unlock()
+
 	all, err := sharing.FindByReference(inst, cmd.Reference.Source, cmd.Reference.ID)
 	if err != nil {
 		return false, err
@@ -93,6 +99,12 @@ func workRemoval(ctx *job.TaskContext) error {
 }
 
 func remove(ctx context.Context, pub messaging.Publisher, inst *instance.Instance, msg *RemovalMessage) error {
+	mu := referenceLock(inst, msg.Reference)
+	if err := mu.Lock(); err != nil {
+		return err
+	}
+	defer mu.Unlock()
+
 	all, err := sharing.FindByReference(inst, msg.Reference.Source, msg.Reference.ID)
 	if err != nil {
 		return err
