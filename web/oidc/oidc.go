@@ -284,7 +284,7 @@ func Redirect(c echo.Context) error {
 
 		// Extract session ID from id_token for OIDC logout support
 		sessionID := extractSessionID(tokenResp.IDToken)
-		code := getStorage().CreateCodeData(sub, sessionID, state.OIDCContext, conf.Provider)
+		code := getStorage().CreateCodeData(sub, sessionID, delegatedCodeContext(domain, state.OIDCContext, conf), conf.Provider)
 		u, err := url.Parse(state.Redirect)
 		if err != nil {
 			return renderError(c, nil, http.StatusNotFound, "Sorry, an error occurred.")
@@ -936,6 +936,25 @@ func audienceContains(audiences []string, clientID string) bool {
 		}
 	}
 	return false
+}
+
+// delegatedCodeContext exists because a moved instance keeps logging in
+// through its old context, but the code is only accepted in the instance's
+// context. It is minted there only when both contexts share the identity
+// provider endpoints, so a subject from another provider stays refused.
+func delegatedCodeContext(domain, loginContext string, loginConf *Config) string {
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil || inst.ContextName == "" || inst.ContextName == loginContext {
+		return loginContext
+	}
+	conf, err := oidcprovider.LoadConfig(inst.ContextName, oidcprovider.RequireTokenURL, oidcprovider.RequireUserInfoURL)
+	if err != nil || conf.Provider != loginConf.Provider ||
+		conf.TokenURL != loginConf.TokenURL || conf.UserInfoURL != loginConf.UserInfoURL {
+		inst.Logger().WithNamespace("oidc").
+			Infof("Delegated code kept in login context %s: context %s uses another identity provider", loginContext, inst.ContextName)
+		return loginContext
+	}
+	return inst.ContextName
 }
 
 // validateDelegatedCode validates a delegated code and returns the associated identity.
