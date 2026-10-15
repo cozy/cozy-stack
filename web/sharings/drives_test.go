@@ -5293,7 +5293,8 @@ func TestSharedDriveNotes(t *testing.T) {
 		oo := attrs.Value("onlyoffice").Object()
 		oo.ValueEqual("documentType", "pdf")
 		document := oo.Value("document").Object()
-		document.ValueEqual("filetype", "pdf")
+		document.ValueEqual("fileType", "pdf")
+		document.NotContainsKey("filetype")
 		document.Value("permissions").Object().ValueEqual("edit", true)
 	})
 

@@ -48,7 +48,7 @@ func TestOnlyOfficeConfigSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	claims := &onlyOffice{}
+	claims := jwt.MapClaims{}
 	parsed, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
@@ -58,7 +58,21 @@ func TestOnlyOfficeConfigSignature(t *testing.T) {
 	if !parsed.Valid {
 		t.Fatal("expected a valid OnlyOffice configuration signature")
 	}
-	if claims.Type != "pdf" || !claims.Doc.Permissions.Edit {
-		t.Fatalf("unexpected signed claims: documentType=%q edit=%t", claims.Type, claims.Doc.Permissions.Edit)
+	if claims["documentType"] != "pdf" {
+		t.Fatalf("unexpected signed documentType: %v", claims["documentType"])
+	}
+	document, ok := claims["document"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected document in signed claims")
+	}
+	if document["fileType"] != "pdf" {
+		t.Errorf("signed document.fileType = %v, want pdf", document["fileType"])
+	}
+	if _, ok := document["filetype"]; ok {
+		t.Error("signed document must use fileType, not filetype")
+	}
+	permissions, ok := document["permissions"].(map[string]interface{})
+	if !ok || permissions["edit"] != true {
+		t.Fatalf("unexpected signed permissions: %v", document["permissions"])
 	}
 }
