@@ -18,11 +18,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 )
 
-// WorkerRemoval is the worker that removes the drives of a reference after a
-// removed command, and deletes their folder from the trash later.
+// WorkerRemoval revokes and trashes drives after a removed command.
 const WorkerRemoval = "org-drive-removal"
-
-const purgeDelay = 30 * 24 * time.Hour
 
 func init() {
 	job.AddWorker(&job.WorkerConfig{
@@ -40,7 +37,6 @@ type RemovalMessage struct {
 	OrganizationID string    `json:"organization_id"`
 	Reference      Reference `json:"reference"`
 	Revision       int64     `json:"revision"`
-	PurgeDirID     string    `json:"purge_dir_id,omitempty"`
 }
 
 // RemovedData is the data of com.twake.drive.org_drive.removed.v1.
@@ -93,9 +89,6 @@ func workRemoval(ctx *job.TaskContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	if msg.PurgeDirID != "" {
-		return purge(ctx.Instance, msg.PurgeDirID)
-	}
 	return remove(ctx, ctx.Publisher, ctx.Instance, &msg)
 }
 
@@ -125,8 +118,7 @@ func remove(ctx context.Context, pub messaging.Publisher, inst *instance.Instanc
 	return publishRemoved(ctx, pub, inst, msg)
 }
 
-// trash sets the purge trigger before trashing the folder, so that a folder
-// found in the trash already has one.
+// trash moves the root folder to the trash using the normal retention policy.
 func trash(inst *instance.Instance, s *sharing.Sharing) error {
 	rule := s.FirstFilesRule()
 	if rule == nil || len(rule.Values) == 0 {
@@ -144,39 +136,9 @@ func trash(inst *instance.Instance, s *sharing.Sharing) error {
 		return nil
 	}
 
-	purgeMsg, err := job.NewMessage(&RemovalMessage{PurgeDirID: dir.ID()})
-	if err != nil {
-		return err
-	}
-	t, err := job.NewTrigger(inst, job.TriggerInfos{
-		Type:       "@in",
-		WorkerType: WorkerRemoval,
-		Arguments:  purgeDelay.String(),
-	}, purgeMsg)
-	if err != nil {
-		return err
-	}
-	if err := job.System().AddTrigger(t); err != nil {
-		return err
-	}
+	job.EnsureCleanOldTrashedTrigger(inst)
 	_, err = vfs.TrashDir(fs, dir)
 	return err
-}
-
-// purge deletes the folder of a removed drive, unless it left the trash.
-func purge(inst *instance.Instance, dirID string) error {
-	fs := inst.VFS()
-	dir, err := fs.DirByID(dirID)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !inTrash(dir) {
-		return nil
-	}
-	return fs.DestroyDirAndContent(dir, fs.EnsureErased)
 }
 
 func publishRemoved(ctx context.Context, pub messaging.Publisher, inst *instance.Instance, msg *RemovalMessage) error {
