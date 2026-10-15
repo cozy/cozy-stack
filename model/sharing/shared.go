@@ -2,7 +2,6 @@ package sharing
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -506,55 +505,6 @@ func doRemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 		}
 	}
 	return nil
-}
-
-// RemoveSharedRefsByPage does what RemoveSharedRefs does for a sharing with
-// many files: it reads the references by pages and writes each page in bulk.
-func RemoveSharedRefsByPage(inst *instance.Instance, sharingID string, pageSize int) error {
-	var previous string
-	for {
-		req := &couchdb.ViewRequest{Key: sharingID, IncludeDocs: true, Limit: pageSize}
-		var res couchdb.ViewResponse
-		err := couchdb.ExecView(inst, couchdb.SharedDocsBySharingID, req, &res)
-		if couchdb.IsNoDatabaseError(err) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if len(res.Rows) == 0 {
-			return nil
-		}
-		// A bulk write skips the documents in conflict, and they come back in
-		// the next page: stop instead of looping on them.
-		first := res.Rows[0].ID
-		if first == previous {
-			return fmt.Errorf("shared refs of %s: no progress on %s", sharingID, first)
-		}
-		previous = first
-
-		var updates, olds []interface{}
-		var deletes []couchdb.Doc
-		for _, row := range res.Rows {
-			doc := &SharedRef{}
-			if err := json.Unmarshal(row.Doc, doc); err != nil {
-				return err
-			}
-			if len(doc.Infos) > 1 {
-				delete(doc.Infos, sharingID)
-				updates = append(updates, doc)
-				olds = append(olds, nil)
-			} else {
-				deletes = append(deletes, doc)
-			}
-		}
-		if err := couchdb.BulkUpdateDocs(inst, consts.Shared, updates, olds); err != nil {
-			return err
-		}
-		if err := couchdb.BulkDeleteDocs(inst, consts.Shared, deletes); err != nil {
-			return err
-		}
-	}
 }
 
 // GetSharedDocsBySharingIDs returns a map associating each given sharingID

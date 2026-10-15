@@ -10,24 +10,19 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/messaging"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
-	"golang.org/x/sync/errgroup"
 )
 
 // WorkerRemoval is the worker that removes the drives of a reference after a
 // removed command, and deletes their folder from the trash later.
 const WorkerRemoval = "org-drive-removal"
 
-const (
-	membersPage     = 50
-	parallelNotices = 8
-	sharedRefsPage  = 500
-	purgeDelay      = 30 * 24 * time.Hour
-)
+const purgeDelay = 30 * 24 * time.Hour
 
 func init() {
 	job.AddWorker(&job.WorkerConfig{
@@ -111,94 +106,23 @@ func remove(ctx context.Context, pub messaging.Publisher, inst *instance.Instanc
 	}
 	for _, s := range all {
 		if s.Owner && s.Drive && !s.Active && s.Reference.Revision == msg.Revision {
-			if err := removeDrive(ctx, inst, s); err != nil {
+			if err := s.Revoke(inst); err != nil {
+				if !errors.Is(err, permission.ErrExpiredToken) {
+					return fmt.Errorf("revoke drive %s: %w", s.SID, err)
+				}
+				// Replaying a completed revocation finds already-expired permissions.
+				for _, m := range s.Members[1:] {
+					if m.Status != sharing.MemberStatusRevoked {
+						return fmt.Errorf("revoke drive %s: %w", s.SID, err)
+					}
+				}
+			}
+			if err := trash(inst, s); err != nil {
 				return fmt.Errorf("remove drive %s: %w", s.SID, err)
 			}
 		}
 	}
 	return publishRemoved(ctx, pub, inst, msg)
-}
-
-// Each step of removeDrive can be run again, so a job that failed restarts
-// where it stopped.
-func removeDrive(ctx context.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	for {
-		page := pendingMembers(s)
-		if len(page) == 0 {
-			break
-		}
-		if err := revokePage(ctx, inst, s, page); err != nil {
-			return err
-		}
-	}
-	if err := s.RemoveTriggers(inst); err != nil {
-		return err
-	}
-	if err := couchdb.UpdateDoc(inst, s); err != nil {
-		return err
-	}
-	if err := sharing.RemoveSharedRefsByPage(inst, s.SID, sharedRefsPage); err != nil {
-		return err
-	}
-	if err := s.RemoveReferenceForSharing(inst, s.FirstFilesRule()); err != nil {
-		return err
-	}
-	if err := s.RevokeInteractPermissions(inst); err != nil {
-		return err
-	}
-	return trash(inst, s)
-}
-
-func pendingMembers(s *sharing.Sharing) []int {
-	var page []int
-	for i := 1; i < len(s.Members) && len(page) < membersPage; i++ {
-		if s.Members[i].Status != sharing.MemberStatusRevoked {
-			page = append(page, i)
-		}
-	}
-	return page
-}
-
-// revokePage tells the members of the page that the drive is gone, a few at a
-// time, and writes the sharing once for the whole page.
-func revokePage(ctx context.Context, inst *instance.Instance, s *sharing.Sharing, page []int) error {
-	g, _ := errgroup.WithContext(ctx)
-	g.SetLimit(parallelNotices)
-	for _, i := range page {
-		// Each notice works on its own copy: refreshing a token writes the
-		// whole sharing.
-		own := s.Clone().(*sharing.Sharing)
-		g.Go(func() error {
-			m, c := &own.Members[i], &own.Credentials[i-1]
-			if err := own.NotifyMemberRevocation(inst, m, c); err != nil {
-				inst.Logger().WithNamespace("orgdrive").
-					Warnf("Revocation notice to %s for %s: %s", m.Instance, own.SID, err)
-			}
-			if m.Status == sharing.MemberStatusReady {
-				if err := sharing.DeleteOAuthClient(inst, m, c); err != nil {
-					return err
-				}
-			}
-			return own.ClearLastSequenceNumbers(inst, m)
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	for retries := 3; ; retries-- {
-		for _, i := range page {
-			s.Members[i].Status = sharing.MemberStatusRevoked
-			s.Credentials[i-1] = sharing.Credentials{}
-		}
-		err := couchdb.UpdateDoc(inst, s)
-		if !couchdb.IsConflictError(err) || retries == 0 {
-			return err
-		}
-		if err := couchdb.GetDoc(inst, s.DocType(), s.SID, s); err != nil {
-			return err
-		}
-	}
 }
 
 // trash sets the purge trigger before trashing the folder, so that a folder

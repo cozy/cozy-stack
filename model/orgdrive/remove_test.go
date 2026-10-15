@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -54,6 +55,12 @@ func TestRemoval(t *testing.T) {
 		msg := markRemoved(t, org, "sp", 2)
 		pub := &fakePublisher{}
 
+		pending := driveOf(t, org, "sp")
+		assert.False(t, pending.Active)
+		assert.NotEqual(t, sharing.MemberStatusRevoked, pending.Members[1].Status)
+		assert.False(t, inTrash(rootDir(t, org, pending)))
+		_, err := permission.CreateShareInteractSet(org, pending.ID(), nil, permission.Permission{Permissions: pending.CreateInteractSet()})
+		require.NoError(t, err)
 		require.NoError(t, remove(ctx, pub, org, msg))
 
 		s := driveOf(t, org, "sp")
@@ -74,10 +81,31 @@ func TestRemoval(t *testing.T) {
 		assert.Equal(t, RemovedData{Reference: Reference{Source: "twake-space", ID: "sp"}, Revision: 2}, data)
 
 		t.Run("RedeliveryRepliesAgain", func(t *testing.T) {
+			_, err := permission.GetForShareInteract(org, s.ID())
+			require.ErrorIs(t, err, permission.ErrExpiredToken)
+			markRemoved(t, org, "sp", 2)
 			require.NoError(t, remove(ctx, pub, org, msg))
 			assert.Len(t, pub.requests, 2)
 			assert.Equal(t, []string{dir.ID()}, purgeTriggers(t, org))
 		})
+	})
+
+	t.Run("ExpiredPermissionsDoNotHideIncompleteRevocation", func(t *testing.T) {
+		org := newOrgInstance(t)
+		inDirectory(t, org, "alice@example.net")
+		require.NoError(t, NewHandler(&fakePublisher{}).Handle(ctx, ensureWith(t, org, "sp", 1, []Member{
+			{Email: "alice@example.net", Role: RoleWrite},
+		}, nil)))
+		msg := markRemoved(t, org, "sp", 2)
+		s := driveOf(t, org, "sp")
+		_, err := permission.CreateShareInteractSet(org, s.ID(), nil, permission.Permission{Permissions: s.CreateInteractSet()})
+		require.NoError(t, err)
+		require.NoError(t, s.RevokeInteractPermissions(org))
+		pub := &fakePublisher{}
+
+		require.ErrorIs(t, remove(ctx, pub, org, msg), permission.ErrExpiredToken)
+		assert.Empty(t, pub.requests)
+		assert.False(t, inTrash(rootDir(t, org, s)))
 	})
 
 	t.Run("OlderRevisionIsIgnored", func(t *testing.T) {
