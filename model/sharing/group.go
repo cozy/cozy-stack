@@ -35,17 +35,6 @@ type Group struct {
 // AddGroup adds a group of contacts identified by its ID to the members of the
 // sharing.
 func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly bool) error {
-	return s.addGroup(inst, groupID, readOnly, false)
-}
-
-// AttachGroup adds a group like AddGroup, except that the contacts of the
-// group who are already active members keep their role, so the caller can
-// set it from all their memberships.
-func (s *Sharing) AttachGroup(inst *instance.Instance, groupID string, readOnly bool) error {
-	return s.addGroup(inst, groupID, readOnly, true)
-}
-
-func (s *Sharing) addGroup(inst *instance.Instance, groupID string, readOnly, keepRoles bool) error {
 	for _, g := range s.Groups {
 		if g.ID == groupID && !g.Revoked {
 			return ErrGroupCannotBeAddedTwice
@@ -66,12 +55,6 @@ func (s *Sharing) addGroup(inst *instance.Instance, groupID string, readOnly, ke
 		m := buildMemberFromContact(contact, readOnly)
 		m.Groups = []int{groupIndex}
 		m.OnlyInGroups = true
-		if keepRoles {
-			if idx := s.activeMemberIndex(m); idx > 0 {
-				addGroupToMember(&s.Members[idx], groupIndex)
-				continue
-			}
-		}
 		_, idx, err := s.addMember(inst, m)
 		if err != nil {
 			return err
@@ -88,19 +71,6 @@ func (s *Sharing) addGroup(inst *instance.Instance, groupID string, readOnly, ke
 	}
 	s.Groups = append(s.Groups, g)
 	return nil
-}
-
-func (s *Sharing) activeMemberIndex(m Member) int {
-	for i := 1; i < len(s.Members); i++ {
-		member := s.Members[i]
-		if member.Status == MemberStatusRevoked {
-			continue
-		}
-		if (m.Email != "" && m.Email == member.Email) || (m.Email == "" && m.Instance != "" && m.Instance == member.Instance) {
-			return i
-		}
-	}
-	return -1
 }
 
 // RevokeGroup revokes a group of members on the sharer Cozy. After that, the

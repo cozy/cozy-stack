@@ -2,6 +2,10 @@ package orgdrive
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -14,6 +18,8 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
 func TestMembers(t *testing.T) {
@@ -82,13 +88,15 @@ func TestMembers(t *testing.T) {
 		assert.Equal(t, []Skipped{{GroupID: "unknown", Reason: ReasonNotInDirectory}}, pub.ready(t, 0).Skipped)
 
 		status := member(t, s, "dave@example.net").Status
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 2, nil, []Group{{ID: "g1", Role: RoleWrite}})))
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1, nil, []Group{{ID: "g1", Role: RoleRead}})))
+		err := h.Handle(ctx, ensureWith(t, org, "sp", 2, nil, []Group{{ID: "g1", Role: RoleWrite}}))
+		require.ErrorIs(t, err, sharing.ErrGroupCannotBeAddedTwice)
 		s = onlyDrive(t, org)
 		require.Len(t, s.Groups, 1)
 		assert.False(t, s.Groups[0].Revoked)
-		assert.False(t, s.Groups[0].ReadOnly)
+		assert.True(t, s.Groups[0].ReadOnly)
 		dave = member(t, s, "dave@example.net")
-		assert.False(t, dave.ReadOnly)
+		assert.True(t, dave.ReadOnly)
 		assert.Equal(t, status, dave.Status)
 
 		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 3, nil, nil)))
@@ -97,65 +105,123 @@ func TestMembers(t *testing.T) {
 		assert.True(t, s.Active)
 	})
 
-	t.Run("DirectRoleWinsOverAReadGroup", func(t *testing.T) {
+	for _, directRole := range []string{RoleRead, RoleWrite} {
+		t.Run("RejectsConflictingRolesInOneCommand/"+directRole, func(t *testing.T) {
+			org := newOrgInstance(t)
+			inGroup(t, org, "g1", "dave@example.net")
+			groupRole := RoleRead
+			if directRole == RoleRead {
+				groupRole = RoleWrite
+			}
+			pub := &fakePublisher{}
+			err := NewHandler(pub).Handle(ctx, ensureWith(t, org, "sp", 1,
+				[]Member{{Email: "dave@example.net", Role: directRole}},
+				[]Group{{ID: "g1", Role: groupRole}}))
+			require.ErrorIs(t, err, sharing.ErrMemberAlreadyAdded)
+			assert.Empty(t, pub.requests)
+			assert.Empty(t, onlyDrive(t, org).Groups)
+		})
+	}
+
+	t.Run("RejectsGroupConflictingWithExistingDirectMember", func(t *testing.T) {
 		org := newOrgInstance(t)
 		inGroup(t, org, "g1", "dave@example.net", "erin@example.net")
 		pub := &fakePublisher{}
 		h := NewHandler(pub)
-
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1,
-			[]Member{{Email: "dave@example.net", Role: RoleWrite}},
-			[]Group{{ID: "g1", Role: RoleRead}})))
-
-		s := onlyDrive(t, org)
-		dave := member(t, s, "dave@example.net")
-		assert.False(t, dave.ReadOnly)
-		assert.False(t, dave.OnlyInGroups)
-		assert.True(t, member(t, s, "erin@example.net").ReadOnly)
-		assert.Empty(t, pub.ready(t, 0).Skipped)
-
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 2, nil, []Group{{ID: "g1", Role: RoleRead}})))
-		dave = member(t, onlyDrive(t, org), "dave@example.net")
-		assert.True(t, dave.OnlyInGroups)
-		assert.True(t, dave.ReadOnly)
-		assert.NotEqual(t, sharing.MemberStatusRevoked, dave.Status)
-	})
-
-	t.Run("GroupJoinsADirectMemberWithAnotherRole", func(t *testing.T) {
-		org := newOrgInstance(t)
-		inGroup(t, org, "g1", "dave@example.net", "erin@example.net")
-		pub := &fakePublisher{}
-		h := NewHandler(pub)
-		dave := []Member{{Email: "dave@example.net", Role: RoleWrite}}
-
+		dave := []Member{{Email: "dave@example.net", Role: RoleRead}}
 		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1, dave, nil)))
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 2, dave, []Group{{ID: "g1", Role: RoleRead}})))
-
+		err := h.Handle(ctx, ensureWith(t, org, "sp", 2, dave, []Group{{ID: "g1", Role: RoleWrite}}))
+		require.ErrorIs(t, err, sharing.ErrMemberAlreadyAdded)
 		s := onlyDrive(t, org)
-		require.Len(t, s.Groups, 1)
-		assert.False(t, member(t, s, "dave@example.net").ReadOnly)
-		assert.True(t, member(t, s, "erin@example.net").ReadOnly)
-		assert.Empty(t, pub.ready(t, 1).Skipped)
+		assert.Empty(t, s.Groups)
+		assert.True(t, member(t, s, "dave@example.net").ReadOnly)
+		assert.Len(t, pub.requests, 1)
 	})
 
-	t.Run("WriteGroupWinsOverADirectReader", func(t *testing.T) {
+	t.Run("RejectsDirectRoleConflictingWithGroupMember", func(t *testing.T) {
+		org := newOrgInstance(t)
+		inGroup(t, org, "g1", "dave@example.net")
+		h := NewHandler(&fakePublisher{})
+		groups := []Group{{ID: "g1", Role: RoleRead}}
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1, nil, groups)))
+		err := h.Handle(ctx, ensureWith(t, org, "sp", 2,
+			[]Member{{Email: "dave@example.net", Role: RoleWrite}}, groups))
+		require.ErrorIs(t, err, sharing.ErrMemberAlreadyInGroup)
+		dave := member(t, onlyDrive(t, org), "dave@example.net")
+		assert.True(t, dave.ReadOnly)
+		assert.True(t, dave.OnlyInGroups)
+	})
+
+	t.Run("RejectsConflictingGroupRoles", func(t *testing.T) {
+		org := newOrgInstance(t)
+		inGroup(t, org, "readers", "dave@example.net")
+		inGroup(t, org, "writers", "dave@example.net")
+		h := NewHandler(&fakePublisher{})
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1, nil,
+			[]Group{{ID: "readers", Role: RoleRead}})))
+		err := h.Handle(ctx, ensureWith(t, org, "sp", 2, nil,
+			[]Group{{ID: "readers", Role: RoleRead}, {ID: "writers", Role: RoleWrite}}))
+		require.ErrorIs(t, err, sharing.ErrMemberAlreadyInGroup)
+		assert.Len(t, onlyDrive(t, org).Groups, 1)
+	})
+
+	t.Run("DirectRoleUpdatesUseExistingReadOnlyMethods", func(t *testing.T) {
 		org := newOrgInstance(t)
 		inGroup(t, org, "g1", "dave@example.net", "erin@example.net")
 		h := NewHandler(&fakePublisher{})
-		dave := []Member{{Email: "dave@example.net", Role: RoleRead}}
-
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1, dave, []Group{{ID: "g1", Role: RoleRead}})))
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 2, dave, []Group{{ID: "g1", Role: RoleWrite}})))
-
+		groups := []Group{{ID: "g1", Role: RoleWrite}}
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 1,
+			[]Member{{Email: "dave@example.net", Role: RoleWrite}}, groups)))
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 2,
+			[]Member{{Email: "dave@example.net", Role: RoleRead}}, groups)))
 		s := onlyDrive(t, org)
-		assert.False(t, s.Groups[0].Revoked)
-		assert.False(t, member(t, s, "dave@example.net").ReadOnly)
-		erin := member(t, s, "erin@example.net")
-		assert.False(t, erin.ReadOnly)
-		assert.NotEqual(t, sharing.MemberStatusRevoked, erin.Status)
+		assert.True(t, member(t, s, "dave@example.net").ReadOnly)
+		assert.False(t, member(t, s, "erin@example.net").ReadOnly)
+		assert.False(t, s.Groups[0].ReadOnly)
 
-		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 3, dave, []Group{{ID: "g1", Role: RoleRead}})))
-		assert.True(t, member(t, onlyDrive(t, org), "dave@example.net").ReadOnly)
+		require.NoError(t, h.Handle(ctx, ensureWith(t, org, "sp", 3, nil, groups)))
+		dave := member(t, onlyDrive(t, org), "dave@example.net")
+		assert.True(t, dave.OnlyInGroups)
+		assert.True(t, dave.ReadOnly)
+	})
+
+	t.Run("RetriesFailedInvitationBeforePublishingReady", func(t *testing.T) {
+		org := newOrgInstance(t)
+		inDirectory(t, org, "alice@example.net")
+		pub := &fakePublisher{}
+		h := NewHandler(pub)
+		d := ensureWith(t, org, "retry", 1, []Member{{Email: "alice@example.net", Role: RoleRead}}, nil)
+
+		client := config.CouchClient()
+		original := client.Transport
+		t.Cleanup(func() { client.Transport = original })
+		var failures atomic.Int32
+		client.Transport = roundTripper(func(r *http.Request) (*http.Response, error) {
+			if r.Method == http.MethodPost && strings.Contains(r.URL.Path, org.DBPrefix()) && strings.Contains(r.URL.Path, "io-cozy-jobs") {
+				failures.Add(1)
+				return nil, errors.New("job storage unavailable")
+			}
+			return original.RoundTrip(r)
+		})
+
+		err := h.Handle(ctx, d)
+		require.Positive(t, failures.Load())
+		require.ErrorIs(t, err, sharing.ErrInvitationNotSent)
+		assert.Empty(t, pub.requests)
+		s := onlyDrive(t, org)
+		assert.False(t, s.Reference.Ready)
+		assert.Equal(t, sharing.MemberStatusMailNotSent, member(t, s, "alice@example.net").Status)
+		state := s.Credentials[0].State
+
+		client.Transport = original
+		require.NoError(t, h.Handle(ctx, d))
+		retried := onlyDrive(t, org)
+		assert.Equal(t, s.SID, retried.SID)
+		assert.Len(t, retried.Members, 2)
+		assert.Equal(t, state, retried.Credentials[0].State)
+		assert.Equal(t, sharing.MemberStatusPendingInvitation, member(t, retried, "alice@example.net").Status)
+		assert.True(t, retried.Reference.Ready)
+		assert.Len(t, pub.requests, 1)
 	})
 
 	t.Run("RedeliveryDoesNotAddTwice", func(t *testing.T) {

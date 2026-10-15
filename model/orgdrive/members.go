@@ -18,49 +18,32 @@ const (
 	ReasonDriveFull      = "the drive has too many members"
 )
 
-// syncMembers makes the members and groups of the drive match the command.
-// The role of a member is write when their direct role or one of their groups
-// gives it, and read otherwise. Everything is decided from the stored sharing,
-// so a redelivery after a failure finishes the job, invitations included.
+// syncMembers reconciles membership using the same sharing methods as the API.
+// Redelivery finishes partially applied commands, including invitations.
 func syncMembers(inst *instance.Instance, s *sharing.Sharing, cmd *Command) ([]Skipped, error) {
 	if err := revokeGroups(inst, s, cmd); err != nil {
 		return nil, err
 	}
-	skipped, dirty, err := attachGroups(inst, s, cmd)
-	if err != nil {
-		return nil, err
+	var skipped []Skipped
+	dirty := false
+
+	wanted := make(map[string]bool, len(cmd.Members))
+	for _, m := range cmd.Members {
+		wanted[strings.ToLower(m.Email)] = true
+	}
+	present := make(map[string]int, len(s.Members))
+	for i := 1; i < len(s.Members); i++ {
+		if s.Members[i].Status != sharing.MemberStatusRevoked {
+			present[strings.ToLower(s.Members[i].Email)] = i
+		}
 	}
 
-	wanted := make(map[string]bool, len(cmd.Members)) // email -> read only
 	for _, m := range cmd.Members {
-		wanted[strings.ToLower(m.Email)] = m.Role == RoleRead
-	}
-	present := make(map[string]bool, len(s.Members))
-	for i := 1; i < len(s.Members); i++ {
-		m := &s.Members[i]
-		if m.Status == sharing.MemberStatusRevoked {
-			continue
-		}
-		email := strings.ToLower(m.Email)
-		readOnly, direct := wanted[email]
-		present[email] = direct
-		if !direct && len(m.Groups) == 0 {
-			if err := s.RevokeRecipient(inst, i); err != nil {
+		i, exists := present[strings.ToLower(m.Email)]
+		if exists && !s.Members[i].OnlyInGroups {
+			if err := setRole(inst, s, i, m.Role == RoleRead); err != nil {
 				return nil, err
 			}
-			continue
-		}
-		if m.OnlyInGroups == direct {
-			m.OnlyInGroups = !direct
-			dirty = true
-		}
-		if err := setRole(inst, s, i, (!direct || readOnly) && !inWritableGroup(s, i)); err != nil {
-			return nil, err
-		}
-	}
-
-	for _, m := range cmd.Members {
-		if present[strings.ToLower(m.Email)] {
 			continue
 		}
 		c, err := orgdirectory.FindManagedContactByEmail(inst, m.Email)
@@ -82,10 +65,32 @@ func syncMembers(inst *instance.Instance, s *sharing.Sharing, cmd *Command) ([]S
 		if err != nil {
 			return nil, err
 		}
+		if exists {
+			s.Members[i].OnlyInGroups = false
+		}
 		dirty = true
 	}
 
-	if dirty {
+	groupSkipped, groupsChanged, err := attachGroups(inst, s, cmd)
+	if err != nil {
+		return nil, err
+	}
+	skipped = append(skipped, groupSkipped...)
+	for i := 1; i < len(s.Members); i++ {
+		m := &s.Members[i]
+		if m.Status == sharing.MemberStatusRevoked || wanted[strings.ToLower(m.Email)] {
+			continue
+		}
+		if len(m.Groups) == 0 {
+			if err := s.RevokeRecipient(inst, i); err != nil {
+				return nil, err
+			}
+		} else if !m.OnlyInGroups {
+			m.OnlyInGroups = true
+			dirty = true
+		}
+	}
+	if dirty || groupsChanged {
 		if err := couchdb.UpdateDoc(inst, s); err != nil {
 			return nil, err
 		}
@@ -96,8 +101,7 @@ func syncMembers(inst *instance.Instance, s *sharing.Sharing, cmd *Command) ([]S
 	return skipped, nil
 }
 
-// revokeGroups keeps a group whose role changed: its members get their new
-// role from the role pass of syncMembers.
+// revokeGroups removes the groups no longer listed in the command.
 func revokeGroups(inst *instance.Instance, s *sharing.Sharing, cmd *Command) error {
 	wanted := make(map[string]bool, len(cmd.Groups))
 	for _, g := range cmd.Groups {
@@ -114,25 +118,20 @@ func revokeGroups(inst *instance.Instance, s *sharing.Sharing, cmd *Command) err
 	return nil
 }
 
-// attachGroups sets the role of the groups already on the drive and adds the
-// missing ones.
+// attachGroups adds groups with the model's existing role-conflict checks.
 func attachGroups(inst *instance.Instance, s *sharing.Sharing, cmd *Command) ([]Skipped, bool, error) {
 	var skipped []Skipped
 	dirty := false
 	for _, g := range cmd.Groups {
 		id := groupDocID(cmd, g.ID)
 		readOnly := g.Role == RoleRead
-		if i := groupIndex(s, id); i >= 0 {
-			if s.Groups[i].ReadOnly != readOnly {
-				s.Groups[i].ReadOnly = readOnly
-				dirty = true
-			}
+		if i := groupIndex(s, id); i >= 0 && s.Groups[i].ReadOnly == readOnly {
 			continue
 		}
-		// AttachGroup can fail after adding some of the group's members, so it
+		// AddGroup can fail after adding some of the group's members, so it
 		// works on a copy that is kept only when the whole group is added.
 		trial := s.Clone().(*sharing.Sharing)
-		err := trial.AttachGroup(inst, id, readOnly)
+		err := trial.AddGroup(inst, id, readOnly)
 		switch {
 		case couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err):
 			skipped = append(skipped, Skipped{GroupID: g.ID, Reason: ReasonNotInDirectory})
@@ -156,15 +155,6 @@ func setRole(inst *instance.Instance, s *sharing.Sharing, i int, readOnly bool) 
 		return s.AddReadOnlyFlag(inst, i)
 	}
 	return s.RemoveReadOnlyFlag(inst, i)
-}
-
-func inWritableGroup(s *sharing.Sharing, i int) bool {
-	for _, idx := range s.Members[i].Groups {
-		if idx < len(s.Groups) && !s.Groups[idx].Revoked && !s.Groups[idx].ReadOnly {
-			return true
-		}
-	}
-	return false
 }
 
 func groupIndex(s *sharing.Sharing, id string) int {
@@ -194,10 +184,7 @@ func invite(inst *instance.Instance, s *sharing.Sharing) error {
 	if !pending {
 		return nil
 	}
-	err := s.SendInvitations(inst, nil)
-	if errors.Is(err, sharing.ErrInvitationNotSent) {
-		log.Warnf("Some invitations to the drive %s were not sent", s.SID)
-	} else if err != nil {
+	if err := s.SendInvitations(inst, nil); err != nil {
 		return err
 	}
 	go s.Clone().(*sharing.Sharing).NotifyRecipients(inst, nil)

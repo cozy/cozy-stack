@@ -497,10 +497,12 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
 - The members and groups of the drive are made to match the lists: a member is
   the contact of the organization directory with this email, and a group is
   the directory group with this id. Those who are no longer listed are
-  revoked, and a role change is applied in place. A person gets write access
-  when their direct role or one of their groups gives it, and read access
-  otherwise. Each command is applied, even with the same revision, so a
-  redelivery finishes what a failure left undone, invitations included.
+  revoked. Direct member roles use the existing read-only update methods.
+  Adding members and groups uses the same conflict checks as the sharing API;
+  conflicting roles are rejected, not combined. Changing the role of an already
+  attached group is also rejected by the existing model. Each command is applied,
+  even with the same revision, so a redelivery finishes what a failure left
+  undone, invitations included.
 - A drive whose sharing was revoked or whose folder was trashed is replaced by
   a new one. Its old sharing stays inactive and retains the reference and
   revision, including after the folder is permanently deleted. An active
@@ -512,7 +514,9 @@ of its objects by sending `drive.org_drive.ensure` on the `drive` exchange
   members (`email`) and groups (`group_id`) that could not be put on the
   drive, with a `reason`: not in the organization directory, several contacts
   in it, or too many members. A command with the same revision gets a reply
-  again. A failed publish fails the delivery.
+  again. Failed invitations fail the delivery before the reply is published;
+  redelivery retries the unsent invitations. A failed publish also fails the
+  delivery.
 - A malformed command (no reference, no revision, unknown state or role) goes
   to the dead letter queue at once.
 
