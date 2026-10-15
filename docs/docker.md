@@ -117,6 +117,74 @@ office:
     onlyoffice_outbox_secret: ""
 ```
 
+### Optional: Enable JWT authentication locally
+
+JWT authentication is **optional for local development**. The default setup
+above works without it; skip this section unless you need to test the
+authenticated flow used in production.
+
+To enable JWT, OnlyOffice and cozy-stack must share the same secret. This
+setup was tested with Document Server 9.4.
+
+Generate a secret **once** and store it outside the repository:
+
+```bash
+(umask 077; printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32)" > "$HOME/.cozy/onlyoffice.env")
+```
+
+In your local `scripts/start-oo.sh`, replace `-e JWT_ENABLED=false` with:
+
+```bash
+  -e JWT_ENABLED=true \
+  -e JWT_SECRET="$JWT_SECRET" \
+```
+
+Do not hardcode the secret in the script or commit it. Passing the value
+explicitly also avoids relying on whether the shell variable was exported:
+`-e JWT_SECRET` alone only reads exported environment variables. Without a
+secret, OnlyOffice generates a random one when the container is recreated.
+
+In `~/.cozy/cozy.yaml`, replace the two empty secrets with the value stored
+in `~/.cozy/onlyoffice.env`:
+
+```yaml
+office:
+  default:
+    onlyoffice_url: http://localhost:8000/
+    onlyoffice_inbox_secret: "<same value as JWT_SECRET>"
+    onlyoffice_outbox_secret: "<same value as JWT_SECRET>"
+```
+
+The inbox secret signs the configuration sent to the editor; the outbox
+secret verifies callbacks from OnlyOffice. Use the actual secret in the YAML,
+not `$JWT_SECRET`: the YAML value is not a shell variable reference.
+
+From the repository root, load the saved secret and recreate OnlyOffice:
+
+```bash
+. "$HOME/.cozy/onlyoffice.env"
+JWT_SECRET="$JWT_SECRET" ./scripts/start-oo.sh
+```
+
+Reuse this file on subsequent restarts; do not generate a new secret unless
+you also update both YAML values. Restart cozy-stack to load the configuration,
+then reload the editor in the browser. Keep the default `Authorization` JWT
+header so cozy-stack can verify callbacks.
+
+The helper script uses `go run . instances ls` to discover instance domains.
+Running it outside the repository root can silently fall back to a
+`cozy.localhost` mapping, which does not cover instances such as
+`alice.localhost`. Verify the mapping for your actual instance:
+
+```bash
+docker exec onlyoffice-ds getent hosts alice.localhost
+```
+
+The instance must resolve to the host gateway. On Linux, also ensure cozy-stack
+listens on an address reachable from Docker, for example with
+`cozy-stack serve --host 0.0.0.0`. This exposes the development server beyond
+loopback, so use it only on a trusted development network.
+
 ### Enable Feature Flag
 
 ```bash
