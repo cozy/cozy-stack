@@ -820,15 +820,21 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 			Warnf("RevokeRecipientBySelf failed to remove shared refs (%s)': %s", s.ID(), err)
 	}
 	if !sharingDirTrashed {
-		if err := s.FixRevokedNotes(inst); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Warnf("RevokeRecipientBySelf failed to fix notes for revoked sharing %s: %s", s.ID(), err)
-		}
-
-		if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
-			if err := s.RemoveSharingDir(inst); err != nil {
+		if s.Drive {
+			// The recipient has no local copy of a shared drive, only a
+			// shortcut to it. Looking for the sharing dir would create one.
+			s.cleanShortcutID(inst)
+		} else {
+			if err := s.FixRevokedNotes(inst); err != nil {
 				inst.Logger().WithNamespace("sharing").
-					Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
+					Warnf("RevokeRecipientBySelf failed to fix notes for revoked sharing %s: %s", s.ID(), err)
+			}
+
+			if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
+				if err := s.RemoveSharingDir(inst); err != nil {
+					inst.Logger().WithNamespace("sharing").
+						Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
+				}
 			}
 		}
 	}

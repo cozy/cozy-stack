@@ -6111,8 +6111,33 @@ func TestFileRootSharedDriveOwnerDeletionRevokesRecipient(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond, "Owner's sharing document should be deleted after deleting the shared-drive root file")
 }
 
+// rootDirChildNames returns the names of the files and directories at the
+// root of the instance VFS, i.e. what the user sees in "My Drive".
+func rootDirChildNames(t *testing.T, inst *instance.Instance) []string {
+	t.Helper()
+	fs := inst.VFS()
+	root, err := fs.DirByID(consts.RootDirID)
+	require.NoError(t, err)
+
+	var names []string
+	iter := fs.DirIterator(root, nil)
+	for {
+		d, f, err := iter.Next()
+		if err != nil {
+			require.ErrorIs(t, err, vfs.ErrIteratorDone)
+			return names
+		}
+		if f != nil {
+			names = append(names, f.DocName)
+		} else {
+			names = append(names, d.DocName)
+		}
+	}
+}
+
 // TestSharedDriveRecipientSelfRevocation tests that a recipient can revoke themselves
-// from a shared drive and the owner is properly notified.
+// from a shared drive, the owner is properly notified, and nothing from the
+// shared drive is left behind in the recipient's VFS.
 func TestSharedDriveRecipientSelfRevocation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -6123,6 +6148,17 @@ func TestSharedDriveRecipientSelfRevocation(t *testing.T) {
 
 	// Use the existing shared drive from setupSharedDrivesEnv where Betty is already a member
 	sharingID := env.firstSharingID
+
+	// The env accepts the drive through the authorize form, which doesn't
+	// create the shortcut that Betty gets in "My Drive" when she accepts
+	// from the link. Add it, so that the test matches what users have.
+	recipientSharing, err := sharing.FindSharing(env.betty, sharingID)
+	require.NoError(t, err)
+	require.NoError(t, recipientSharing.AddShortcut(env.betty, ""))
+	require.NotEmpty(t, recipientSharing.ShortcutID)
+	shortcutID := recipientSharing.ShortcutID
+	_, err = env.betty.VFS().FileByID(shortcutID)
+	require.NoError(t, err, "Betty should have a shortcut to the shared drive before leaving it")
 
 	t.Run("VerifyBettyIsMember", func(t *testing.T) {
 		obj := eA.GET("/sharings/"+sharingID).
@@ -6142,6 +6178,21 @@ func TestSharedDriveRecipientSelfRevocation(t *testing.T) {
 		eB.DELETE("/sharings/"+sharingID+"/recipients/self").
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(204)
+	})
+
+	t.Run("NothingIsLeftOnBettySide", func(t *testing.T) {
+		_, err := env.betty.VFS().FileByID(shortcutID)
+		require.True(t, os.IsNotExist(err), "Betty's shortcut to the shared drive should be removed, got %v", err)
+
+		// The recipient never had a local copy of the drive, so leaving it
+		// must not create one (it used to show up as "<name> (cancelled sharing)").
+		_, err = env.betty.VFS().DirByID(env.firstRootDirID)
+		require.True(t, os.IsNotExist(err), "no directory should be created for the shared drive root, got %v", err)
+
+		for _, name := range rootDirChildNames(t, env.betty) {
+			require.False(t, strings.HasPrefix(name, env.rootDirName),
+				"Betty's root should not contain anything from the shared drive, found %q", name)
+		}
 	})
 
 	t.Run("VerifyBettyIsRevokedOnOwnerSide", func(t *testing.T) {
