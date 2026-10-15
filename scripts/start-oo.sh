@@ -38,7 +38,7 @@ docker run -d --name $CONTAINER_NAME \
   -e ALLOW_PRIVATE_IP_ADDRESS=true \
   -e ALLOW_META_IP_ADDRESS=true \
   $HOSTS \
-  onlyoffice/documentserver:latest
+  onlyoffice/documentserver:9.4
 
 echo "Waiting for OnlyOffice to be ready..."
 for i in {1..60}; do

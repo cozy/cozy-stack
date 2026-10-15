@@ -103,7 +103,7 @@ Content-Type: application/vnd.api+json
         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.t-IDcSemACt8x4iTMCda8Yhe3iZaWbvV5XKSTbuAn0M",
         "documentType": "word",
         "document": {
-          "filetype": "docx",
+          "fileType": "docx",
           "key": "7c7ccc2e7137ba774b7e44de",
           "title": "Letter.docx",
           "url": "https://bob.cozy.example/files/downloads/735e6cf69af2db82/Letter.docx?Dl=1",
@@ -126,7 +126,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-PDF files use `documentType: "pdf"` and `document.filetype: "pdf"`. For all
+PDF files use `documentType: "pdf"` and `document.fileType: "pdf"`. For all
 supported formats, `document.permissions.edit` is `true` only when the
 `editorConfig.mode` is `"edit"`; it is `false` in read-only mode.
 

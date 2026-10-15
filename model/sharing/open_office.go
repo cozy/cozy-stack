@@ -38,7 +38,7 @@ type onlyOffice struct {
 }
 
 type onlyOfficeDoc struct {
-	FileType    string `json:"filetype,omitempty"`
+	FileType    string `json:"fileType,omitempty"`
 	Key         string `json:"key"`
 	Title       string `json:"title,omitempty"`
 	URL         string `json:"url"`
@@ -97,7 +97,6 @@ func (o *apiOfficeURL) sign(cfg *config.Office) (string, error) {
 
 	claims := *o.OO
 	claims.URL = ""
-	claims.Doc.FileType = ""
 	claims.Doc.Title = ""
 	claims.Doc.Info.Owner = ""
 	claims.Doc.Info.Uploaded = ""
