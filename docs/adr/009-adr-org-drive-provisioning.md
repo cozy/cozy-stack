@@ -127,11 +127,9 @@ sequenceDiagram
   S->>O: mark the drive inactive, store the revision
   S->>J: queue one removal job
   S->>R: ack
-  loop a page of members
-    J->>M: revocation notices, capped in parallel
-    J->>O: one write of the sharing for the page
-  end
-  J->>O: shared references in bulk, by page
+  J->>O: Sharing.Revoke()
+  O->>M: revocation notices through the existing sharing flow
+  O->>O: remove sharing credentials, triggers, references and permissions
   J->>O: folder to the trash
   J->>R: activity exchange, com.twake.drive.org_drive.removed.v1
   Note over J,O: 30 days later
@@ -140,7 +138,7 @@ sequenceDiagram
 
 - Revoking a drive sharing in one call costs one HTTP call and one full sharing write per member, then one update per shared file. For a large drive that does not fit in a delivery, hence the job.
 - Marking the drive inactive cuts every member's access at once, because the drive routes refuse an inactive sharing, also when the organization and the member are on the same stack. The handler does nothing else, so it finishes quickly whatever the size of the drive.
-- The job saves its progress in the sharing at the end of each page. A job that crashes starts again from the next page.
+- The job uses the existing `Sharing.Revoke()` method. Each revoked member is saved by that method, so a retry skips members already revoked. There is no separate revocation or batching implementation for provisioned drives.
 - The folder goes to the trash, and an `@in` trigger set by the job deletes it 30 days after the removal, whatever the trash cleanup setting of the context. Nothing deletes the files inline.
 - When a whole organization goes, each drive is its own command and its own job. The queue prefetch and the job workers cap how much runs at once.
 - A later `created` command with a higher revision creates a new drive. It does not restore the trashed folder.
