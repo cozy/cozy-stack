@@ -199,7 +199,11 @@ func filterMapEvents(ctx context.Context, ds *realtime.Subscriber, ch chan *wsRe
 		}
 		if f, ok := doc.(*vfs.FileDoc); ok {
 			if f.Trashed {
-				return strings.HasPrefix(f.RestorePath, dir.Fullpath+"/")
+				// RestorePath is the fullpath of the directory that
+				// contained the file, so a file trashed at the very root
+				// of the shared folder has an equal RestorePath
+				return f.RestorePath == dir.Fullpath ||
+					strings.HasPrefix(f.RestorePath, dir.Fullpath+"/")
 			}
 			p, err := f.Path(inst.VFS())
 			if err != nil {
