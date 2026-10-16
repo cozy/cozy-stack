@@ -5662,6 +5662,160 @@ func TestSharedDriveRealtime(t *testing.T) {
 	})
 }
 
+// TestSharedDriveRealtimeNestedFolders checks the realtime delivery of
+// GET /sharings/drives/:id/realtime when shared folders are nested
+// (regression tests for issue #4845).
+func TestSharedDriveRealtimeNestedFolders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, _, _ := env.createClients(t)
+
+	// Parent drive D1 shared with Dave; child drive D2 nested inside D1 and
+	// shared with Betty only.
+	driveName := "Realtime Parent Drive"
+	d1ID, d1RootID, _ := createSharedDrive(t, DriveCreationMethodFromFolder,
+		env.acme, env.acmeToken, env.tsA.URL, driveName, "d1",
+		[]RecipientInfo{{Name: "Dave", Email: "dave@example.net", ReadOnly: false}})
+	childDirID := createDirectory(t, eA, d1RootID, "Child", env.acmeToken)
+	d2ID := createDriveOnFolder(t, eA, env.acme, childDirID, env.acmeToken,
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}})
+
+	acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, d1ID)
+	acceptSharedDrive(t, env.acme, env.betty, "Betty", env.tsA.URL, env.tsB.URL, d2ID)
+
+	t.Run("ParentSubscriberReceivesNestedChildContent", func(t *testing.T) {
+		_, _, eD := env.createClients(t)
+
+		ws := eD.GET("/sharings/drives/" + d1ID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.daveToken))
+		time.Sleep(50 * time.Millisecond)
+
+		nestedFileID := createFile(t, eA, childDirID, "InNestedChild.txt", env.acmeToken)
+
+		obj := ws.Expect().TextMessage().JSON().Object()
+		obj.HasValue("event", "CREATED")
+		payload := obj.Value("payload").Object()
+		payload.HasValue("type", consts.Files)
+		payload.HasValue("id", nestedFileID)
+	})
+
+	t.Run("ChildSubscriberReceivesChildEvents", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		ws := eB.GET("/sharings/drives/" + d2ID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		childFileID := createFile(t, eA, childDirID, "ChildRealtime.txt", env.acmeToken)
+
+		obj := ws.Expect().TextMessage().JSON().Object()
+		obj.HasValue("event", "CREATED")
+		payload := obj.Value("payload").Object()
+		payload.HasValue("type", consts.Files)
+		payload.HasValue("id", childFileID)
+	})
+
+	t.Run("ChildOnlyRecipientDoesNotReceiveParentSiblings", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		ws := eB.GET("/sharings/drives/" + d2ID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		// A sibling of the child folder, in the parent tree but outside it
+		createFile(t, eA, d1RootID, "SiblingOutsideChild.txt", env.acmeToken)
+
+		raw := ws.Raw()
+		require.NoError(t, raw.SetReadDeadline(time.Now().Add(250*time.Millisecond)))
+		_, _, err := raw.ReadMessage()
+		require.Error(t, err)
+		netErr, ok := err.(net.Error)
+		require.True(t, ok, "expected a timeout while waiting for an event outside the child tree")
+		require.True(t, netErr.Timeout(), "expected a timeout while waiting for an event outside the child tree")
+	})
+
+	t.Run("ParentSubscriberReceivesRenamedChildDir", func(t *testing.T) {
+		_, _, eD := env.createClients(t)
+
+		ws := eD.GET("/sharings/drives/" + d1ID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.daveToken))
+		time.Sleep(50 * time.Millisecond)
+
+		// The child shared folder itself is renamed: both the new and the
+		// old paths are inside the parent tree
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.DirDoc{
+			Type:     consts.Files,
+			DocID:    childDirID,
+			DocName:  "ChildRenamed",
+			Fullpath: "/" + driveName + "/ChildRenamed",
+		}, &vfs.DirDoc{
+			Type:     consts.Files,
+			DocID:    childDirID,
+			DocName:  "Child",
+			Fullpath: "/" + driveName + "/Child",
+		})
+
+		obj := ws.Expect().TextMessage().JSON().Object()
+		obj.HasValue("event", "UPDATED")
+		payload := obj.Value("payload").Object()
+		payload.HasValue("type", consts.Files)
+		payload.HasValue("id", childDirID)
+	})
+
+	t.Run("ChildSubscriberReceivesTrashedFileEvent", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		ws := eB.GET("/sharings/drives/" + d2ID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, env.bettyToken))
+		time.Sleep(50 * time.Millisecond)
+
+		// A file inside the child folder is trashed: the event doc carries
+		// Trashed=true and its RestorePath points inside the child tree
+		realtime.GetHub().Publish(env.acme, realtime.EventUpdate, &vfs.FileDoc{
+			Type:        consts.Files,
+			DocID:       "trashed-child-file",
+			DocName:     "Gone.txt",
+			Trashed:     true,
+			DirID:       childDirID,
+			RestorePath: "/" + driveName + "/Child",
+		}, nil)
+
+		obj := ws.Expect().TextMessage().JSON().Object()
+		obj.HasValue("event", "UPDATED")
+		payload := obj.Value("payload").Object()
+		payload.HasValue("type", consts.Files)
+		payload.HasValue("id", "trashed-child-file")
+	})
+}
+
 func TestSharedDriveRevocation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
