@@ -339,7 +339,11 @@ export function changesReaderLoop(data: SetupData): void {
   })
 
   const startTime = Date.now()
-  const res = http.get(url, { headers, tags: { scenario: 'changes_readers' } })
+  // A fixed name keeps the since token out of the metric labels.
+  const res = http.get(url, {
+    headers,
+    tags: { name: 'GET /sharings/drives/:id/_changes', scenario: 'changes_readers' },
+  })
   const duration = Date.now() - startTime
   changesFeedDuration.add(duration)
 
