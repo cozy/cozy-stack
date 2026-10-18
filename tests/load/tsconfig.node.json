@@ -5,6 +5,12 @@
   },
   "include": [
     "src/fixtures/upload-sizes.ts",
+    "src/lib/cozy-changes.test.ts",
+    "src/lib/cozy-realtime.test.ts",
+    "src/lib/duration.ts",
+    "src/lib/duration.test.ts",
+    "src/lib/env.ts",
+    "src/lib/env.test.ts",
     "src/lib/upload-consistency.ts",
     "src/lib/upload-consistency.test.ts",
     "src/lib/upload-target.ts",
