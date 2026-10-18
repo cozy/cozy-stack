@@ -2,7 +2,6 @@ import { deepEqual, equal } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
-  computeP95LimitMs,
   getCapacityResultBound,
   searchCapacity,
   type CapacitySearchOptions,
@@ -23,7 +22,6 @@ function makeOptions(
     baselineIterations: 50,
     configuredP95LimitMs: null,
     confirmationIterations: 20,
-    latencyMultiplier: 2,
     maxVus: 16,
     runPoint,
     ...overrides,
@@ -54,7 +52,7 @@ describe('searchCapacity', (): void => {
       baselineP95Ms: 100,
       bound: 'lower_bound',
       maximumVus: 8,
-      p95LimitMs: 200,
+      p95LimitMs: null,
       status: 'completed',
     })
     deepEqual(
@@ -73,13 +71,16 @@ describe('searchCapacity', (): void => {
     )
   })
 
-  it('runs the baseline without a p95 limit and later points with the derived limit', (): void => {
+  it('judges no point on latency unless a limit is configured', (): void => {
     const requests: RecordedRequest[] = []
-    searchCapacity(makeOptions(passUpTo(Infinity, requests), { maxVus: 2 }))
+    const result = searchCapacity(
+      makeOptions(passUpTo(Infinity, requests), { maxVus: 2 }),
+    )
 
+    equal(result.status === 'completed' && result.p95LimitMs, null)
     deepEqual(
       requests.map(({ p95LimitMs }) => p95LimitMs),
-      [null, 200, 200],
+      [null, null, null],
     )
   })
 
@@ -107,7 +108,7 @@ describe('searchCapacity', (): void => {
       baselineP95Ms: 100,
       bound: 'exact',
       maximumVus: 5,
-      p95LimitMs: 200,
+      p95LimitMs: null,
       status: 'completed',
     })
     deepEqual(
@@ -178,7 +179,7 @@ describe('searchCapacity', (): void => {
       baselineP95Ms: 100,
       bound: 'exact',
       maximumVus: 3,
-      p95LimitMs: 200,
+      p95LimitMs: null,
       status: 'completed',
     })
     deepEqual(
@@ -216,7 +217,7 @@ describe('searchCapacity', (): void => {
       baselineP95Ms: 100,
       bound: 'exact',
       maximumVus: 0,
-      p95LimitMs: 200,
+      p95LimitMs: null,
       status: 'completed',
     })
     equal(requests.length, 1)
@@ -287,15 +288,5 @@ describe('getCapacityResultBound', (): void => {
 
   it('returns an exact bound when a failing level was measured', (): void => {
     equal(getCapacityResultBound(7, 8, 8), 'exact')
-  })
-})
-
-describe('computeP95LimitMs', (): void => {
-  it('uses the baseline multiplier when no absolute limit is configured', (): void => {
-    equal(computeP95LimitMs(25, 20, null), 500)
-  })
-
-  it('uses the absolute limit when configured', (): void => {
-    equal(computeP95LimitMs(25, 20, 2_000), 2_000)
   })
 })

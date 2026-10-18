@@ -12,6 +12,7 @@ import {
 const passingMetrics: UploadPointMetrics = {
   cleanupRate: 1,
   completedIterations: 4,
+  consistencyRate: 1,
   droppedIterations: 0,
   p95Ms: 150,
   successRate: 1,
@@ -41,6 +42,7 @@ describe('readUploadPointMetrics', (): void => {
           http_req_duration: { 'p(95)': 999 },
           'http_req_duration{operation:file-upload}': { 'p(95)': 120 },
           iterations: { count: 10 },
+          upload_consistency: { value: 1 },
           upload_success: { value: 0.5 },
           'upload_success{operation:file-upload}': { value: 0.9 },
         },
@@ -48,10 +50,25 @@ describe('readUploadPointMetrics', (): void => {
       {
         cleanupRate: 1,
         completedIterations: 10,
+        consistencyRate: 1,
         droppedIterations: 2,
         p95Ms: 120,
         successRate: 0.9,
       },
+    )
+  })
+
+  it('reports no consistency rate when the scenario did not record one', (): void => {
+    equal(
+      readUploadPointMetrics({
+        metrics: {
+          cleanup_success: { value: 1 },
+          http_req_duration: { 'p(95)': 120 },
+          iterations: { count: 10 },
+          upload_success: { value: 1 },
+        },
+      })?.consistencyRate,
+      null,
     )
   })
 
@@ -108,6 +125,26 @@ describe('classifyUploadPoint', (): void => {
       reason: 'summary is missing required metrics',
       result: 'infrastructure_failure',
     })
+  })
+
+  it('fails a point whose uploads did not read back intact, even after k6 aborted', (): void => {
+    deepEqual(
+      classifyUploadPoint(
+        makeInput({
+          metrics: {
+            ...passingMetrics,
+            cleanupRate: 0,
+            completedIterations: 2,
+            consistencyRate: 0.5,
+          },
+          runnerExitCode: 108,
+        }),
+      ),
+      {
+        reason: 'uploaded content did not match after download',
+        result: 'failed',
+      },
+    )
   })
 
   it('reports cleanup failures before measured failures', (): void => {

@@ -46,6 +46,7 @@ export const options: Options = {
       stages: buildRampingVuStages(
         rampPlan,
         rampPlan.vusPerLevel.changesReaders,
+        { drain: true },
       ),
       startVUs: 0,
     },

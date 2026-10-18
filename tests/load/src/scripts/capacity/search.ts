@@ -24,7 +24,6 @@ export type CapacitySearchOptions = {
   baselineIterations: number
   configuredP95LimitMs: number | null
   confirmationIterations: number
-  latencyMultiplier: number
   log?: (message: string) => void
   maxVus: number
   runPoint: (request: PointRequest) => PointOutcome
@@ -35,7 +34,7 @@ export type CapacitySearchResult =
       baselineP95Ms: number
       bound: ResultBound
       maximumVus: number
-      p95LimitMs: number
+      p95LimitMs: number | null
       status: 'completed'
     }
   | {
@@ -46,19 +45,13 @@ export type CapacitySearchResult =
 type SearchContext = {
   log: (message: string) => void
   options: CapacitySearchOptions
-  p95LimitMs: number
+  p95LimitMs: number | null
 }
 
 // The search only orders k6 points. Running a point, judging it, and keeping
 // the report stay with the caller, which makes the search testable without k6.
-
-export function computeP95LimitMs(
-  baselineP95Ms: number,
-  latencyMultiplier: number,
-  configuredP95LimitMs: number | null,
-): number {
-  return configuredP95LimitMs ?? baselineP95Ms * latencyMultiplier
-}
+// Points are judged on latency only when an absolute limit is configured: a
+// limit derived from the 1-VU baseline mostly measured latency doubling.
 
 export function getCapacityResultBound(
   candidateVus: number,
@@ -221,11 +214,7 @@ export function searchCapacity(
   }
 
   const baselineP95Ms = baselineOutcome.p95Ms
-  const p95LimitMs = computeP95LimitMs(
-    baselineP95Ms,
-    options.latencyMultiplier,
-    options.configuredP95LimitMs,
-  )
+  const p95LimitMs = options.configuredP95LimitMs
   const complete = (
     maximumVus: number,
     bound: ResultBound,

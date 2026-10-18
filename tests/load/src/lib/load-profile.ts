@@ -6,6 +6,12 @@ import { parsePositiveIntegerEnv } from './env.ts'
 // level being held, so one k6 run can judge each level separately.
 
 const RAMP_TRANSITION_MS = 10_000
+// Changes readers keep polling this long after the last hold, so the changes
+// of the last uploads are still counted.
+const RAMP_DRAIN_MS = 10_000
+// WebSocket sessions stay open this long after their hold, so events of
+// uploads that finish at the boundary still arrive.
+export const RAMP_EVENT_GRACE_MS = 2_000
 const MINIMUM_HOLD_MS = 5_000
 const DEFAULT_RAMP_LEVELS = '1,2,4,8,16'
 
@@ -27,8 +33,10 @@ export type RampPhase = {
   level: number | null
 }
 
+// A level fails on errors or missing events. Latency is judged only when an
+// absolute limit is configured; otherwise the p95 is reported for reference.
 export type RampCriteria = {
-  latencyMultiplier: number
+  minimumDeliveryRatio: number
   minimumSuccessRate: number
   p95LimitMs: number | null
 }
@@ -51,6 +59,8 @@ export type RampLevelStatus = 'passed' | 'failed' | 'not_measured' | 'not_run'
 export type RampResultBound = 'exact' | 'lower_bound' | 'inconclusive'
 
 export type RampLevelResult = {
+  changes_delivery_ratio: number | null
+  changes_items: number | null
   changes_p95_ms: number | null
   changes_success_rate: number | null
   level: number
@@ -58,18 +68,19 @@ export type RampLevelResult = {
   status: RampLevelStatus
   upload_p95_ms: number | null
   upload_success_rate: number | null
+  uploads: number | null
   ws_auth_rate: number | null
+  ws_delivery_ratio: number | null
+  ws_events: number | null
   ws_handshake_rate: number | null
 }
 
 export type RampReport = {
   criteria: {
-    baseline_level: number
-    changes_p95_limit_ms: number | null
+    minimum_delivery_ratio: number
     minimum_success_rate: number
-    p95_baseline_multiplier: number | null
-    p95_limit_mode: 'absolute' | 'baseline_multiplier'
-    upload_p95_limit_ms: number | null
+    p95_limit_mode: 'absolute' | 'none'
+    p95_limit_ms: number | null
   }
   levels: RampLevelResult[]
   max_sustained_level: number
@@ -91,12 +102,26 @@ type RateKey =
   | 'ws_handshake_rate'
 
 type TrendKey = 'changes_p95_ms' | 'upload_p95_ms'
+type DeliveryKey = 'changes_delivery_ratio' | 'ws_delivery_ratio'
+type CountKey = 'changes_items' | 'ws_events'
 
 type JudgedRate = { key: RateKey; label: string; metric: string }
 type JudgedTrend = {
   key: TrendKey
   label: string
   metric: string
+  tags: Record<string, string>
+}
+
+// Every reader should see one event or change per successful upload of its
+// level. k6 cannot match events to uploads across VUs, so delivery is judged
+// on totals; the minimum ratio absorbs the reconnect at each level boundary.
+type JudgedDelivery = {
+  countKey: CountKey
+  key: DeliveryKey
+  label: string
+  metric: string
+  readersPerLevel: (vusPerLevel: RampVusPerLevel) => number
   tags: Record<string, string>
 }
 
@@ -130,6 +155,26 @@ const judgedTrends: readonly JudgedTrend[] = [
     key: 'changes_p95_ms',
     label: 'changes p95',
     metric: 'shared_drive_changes_duration_ms',
+    tags: {},
+  },
+]
+
+const judgedDeliveries: readonly JudgedDelivery[] = [
+  {
+    countKey: 'ws_events',
+    key: 'ws_delivery_ratio',
+    label: 'ws event delivery',
+    metric: 'shared_drive_ws_events_total',
+    readersPerLevel: ({ wsReaders }: RampVusPerLevel): number => wsReaders,
+    tags: { event: 'CREATED' },
+  },
+  {
+    countKey: 'changes_items',
+    key: 'changes_delivery_ratio',
+    label: 'changes delivery',
+    metric: 'shared_drive_changes_items_total',
+    readersPerLevel: ({ changesReaders }: RampVusPerLevel): number =>
+      changesReaders,
     tags: {},
   },
 ]
@@ -190,26 +235,26 @@ function parsePositiveNumber(name: string, raw: string): number {
   return value
 }
 
-export function parseRampCriteria(env: Environment): RampCriteria {
-  const rawSuccessRate = env.MIN_SUCCESS_RATE || '0.99'
-  const minimumSuccessRate = Number(rawSuccessRate)
+function parseRatio(name: string, raw: string): number {
+  const value = Number(raw)
 
-  if (
-    !Number.isFinite(minimumSuccessRate) ||
-    minimumSuccessRate <= 0 ||
-    minimumSuccessRate > 1
-  ) {
-    throw new Error(
-      `MIN_SUCCESS_RATE must be greater than 0 and at most 1, got "${rawSuccessRate}"`,
-    )
+  if (!Number.isFinite(value) || value <= 0 || value > 1) {
+    throw new Error(`${name} must be greater than 0 and at most 1, got "${raw}"`)
   }
 
+  return value
+}
+
+export function parseRampCriteria(env: Environment): RampCriteria {
   return {
-    latencyMultiplier: parsePositiveNumber(
-      'LATENCY_MULTIPLIER',
-      env.LATENCY_MULTIPLIER || '2',
+    minimumDeliveryRatio: parseRatio(
+      'MIN_DELIVERY_RATIO',
+      env.MIN_DELIVERY_RATIO || '0.9',
     ),
-    minimumSuccessRate,
+    minimumSuccessRate: parseRatio(
+      'MIN_SUCCESS_RATE',
+      env.MIN_SUCCESS_RATE || '0.99',
+    ),
     p95LimitMs: env.P95_LIMIT_MS
       ? parsePositiveNumber('P95_LIMIT_MS', env.P95_LIMIT_MS)
       : null,
@@ -227,14 +272,20 @@ export function getRampTotalDurationMs(plan: RampPlan): number {
 export function buildRampingVuStages(
   plan: RampPlan,
   vusPerLevel: number,
+  { drain = false }: { drain?: boolean } = {},
 ): RampingVuStage[] {
-  return plan.levels.flatMap((level: number): RampingVuStage[] => {
+  const stages = plan.levels.flatMap((level: number): RampingVuStage[] => {
     const target = level * vusPerLevel
     return [
       { duration: `${plan.transitionMs}ms`, target },
       { duration: `${plan.holdMs}ms`, target },
     ]
   })
+  const lastTarget = stages[stages.length - 1]?.target ?? 0
+
+  return drain
+    ? [...stages, { duration: `${RAMP_DRAIN_MS}ms`, target: lastTarget }]
+    : stages
 }
 
 export function getRampPhaseAt(plan: RampPlan, elapsedMs: number): RampPhase {
@@ -251,6 +302,37 @@ export function getRampPhaseAt(plan: RampPlan, elapsedMs: number): RampPhase {
   return elapsedMs < transitionEndsAtMs
     ? { endsAtMs: transitionEndsAtMs, level: null }
     : { endsAtMs: (index + 1) * spanMs, level }
+}
+
+// A WebSocket session started during a transition serves the upcoming level
+// and lasts until that level's hold ends, so readers are connected for the
+// whole hold and reconnect only during transitions.
+export function getServedRampPhase(plan: RampPlan, elapsedMs: number): RampPhase {
+  const phase = getRampPhaseAt(plan, elapsedMs)
+
+  if (phase.level !== null) {
+    return phase
+  }
+
+  const upcoming = getRampPhaseAt(plan, phase.endsAtMs)
+  return upcoming.level === null ? phase : upcoming
+}
+
+const RAMP_UPLOAD_LEVEL_PATTERN = /^sd-L([1-9][0-9]*)-/
+
+// Ramp uploads carry the level that produced them in their name. Events and
+// changes include the file name, so readers attribute what they receive to
+// the right level whenever it arrives.
+export function getRampUploadPrefix(phase: RampPhase): string {
+  return phase.level === null ? 'sd-transition-' : `sd-L${phase.level}-`
+}
+
+export function parseRampUploadLevel(name: unknown): string {
+  if (typeof name !== 'string') {
+    return 'unattributed'
+  }
+
+  return RAMP_UPLOAD_LEVEL_PATTERN.exec(name)?.[1] ?? 'unattributed'
 }
 
 export function rampLevelMetricName(
@@ -287,18 +369,24 @@ export function buildRampThresholds(
     for (const { metric, tags } of judgedTrends) {
       thresholds[rampLevelMetricName(metric, level, tags)] = ['p(95)>=0']
     }
+    for (const { metric, tags } of judgedDeliveries) {
+      thresholds[rampLevelMetricName(metric, level, tags)] = ['count>=0']
+    }
   }
 
   return thresholds
 }
 
-function readRate(metrics: SummaryMetrics, name: string): number | null {
+type RateReading = { passes: number; rate: number }
+
+function readRate(metrics: SummaryMetrics, name: string): RateReading | null {
   const values = metrics[name]?.values
-  const samples = (values?.passes ?? 0) + (values?.fails ?? 0)
+  const passes = values?.passes ?? 0
+  const samples = passes + (values?.fails ?? 0)
   const rate = values?.rate
 
   return samples > 0 && typeof rate === 'number' && Number.isFinite(rate)
-    ? rate
+    ? { passes, rate }
     : null
 }
 
@@ -315,93 +403,131 @@ function readP95(metrics: SummaryMetrics, name: string): number | null {
     : null
 }
 
+function readCount(metrics: SummaryMetrics, name: string): number | null {
+  const value = metrics[name]?.values?.count
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function round(value: number, digits: number): number {
   return Number(value.toFixed(digits))
 }
 
-type LatencyLimits = Record<TrendKey, number | null>
+type Verdicts = { failures: string[]; missing: string[] }
 
-function getLatencyLimits(
-  metrics: SummaryMetrics,
-  plan: RampPlan,
+function judgeRates(
+  rates: Record<RateKey, RateReading | null>,
   criteria: RampCriteria,
-): LatencyLimits {
-  const baselineLevel = plan.levels[0] ?? 1
-  const limitFor = (trend: JudgedTrend): number | null => {
-    if (criteria.p95LimitMs !== null) {
-      return criteria.p95LimitMs
+  verdicts: Verdicts,
+): void {
+  for (const { key, label } of judgedRates) {
+    const reading = rates[key]
+    if (reading === null) {
+      verdicts.missing.push(`${label} has no samples`)
+    } else if (reading.rate < criteria.minimumSuccessRate) {
+      verdicts.failures.push(
+        `${label} ${round(reading.rate, 4)} is below ${criteria.minimumSuccessRate}`,
+      )
     }
+  }
+}
 
-    const baseline = readP95(
-      metrics,
-      rampLevelMetricName(trend.metric, baselineLevel, trend.tags),
-    )
-    return baseline === null ? null : baseline * criteria.latencyMultiplier
+function judgeDeliveries(
+  ratios: Record<DeliveryKey, number | null>,
+  counts: Record<CountKey, number | null>,
+  criteria: RampCriteria,
+  verdicts: Verdicts,
+): void {
+  for (const { countKey, key, label } of judgedDeliveries) {
+    const ratio = ratios[key]
+    if (counts[countKey] === null) {
+      verdicts.missing.push(`${label} has no samples`)
+    } else if (ratio === null) {
+      verdicts.missing.push(`${label} has no uploads to compare with`)
+    } else if (ratio < criteria.minimumDeliveryRatio) {
+      verdicts.failures.push(
+        `${label} ${round(ratio, 4)} is below ${criteria.minimumDeliveryRatio}`,
+      )
+    }
+  }
+}
+
+function judgeTrends(
+  trends: Record<TrendKey, number | null>,
+  criteria: RampCriteria,
+  verdicts: Verdicts,
+): void {
+  const limit = criteria.p95LimitMs
+  if (limit === null) {
+    return
   }
 
-  return Object.fromEntries(
-    judgedTrends.map((trend: JudgedTrend) => [trend.key, limitFor(trend)]),
-  ) as LatencyLimits
+  for (const { key, label } of judgedTrends) {
+    const value = trends[key]
+    if (value === null) {
+      verdicts.missing.push(`${label} has no samples`)
+    } else if (value > limit) {
+      verdicts.failures.push(`${label} ${round(value, 1)} ms exceeds ${limit} ms`)
+    }
+  }
 }
 
 function evaluateLevel(
   metrics: SummaryMetrics,
   level: number,
+  plan: RampPlan,
   criteria: RampCriteria,
-  limits: LatencyLimits,
 ): RampLevelResult {
   const rates = Object.fromEntries(
     judgedRates.map(({ key, metric }) => [
       key,
       readRate(metrics, rampLevelMetricName(metric, level)),
     ]),
-  ) as Record<RateKey, number | null>
+  ) as Record<RateKey, RateReading | null>
   const trends = Object.fromEntries(
     judgedTrends.map(({ key, metric, tags }) => [
       key,
       readP95(metrics, rampLevelMetricName(metric, level, tags)),
     ]),
   ) as Record<TrendKey, number | null>
+  const uploads = rates.upload_success_rate?.passes ?? null
+  const counts = Object.fromEntries(
+    judgedDeliveries.map(({ countKey, metric, tags }) => [
+      countKey,
+      readCount(metrics, rampLevelMetricName(metric, level, tags)),
+    ]),
+  ) as Record<CountKey, number | null>
+  const ratios = Object.fromEntries(
+    judgedDeliveries.map(({ countKey, key, readersPerLevel }) => {
+      const count = counts[countKey]
+      const expected =
+        (uploads ?? 0) * level * readersPerLevel(plan.vusPerLevel)
+      return [key, count === null || expected === 0 ? null : count / expected]
+    }),
+  ) as Record<DeliveryKey, number | null>
   const result: RampLevelResult = {
-    ...rates,
+    ...counts,
+    ...ratios,
     ...trends,
+    changes_success_rate: rates.changes_success_rate?.rate ?? null,
     level,
     reasons: [],
     status: 'passed',
+    upload_success_rate: rates.upload_success_rate?.rate ?? null,
+    uploads,
+    ws_auth_rate: rates.ws_auth_rate?.rate ?? null,
+    ws_handshake_rate: rates.ws_handshake_rate?.rate ?? null,
   }
 
   if (rates.upload_success_rate === null && rates.changes_success_rate === null) {
     return { ...result, status: 'not_run' }
   }
 
-  const failures: string[] = []
-  const missing: string[] = []
+  const verdicts: Verdicts = { failures: [], missing: [] }
+  judgeRates(rates, criteria, verdicts)
+  judgeDeliveries(ratios, counts, criteria, verdicts)
+  judgeTrends(trends, criteria, verdicts)
 
-  for (const { key, label } of judgedRates) {
-    const value = rates[key]
-    if (value === null) {
-      missing.push(`${label} has no samples`)
-    } else if (value < criteria.minimumSuccessRate) {
-      failures.push(
-        `${label} ${round(value, 4)} is below ${criteria.minimumSuccessRate}`,
-      )
-    }
-  }
-
-  for (const { key, label } of judgedTrends) {
-    const value = trends[key]
-    const limit = limits[key]
-    if (value === null) {
-      missing.push(`${label} has no samples`)
-    } else if (limit === null) {
-      missing.push(`${label} has no baseline to compare with`)
-    } else if (value > limit) {
-      failures.push(
-        `${label} ${round(value, 1)} ms exceeds ${round(limit, 1)} ms`,
-      )
-    }
-  }
-
+  const { failures, missing } = verdicts
   const status: RampLevelStatus =
     failures.length > 0 ? 'failed' : missing.length > 0 ? 'not_measured' : 'passed'
 
@@ -413,10 +539,9 @@ export function evaluateRampLevels(
   plan: RampPlan,
   criteria: RampCriteria,
 ): RampReport {
-  const limits = getLatencyLimits(metrics, plan, criteria)
   const levels = plan.levels.map(
     (level: number): RampLevelResult =>
-      evaluateLevel(metrics, level, criteria, limits),
+      evaluateLevel(metrics, level, plan, criteria),
   )
   const firstNotPassed = levels.find(
     ({ status }: RampLevelResult): boolean => status !== 'passed',
@@ -436,13 +561,10 @@ export function evaluateRampLevels(
 
   return {
     criteria: {
-      baseline_level: plan.levels[0] ?? 1,
-      changes_p95_limit_ms: limits.changes_p95_ms,
+      minimum_delivery_ratio: criteria.minimumDeliveryRatio,
       minimum_success_rate: criteria.minimumSuccessRate,
-      p95_baseline_multiplier:
-        criteria.p95LimitMs === null ? criteria.latencyMultiplier : null,
-      p95_limit_mode: criteria.p95LimitMs === null ? 'baseline_multiplier' : 'absolute',
-      upload_p95_limit_ms: limits.upload_p95_ms,
+      p95_limit_mode: criteria.p95LimitMs === null ? 'none' : 'absolute',
+      p95_limit_ms: criteria.p95LimitMs,
     },
     levels,
     max_sustained_level: maxSustainedLevel,
