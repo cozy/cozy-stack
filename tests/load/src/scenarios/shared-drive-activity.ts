@@ -10,6 +10,7 @@ import { randomizeUploadData } from '../fixtures/upload-data.ts'
 import {
   buildChangesFeedUrl,
   parseChangesFeedResponse,
+  type ChangesFeedItem,
 } from '../lib/cozy-changes.ts'
 import {
   fetchCreatedTestDirectory,
@@ -22,6 +23,7 @@ import {
   formatAuthMessage,
   getSharedDriveWsUrl,
   parseRealtimeMessage,
+  type RealtimeEventPayload,
 } from '../lib/cozy-realtime.ts'
 import {
   getWsSessionDurationMs,
@@ -31,6 +33,10 @@ import { parsePositiveIntegerEnv } from '../lib/env.ts'
 import {
   getRampPhaseAt,
   getRampTotalDurationMs,
+  getRampUploadPrefix,
+  getServedRampPhase,
+  parseRampUploadLevel,
+  RAMP_EVENT_GRACE_MS,
   type RampPhase,
   type RampPlan,
 } from '../lib/load-profile.ts'
@@ -159,12 +165,16 @@ export function setup(): SetupData {
 // In ramp mode every sample carries the level being held, so the summary can
 // judge each level on its own. Samples taken during a transition are tagged
 // apart and never judged.
-function tagRampLevel(data: SetupData, elapsedMs: number): RampPhase | null {
+function tagRampLevel(
+  data: SetupData,
+  elapsedMs: number,
+  resolvePhase: (plan: RampPlan, elapsedMs: number) => RampPhase = getRampPhaseAt,
+): RampPhase | null {
   if (data.rampPlan === null) {
     return null
   }
 
-  const phase = getRampPhaseAt(data.rampPlan, elapsedMs)
+  const phase = resolvePhase(data.rampPlan, elapsedMs)
   exec.vu.metrics.tags.level =
     phase.level === null ? 'transition' : String(phase.level)
   return phase
@@ -176,12 +186,13 @@ function getElapsedMs(): number {
 
 // --- Scenario 1: Writers ---
 export function writerLoop(data: SetupData): void {
-  tagRampLevel(data, getElapsedMs())
+  const phase = tagRampLevel(data, getElapsedMs())
 
   const vu = exec.vu.idInTest
   const iter = exec.vu.iterationInInstance
   const marker = [iter, vu, Date.now(), Math.floor(Math.random() * 0xffffffff)].join('-')
-  const filename = `sd-vu${vu}-iter${iter}-${marker}.bin`
+  const prefix = phase === null ? 'sd-' : getRampUploadPrefix(phase)
+  const filename = `${prefix}vu${vu}-iter${iter}-${marker}.bin`
   const uploadBody = randomizeUploadData(marker)
   const expectedChecksum = md5(uploadBody, 'base64')
 
@@ -214,10 +225,13 @@ export function writerLoop(data: SetupData): void {
 // --- Scenario 2: WebSocket Readers ---
 export function wsReaderLoop(data: SetupData): void {
   const elapsedMs = getElapsedMs()
-  const phase = tagRampLevel(data, elapsedMs)
-  // A ramp session must not outlive its phase, or its samples would be
-  // judged against the wrong level.
-  const sessionEndsAtMs = phase === null ? data.testDurationMs : phase.endsAtMs
+  // A ramp session serves one level: started during a transition, it stays
+  // connected until the upcoming hold ends, so no event of the hold is missed.
+  const phase = tagRampLevel(data, elapsedMs, getServedRampPhase)
+  const sessionEndsAtMs =
+    phase === null
+      ? data.testDurationMs
+      : phase.endsAtMs + (phase.level === null ? 0 : RAMP_EVENT_GRACE_MS)
   const timeRemainingMs = sessionEndsAtMs - elapsedMs
   if (timeRemainingMs < 1000) {
     sleep(1)
@@ -246,7 +260,14 @@ export function wsReaderLoop(data: SetupData): void {
           wsErrorsReceived.add(1)
           wsAuthSuccessRate.add(0)
         } else if (parsed.event === 'CREATED' || parsed.event === 'UPDATED') {
-          wsEventsReceived.add(1, { event: parsed.event })
+          const payload = parsed.payload as RealtimeEventPayload | undefined
+          // Ramp events count toward the level of the upload that caused them.
+          wsEventsReceived.add(
+            1,
+            data.rampPlan === null
+              ? { event: parsed.event }
+              : { event: parsed.event, level: parseRampUploadLevel(payload?.doc?.name) },
+          )
           check(parsed, {
             'ws received valid file event': (p) =>
               Boolean(p.payload && p.payload.type === 'io.cozy.files' && p.payload.id),
@@ -281,6 +302,26 @@ export function wsReaderLoop(data: SetupData): void {
 // --- Scenario 3: Changes Feed Readers ---
 let vuSince = 'now'
 
+// Ramp changes count toward the level of the upload that caused them, even
+// when they are polled after that level's hold.
+function addChangesItems(data: SetupData, results: ChangesFeedItem[]): void {
+  if (data.rampPlan === null) {
+    if (results.length > 0) {
+      changesItemsReceived.add(results.length)
+    }
+    return
+  }
+
+  const countsByLevel: Record<string, number> = {}
+  for (const item of results) {
+    const level = parseRampUploadLevel(item.doc?.name)
+    countsByLevel[level] = (countsByLevel[level] ?? 0) + 1
+  }
+  for (const [level, count] of Object.entries(countsByLevel)) {
+    changesItemsReceived.add(count, { level })
+  }
+}
+
 export function changesReaderLoop(data: SetupData): void {
   tagRampLevel(data, getElapsedMs())
 
@@ -311,9 +352,7 @@ export function changesReaderLoop(data: SetupData): void {
     try {
       const parsed = parseChangesFeedResponse(res.body)
       vuSince = parsed.last_seq
-      if (parsed.results.length > 0) {
-        changesItemsReceived.add(parsed.results.length)
-      }
+      addChangesItems(data, parsed.results)
       changesPending.add(parsed.pending)
       if (parsed.pending > 0) {
         return

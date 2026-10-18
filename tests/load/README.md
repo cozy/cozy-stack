@@ -294,13 +294,20 @@ Shared drives can be tested in two modes:
    a hold of `RAMP_STEP_DURATION`. Samples taken during the hold are tagged
    with `level`; transitions are tagged apart and never judged.
 
-   After the run, `handleSummary()` judges each level. A level passes when
-   the upload, changes, WebSocket handshake, and WebSocket auth success
-   rates reach `MIN_SUCCESS_RATE` (default 0.99), and the upload and
-   changes p95 stay within `P95_LIMIT_MS`. Without an absolute limit, the
-   p95 limit is `LATENCY_MULTIPLIER` (default 2) times the first level's
-   p95. Prefer `P95_LIMIT_MS` when first-level latencies are only a few
-   milliseconds, because doubling them is within normal jitter.
+   After the run, `handleSummary()` judges each level on errors and
+   missing events:
+
+   - the upload, changes, WebSocket handshake, and WebSocket auth success
+     rates must reach `MIN_SUCCESS_RATE` (default 0.99);
+   - WebSocket readers must receive a `CREATED` event, and changes readers
+     a change, for every successful upload of the level. k6 cannot match
+     events to uploads across VUs, so this compares totals: received
+     divided by uploads × readers must reach `MIN_DELIVERY_RATIO`
+     (default 0.9), which absorbs the reconnect at each level boundary.
+
+   Latency is judged only when `P95_LIMIT_MS` is set: the upload and
+   changes p95 must then stay within it. Otherwise each level's p95 is
+   reported for reference.
 
    The result is written to
    `data/results/<EXECUTION_ID>-shared-drive-ramp.json`.
@@ -362,7 +369,7 @@ $ make upload-capacity-all
 
 For each size, the coordinator:
 
-1. Measures 50 uploads at 1 VU to establish the same-size p95 baseline.
+1. Measures 50 uploads at 1 VU as a baseline point.
 2. Tries burst levels 2, 4, 8, and so on, with one upload per VU.
 3. Retries a failing burst once and uses a third run when the first two
    disagree.
@@ -378,11 +385,13 @@ which point to run next.
 We should not use Node for steady load, ramps, or fixed request rates. k6
 already supports those workload shapes.
 
-A point passes only when upload success is at least 99%, no iterations are
-dropped, and upload p95 is within the configured limit. By default the limit is
-twice the 1-VU baseline. For a repeatable load-environment contract, set an
-absolute `P95_LIMIT_MS`; it replaces the multiplier while the baseline remains
-in the report for comparison.
+A point passes when upload success is at least `MIN_SUCCESS_RATE` (99%), no
+iterations are dropped, and every upload reads back with the same checksum. A
+checksum mismatch aborts the k6 point and fails it; the search then continues
+below that level. Latency is not judged by default, because a limit derived
+from the nearly idle 1-VU baseline mostly measured latency doubling. To add a
+latency contract, set an absolute `P95_LIMIT_MS`. Every point's p95 is in the
+report either way.
 
 ```console
 $ make upload-capacity FILE_SIZE=100K MAX_VUS=64 \
@@ -416,8 +425,8 @@ object-storage cost estimates.
 
 The aggregate report is written to
 `data/results/<campaign>-upload-capacity.json`. It records every attempt, p95,
-success rate, dropped and completed iterations, cleanup result, and the k6
-summary path. An `exact` result has a measured failing level above it. A
+success rate, consistency rate, dropped and completed iterations, cleanup
+result, and the k6 summary path. An `exact` result has a measured failing level above it. A
 `lower_bound` result is displayed as `maximum >= MAX_VUS`, because the
 configured cap passed and no higher level was attempted.
 

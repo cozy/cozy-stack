@@ -7,10 +7,13 @@ import {
   evaluateRampLevels,
   formatRampReport,
   getRampPhaseAt,
+  getRampUploadPrefix,
+  getServedRampPhase,
   getRampTotalDurationMs,
   parseRampCriteria,
   parseRampLevels,
   parseRampPlan,
+  parseRampUploadLevel,
   rampLevelMetricName,
   type RampCriteria,
   type RampPlan,
@@ -25,24 +28,31 @@ const plan: RampPlan = {
 }
 
 const criteria: RampCriteria = {
-  latencyMultiplier: 2,
+  minimumDeliveryRatio: 0.9,
   minimumSuccessRate: 0.99,
   p95LimitMs: null,
 }
 
+const SAMPLES = 100
+
 type LevelSample = {
+  changesDelivery?: number | undefined
   changesP95?: number | undefined
   changesSuccess?: number | undefined
   uploadP95?: number | undefined
   uploadSuccess?: number | undefined
   wsAuth?: number | undefined
+  wsDelivery?: number | undefined
   wsHandshake?: number | undefined
 }
 
 function rate(value: number | undefined): { values: Record<string, number> } {
-  return value === undefined
-    ? { values: { fails: 0, passes: 0, rate: 0 } }
-    : { values: { fails: 1 - value, passes: value, rate: value } }
+  if (value === undefined) {
+    return { values: { fails: 0, passes: 0, rate: 0 } }
+  }
+
+  const passes = Math.round(value * SAMPLES)
+  return { values: { fails: SAMPLES - passes, passes, rate: value } }
 }
 
 // k6 keeps an empty placeholder submetric with a p95 of 0 and a count of 0.
@@ -52,27 +62,42 @@ function trend(value: number | undefined): { values: Record<string, number> } {
     : { values: { count: 10, 'p(95)': value } }
 }
 
+function counter(value: number): { values: Record<string, number> } {
+  return { values: { count: value } }
+}
+
+// Delivery ratios are turned into event counts: every reader should see one
+// event or change per successful upload of its level.
 function makeMetrics(samples: Record<number, LevelSample>): SummaryMetrics {
   const metrics: SummaryMetrics = {}
 
   for (const [rawLevel, sample] of Object.entries(samples)) {
     const level = Number(rawLevel)
-    metrics[rampLevelMetricName('shared_drive_upload_success_rate', level)] =
-      rate(sample.uploadSuccess)
-    metrics[rampLevelMetricName('shared_drive_changes_success_rate', level)] =
-      rate(sample.changesSuccess)
-    metrics[rampLevelMetricName('shared_drive_ws_handshake_rate', level)] =
-      rate(sample.wsHandshake)
-    metrics[rampLevelMetricName('shared_drive_ws_auth_rate', level)] = rate(
-      sample.wsAuth,
+    const uploads = Math.round((sample.uploadSuccess ?? 0) * SAMPLES)
+    const name = (metric: string, tags: Record<string, string> = {}): string =>
+      rampLevelMetricName(metric, level, tags)
+
+    metrics[name('shared_drive_upload_success_rate')] = rate(sample.uploadSuccess)
+    metrics[name('shared_drive_changes_success_rate')] = rate(sample.changesSuccess)
+    metrics[name('shared_drive_ws_handshake_rate')] = rate(sample.wsHandshake)
+    metrics[name('shared_drive_ws_auth_rate')] = rate(sample.wsAuth)
+    metrics[name('http_req_duration', { operation: 'file-upload' })] = trend(
+      sample.uploadP95,
     )
-    metrics[
-      rampLevelMetricName('http_req_duration', level, {
-        operation: 'file-upload',
-      })
-    ] = trend(sample.uploadP95)
-    metrics[rampLevelMetricName('shared_drive_changes_duration_ms', level)] =
-      trend(sample.changesP95)
+    metrics[name('shared_drive_changes_duration_ms')] = trend(sample.changesP95)
+    metrics[name('shared_drive_ws_events_total', { event: 'CREATED' })] = counter(
+      Math.round(
+        (sample.wsDelivery ?? 1) * uploads * level * plan.vusPerLevel.wsReaders,
+      ),
+    )
+    metrics[name('shared_drive_changes_items_total')] = counter(
+      Math.round(
+        (sample.changesDelivery ?? 1) *
+          uploads *
+          level *
+          plan.vusPerLevel.changesReaders,
+      ),
+    )
   }
 
   return metrics
@@ -127,7 +152,7 @@ describe('parseRampPlan', (): void => {
     )
   })
 
-  it('rejects hold durations too short to measure a p95', (): void => {
+  it('rejects hold durations too short to measure a level', (): void => {
     throws(
       () => parseRampPlan({ RAMP_STEP_DURATION: '4s' }),
       /RAMP_STEP_DURATION must be at least 5s/,
@@ -136,26 +161,27 @@ describe('parseRampPlan', (): void => {
 })
 
 describe('parseRampCriteria', (): void => {
-  it('uses the documented defaults', (): void => {
+  it('judges no latency by default', (): void => {
     deepEqual(parseRampCriteria({}), criteria)
   })
 
   it('reads explicit values', (): void => {
     deepEqual(
       parseRampCriteria({
-        LATENCY_MULTIPLIER: '3',
+        MIN_DELIVERY_RATIO: '0.8',
         MIN_SUCCESS_RATE: '0.95',
         P95_LIMIT_MS: '500',
       }),
-      { latencyMultiplier: 3, minimumSuccessRate: 0.95, p95LimitMs: 500 },
+      { minimumDeliveryRatio: 0.8, minimumSuccessRate: 0.95, p95LimitMs: 500 },
     )
   })
 
   it('rejects invalid values', (): void => {
     throws(() => parseRampCriteria({ MIN_SUCCESS_RATE: '0' }), /MIN_SUCCESS_RATE/)
     throws(() => parseRampCriteria({ MIN_SUCCESS_RATE: '1.5' }), /MIN_SUCCESS_RATE/)
+    throws(() => parseRampCriteria({ MIN_DELIVERY_RATIO: '0' }), /MIN_DELIVERY_RATIO/)
+    throws(() => parseRampCriteria({ MIN_DELIVERY_RATIO: '2' }), /MIN_DELIVERY_RATIO/)
     throws(() => parseRampCriteria({ P95_LIMIT_MS: '-1' }), /P95_LIMIT_MS/)
-    throws(() => parseRampCriteria({ LATENCY_MULTIPLIER: 'x' }), /LATENCY_MULTIPLIER/)
   })
 })
 
@@ -172,6 +198,14 @@ describe('ramp schedule', (): void => {
     equal(getRampTotalDurationMs(plan), 210_000)
   })
 
+  it('lets readers drain the feed after the last hold', (): void => {
+    deepEqual(buildRampingVuStages({ ...plan, levels: [1] }, 2, { drain: true }), [
+      { duration: '10000ms', target: 2 },
+      { duration: '60000ms', target: 2 },
+      { duration: '10000ms', target: 2 },
+    ])
+  })
+
   it('maps elapsed time to the held level or a transition', (): void => {
     deepEqual(getRampPhaseAt(plan, 0), { endsAtMs: 10_000, level: null })
     deepEqual(getRampPhaseAt(plan, 10_000), { endsAtMs: 70_000, level: 1 })
@@ -179,6 +213,35 @@ describe('ramp schedule', (): void => {
     deepEqual(getRampPhaseAt(plan, 75_000), { endsAtMs: 80_000, level: null })
     deepEqual(getRampPhaseAt(plan, 150_000), { endsAtMs: 210_000, level: 4 })
     deepEqual(getRampPhaseAt(plan, 250_000), { endsAtMs: 210_000, level: null })
+  })
+})
+
+describe('getServedRampPhase', (): void => {
+  it('serves the held level during a hold', (): void => {
+    deepEqual(getServedRampPhase(plan, 30_000), { endsAtMs: 70_000, level: 1 })
+  })
+
+  it('serves the upcoming level, until its hold ends, during a transition', (): void => {
+    deepEqual(getServedRampPhase(plan, 0), { endsAtMs: 70_000, level: 1 })
+    deepEqual(getServedRampPhase(plan, 72_000), { endsAtMs: 140_000, level: 2 })
+  })
+
+  it('serves nothing after the last hold', (): void => {
+    deepEqual(getServedRampPhase(plan, 210_000), { endsAtMs: 210_000, level: null })
+  })
+})
+
+describe('ramp upload names', (): void => {
+  it('names an upload after the held level or the transition', (): void => {
+    equal(getRampUploadPrefix({ endsAtMs: 70_000, level: 4 }), 'sd-L4-')
+    equal(getRampUploadPrefix({ endsAtMs: 10_000, level: null }), 'sd-transition-')
+  })
+
+  it('reads the level back from a file name', (): void => {
+    equal(parseRampUploadLevel('sd-L16-vu3-iter9-x.bin'), '16')
+    equal(parseRampUploadLevel('sd-transition-vu3-iter9-x.bin'), 'unattributed')
+    equal(parseRampUploadLevel('other.bin'), 'unattributed')
+    equal(parseRampUploadLevel(undefined), 'unattributed')
   })
 })
 
@@ -191,9 +254,11 @@ describe('buildRampThresholds', (): void => {
       'http_req_duration{operation:file-upload,level:1}',
       'http_req_failed',
       'shared_drive_changes_duration_ms{level:1}',
+      'shared_drive_changes_items_total{level:1}',
       'shared_drive_changes_success_rate{level:1}',
       'shared_drive_upload_success_rate{level:1}',
       'shared_drive_ws_auth_rate{level:1}',
+      'shared_drive_ws_events_total{event:CREATED,level:1}',
       'shared_drive_ws_handshake_rate{level:1}',
     ])
     deepEqual(thresholds.http_req_failed, [
@@ -216,8 +281,10 @@ describe('evaluateRampLevels', (): void => {
       report.levels.map(({ status }) => status),
       ['passed', 'passed', 'passed'],
     )
-    equal(report.criteria.upload_p95_limit_ms, 200)
-    equal(report.criteria.changes_p95_limit_ms, 100)
+    equal(report.criteria.p95_limit_mode, 'none')
+    equal(report.levels[2]?.uploads, 100)
+    equal(report.levels[2]?.ws_events, 1_200)
+    equal(report.levels[2]?.ws_delivery_ratio, 1)
   })
 
   it('stops at the first level whose success rate is too low', (): void => {
@@ -229,29 +296,54 @@ describe('evaluateRampLevels', (): void => {
 
     equal(report.max_sustained_level, 1)
     equal(report.result_bound, 'exact')
-    deepEqual(report.levels[1]?.reasons, [
-      'ws auth rate 0.5 is below 0.99',
-    ])
+    deepEqual(report.levels[1]?.reasons, ['ws auth rate 0.5 is below 0.99'])
   })
 
-  it('judges latency against a multiple of the first level', (): void => {
+  it('fails a level whose WebSocket readers missed events', (): void => {
     const report = evaluateRampLevels(
-      makeMetrics({
-        1: healthy,
-        2: { ...healthy, uploadP95: 201 },
-        4: healthy,
-      }),
+      makeMetrics({ 1: healthy, 2: { ...healthy, wsDelivery: 0.5 } }),
       plan,
       criteria,
     )
 
-    equal(report.max_sustained_level, 1)
+    equal(report.levels[1]?.status, 'failed')
     deepEqual(report.levels[1]?.reasons, [
-      'upload p95 201 ms exceeds 200 ms',
+      'ws event delivery 0.5 is below 0.9',
     ])
   })
 
-  it('uses an absolute p95 limit when configured', (): void => {
+  it('fails a level whose changes readers missed changes', (): void => {
+    const report = evaluateRampLevels(
+      makeMetrics({ 1: { ...healthy, changesDelivery: 0.8 } }),
+      { ...plan, levels: [1] },
+      criteria,
+    )
+
+    deepEqual(report.levels[0]?.reasons, ['changes delivery 0.8 is below 0.9'])
+  })
+
+  it('accepts more changes than uploads', (): void => {
+    const report = evaluateRampLevels(
+      makeMetrics({ 1: { ...healthy, changesDelivery: 1.5 } }),
+      { ...plan, levels: [1] },
+      criteria,
+    )
+
+    equal(report.levels[0]?.status, 'passed')
+  })
+
+  it('records the p95 without judging it when no limit is configured', (): void => {
+    const report = evaluateRampLevels(
+      makeMetrics({ 1: healthy, 2: { ...healthy, uploadP95: 10_000 } }),
+      plan,
+      criteria,
+    )
+
+    equal(report.levels[1]?.status, 'passed')
+    equal(report.levels[1]?.upload_p95_ms, 10_000)
+  })
+
+  it('fails a level above a configured p95 limit', (): void => {
     const report = evaluateRampLevels(
       makeMetrics({ 1: { ...healthy, uploadP95: 400 } }),
       { ...plan, levels: [1] },
@@ -259,10 +351,39 @@ describe('evaluateRampLevels', (): void => {
     )
 
     equal(report.levels[0]?.status, 'failed')
-    equal(report.criteria.upload_p95_limit_ms, 300)
+    deepEqual(report.levels[0]?.reasons, ['upload p95 400 ms exceeds 300 ms'])
+    equal(report.criteria.p95_limit_ms, 300)
+    equal(report.criteria.p95_limit_mode, 'absolute')
   })
 
-  it('never counts a level with missing metrics as passed', (): void => {
+  it('treats a p95 without samples as missing when a limit is configured', (): void => {
+    const metrics = makeMetrics({ 1: healthy })
+    metrics[rampLevelMetricName('shared_drive_changes_duration_ms', 1)] = {
+      values: { 'p(95)': 0 },
+    }
+
+    const report = evaluateRampLevels(
+      metrics,
+      { ...plan, levels: [1] },
+      { ...criteria, p95LimitMs: 1_000 },
+    )
+
+    equal(report.levels[0]?.status, 'not_measured')
+    deepEqual(report.levels[0]?.reasons, ['changes p95 has no samples'])
+  })
+
+  it('ignores a missing p95 when no limit is configured', (): void => {
+    const report = evaluateRampLevels(
+      makeMetrics({ 1: { ...healthy, uploadP95: undefined } }),
+      { ...plan, levels: [1] },
+      criteria,
+    )
+
+    equal(report.levels[0]?.status, 'passed')
+    equal(report.levels[0]?.upload_p95_ms, null)
+  })
+
+  it('never counts a level with missing success samples as passed', (): void => {
     const report = evaluateRampLevels(
       makeMetrics({ 1: healthy, 2: { ...healthy, wsAuth: undefined } }),
       plan,
@@ -275,16 +396,16 @@ describe('evaluateRampLevels', (): void => {
     equal(report.result_bound, 'inconclusive')
   })
 
-  it('treats a p95 without samples as missing, not as zero', (): void => {
-    const metrics = makeMetrics({ 1: healthy, 2: healthy })
-    metrics[
-      rampLevelMetricName('shared_drive_changes_duration_ms', 2)
-    ] = { values: { 'p(95)': 0 } }
+  it('cannot judge delivery when the event counters are absent', (): void => {
+    const metrics = makeMetrics({ 1: healthy })
+    delete metrics[
+      rampLevelMetricName('shared_drive_ws_events_total', 1, { event: 'CREATED' })
+    ]
 
-    const report = evaluateRampLevels(metrics, plan, criteria)
+    const report = evaluateRampLevels(metrics, { ...plan, levels: [1] }, criteria)
 
-    equal(report.levels[1]?.status, 'not_measured')
-    deepEqual(report.levels[1]?.reasons, ['changes p95 has no samples'])
+    equal(report.levels[0]?.status, 'not_measured')
+    deepEqual(report.levels[0]?.reasons, ['ws event delivery has no samples'])
   })
 
   it('marks levels the run never reached', (): void => {
@@ -295,17 +416,6 @@ describe('evaluateRampLevels', (): void => {
       ['passed', 'not_run', 'not_run'],
     )
     equal(report.result_bound, 'inconclusive')
-  })
-
-  it('cannot judge latency without a first-level baseline', (): void => {
-    const report = evaluateRampLevels(
-      makeMetrics({ 1: { ...healthy, uploadP95: undefined } }),
-      { ...plan, levels: [1] },
-      criteria,
-    )
-
-    equal(report.levels[0]?.status, 'not_measured')
-    equal(report.max_sustained_level, 0)
   })
 })
 

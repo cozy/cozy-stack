@@ -33,8 +33,14 @@ fails at the next step", not an exact number.
 
 | Capacity | Unit | Command | Pass criteria |
 | --- | --- | --- | --- |
-| Concurrent uploads, per file size | simultaneous uploads | `make upload-capacity FILE_SIZE=…` | Every upload succeeds and reads back with the same checksum; success rate ≥ `MIN_SUCCESS_RATE` (0.99); upload p95 ≤ `P95_LIMIT_MS` or 2 × the 1-VU baseline; cleanup succeeds |
-| Sustained shared-drive activity | level L = L writers, 3L WebSocket readers, 2L changes readers | `make cozy-shared-drive-ramp` | Upload, changes, WebSocket handshake, and WebSocket auth success rates ≥ `MIN_SUCCESS_RATE`; upload and changes p95 ≤ `P95_LIMIT_MS` or 2 × the first level's p95 |
+| Concurrent uploads, per file size | simultaneous uploads | `make upload-capacity FILE_SIZE=…` | Success rate ≥ `MIN_SUCCESS_RATE` (0.99); no dropped uploads; every upload reads back with the same checksum; cleanup succeeds |
+| Sustained shared-drive activity | level L = L writers, 3L WebSocket readers, 2L changes readers | `make cozy-shared-drive-ramp` | Upload, changes, WebSocket handshake, and WebSocket auth success rates ≥ `MIN_SUCCESS_RATE`; WebSocket events and changes received ≥ `MIN_DELIVERY_RATIO` (0.9) × uploads × readers |
+
+Both measurements fail on errors, lost or corrupted data, and missing events.
+Latency is recorded but judged only when an absolute `P95_LIMIT_MS` is set,
+because a limit derived from a nearly idle baseline mostly measured latency
+doubling. The proposed latency criteria below are meant to be passed as
+`P95_LIMIT_MS` once the team agrees on them.
 
 The shared-drive ramp runs with the drive owner's credentials on one stack.
 It does not exercise the recipient paths (see the README warning).

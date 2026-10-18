@@ -4,6 +4,8 @@ import type { PointResult } from './search.ts'
 export type UploadPointMetrics = {
   cleanupRate: number
   completedIterations: number
+  // Null when the scenario predates the upload_consistency metric.
+  consistencyRate: number | null
   droppedIterations: number
   p95Ms: number
   successRate: number
@@ -42,6 +44,11 @@ export function readUploadPointMetrics(
   )
   const completedIterations = getMetricNumber(summary, ['iterations'], 'count')
   const cleanupRate = getMetricNumber(summary, ['cleanup_success'], 'value')
+  const consistencyRate = getMetricNumber(
+    summary,
+    ['upload_consistency'],
+    'value',
+  )
   const droppedIterations =
     getMetricNumber(summary, ['dropped_iterations'], 'count') ?? 0
 
@@ -57,6 +64,7 @@ export function readUploadPointMetrics(
   return {
     cleanupRate,
     completedIterations,
+    consistencyRate,
     droppedIterations,
     p95Ms,
     successRate,
@@ -91,8 +99,10 @@ function getMeasuredFailure(
   return ''
 }
 
-// Infrastructure problems are checked first: a point that did not run
-// completely or cleanly must not count as a capacity measurement.
+// A content mismatch fails the point first: k6 aborts on it, which would
+// otherwise look like an interrupted run. Other infrastructure problems come
+// next, because a point that did not run completely or cleanly must not count
+// as a capacity measurement.
 export function classifyUploadPoint(
   input: UploadPointClassificationInput,
 ): UploadPointClassification {
@@ -107,6 +117,12 @@ export function classifyUploadPoint(
   }
   if (metrics === null) {
     return infrastructureFailure('summary is missing required metrics')
+  }
+  if (metrics.consistencyRate !== null && metrics.consistencyRate < 1) {
+    return {
+      reason: 'uploaded content did not match after download',
+      result: 'failed',
+    }
   }
   if (metrics.cleanupRate !== 1) {
     return infrastructureFailure('test-directory cleanup failed')

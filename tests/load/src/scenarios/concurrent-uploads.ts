@@ -88,6 +88,9 @@ const uploadP95Limit = getOptionalP95Limit()
 const uploadTarget = getUploadTarget(__ENV)
 const uploadSuccess = new Rate('upload_success')
 const cleanupSuccess = new Rate('cleanup_success')
+// Recorded before a consistency abort, so the capacity search can tell a
+// content mismatch from an interrupted run.
+const uploadConsistency = new Rate('upload_consistency')
 const uploadMode = getUploadMode()
 const executionId = __ENV.EXECUTION_ID || 'upload'
 
@@ -95,6 +98,7 @@ const uploadThresholdTags = '{operation:file-upload}'
 const thresholds: NonNullable<Options['thresholds']> = {
   cleanup_success: ['rate==1'],
   dropped_iterations: ['count==0'],
+  upload_consistency: ['rate==1'],
   [`http_req_duration${uploadThresholdTags}`]: [
     uploadP95Limit === null ? 'p(95)>=0' : `p(95)<=${uploadP95Limit}`,
   ],
@@ -168,6 +172,7 @@ function makeUploadName(marker: string): string {
 function abortUploadConsistency(message: string): never {
   const abortMessage = `Upload consistency check failed: ${message}`
 
+  uploadConsistency.add(false)
   exec.test.abort(abortMessage)
   throw new Error(abortMessage)
 }
@@ -310,6 +315,7 @@ export default function runConcurrentUploadsScenario(
     )
   }
 
+  uploadConsistency.add(true)
   return null
 }
 

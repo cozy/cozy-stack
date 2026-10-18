@@ -47,7 +47,7 @@ const harnessDirectory = resolve(scriptDirectory, '..', '..')
 const resultsDirectory = join(harnessDirectory, 'data', 'results')
 
 type CampaignStatus = 'running' | 'completed' | 'infrastructure_failure'
-type P95LimitMode = 'absolute' | 'baseline_multiplier'
+type P95LimitMode = 'absolute' | 'none'
 
 type CampaignCriteria = {
   baseline_iterations: number
@@ -55,7 +55,6 @@ type CampaignCriteria = {
   maximum_p95_ms: number | null
   minimum_success_rate: number
   maximum_dropped_iterations: number
-  p95_baseline_multiplier: number | null
   p95_limit_mode: P95LimitMode
   confirmation_iterations_per_vu: number
 }
@@ -69,6 +68,7 @@ type CapacityAttempt = {
   dropped_iterations: number | null
   completed_iterations: number | null
   cleanup_rate: number | null
+  consistency_rate: number | null
   passed: boolean
   result: PointResult
   reason: string
@@ -87,7 +87,7 @@ type CapacityReport = {
   status: CampaignStatus
   attempts: CapacityAttempt[]
   baseline_p95_ms?: number
-  p95_limit_ms?: number
+  p95_limit_ms?: number | null
   maximum_concurrent_uploads?: number
   result_bound?: ResultBound
   failure_reason?: string
@@ -103,7 +103,6 @@ type CampaignConfig = {
   fileSize: UploadDataSize
   fileSizeBytes: number
   forceCapacityRun: boolean
-  latencyMultiplier: number
   maxVus: number
   minimumSuccessRate: number
   uploadTarget: UploadTarget
@@ -220,10 +219,6 @@ function getCampaignConfig(): CampaignConfig {
     fileSize: configuredFileSize,
     fileSizeBytes: getUploadDataSizeBytes(configuredFileSize),
     forceCapacityRun: process.env.FORCE_CAPACITY_RUN === '1',
-    latencyMultiplier: getPositiveNumber(
-      'LATENCY_MULTIPLIER',
-      process.env.LATENCY_MULTIPLIER || '2',
-    ),
     maxVus,
     minimumSuccessRate: getMinimumSuccessRate(
       process.env.MIN_SUCCESS_RATE || '0.99',
@@ -317,12 +312,7 @@ function makeCapacityReport(config: CampaignConfig): CapacityReport {
       maximum_p95_ms: config.configuredP95LimitMs,
       minimum_success_rate: config.minimumSuccessRate,
       maximum_dropped_iterations: 0,
-      p95_baseline_multiplier:
-        config.configuredP95LimitMs === null ? config.latencyMultiplier : null,
-      p95_limit_mode:
-        config.configuredP95LimitMs === null
-          ? 'baseline_multiplier'
-          : 'absolute',
+      p95_limit_mode: config.configuredP95LimitMs === null ? 'none' : 'absolute',
       confirmation_iterations_per_vu: config.confirmationIterations,
     },
     status: 'running',
@@ -443,6 +433,7 @@ function runUploadPoint(
     dropped_iterations: metrics?.droppedIterations ?? null,
     completed_iterations: metrics?.completedIterations ?? null,
     cleanup_rate: metrics?.cleanupRate ?? null,
+    consistency_rate: metrics?.consistencyRate ?? null,
     passed: result === 'passed',
     result,
     reason,
@@ -495,7 +486,6 @@ function runCapacitySearch(state: CampaignState): number {
     baselineIterations: config.baselineIterations,
     configuredP95LimitMs: config.configuredP95LimitMs,
     confirmationIterations: config.confirmationIterations,
-    latencyMultiplier: config.latencyMultiplier,
     log: (message: string): void => {
       process.stdout.write(message)
     },
