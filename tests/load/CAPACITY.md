@@ -1,140 +1,170 @@
-# Cozy Stack Capacity Model
+# Cozy Stack capacity model
 
-This document defines the operational capacity limits and pass criteria for Cozy Stack as part of [Epic #4864 (Load Testing Suite)](https://github.com/linagora/cozy-stack/issues/4864), [Issue #4866 (Organization / B2B scenarios)](https://github.com/linagora/cozy-stack/issues/4866), [Issue #4867 (Load-test shared drives)](https://github.com/linagora/cozy-stack/issues/4867), and [Issue #4863 (Indexing sharing groups and members)](https://github.com/linagora/cozy-stack/issues/4863).
+This document lists the capacity questions the load-test harness answers or
+will answer, how each one is measured, and when a measurement passes. It
+belongs to [#4864](https://github.com/linagora/cozy-stack/issues/4864) and
+covers [#4866](https://github.com/linagora/cozy-stack/issues/4866),
+[#4867](https://github.com/linagora/cozy-stack/issues/4867), and the large
+databases targeted by
+[#4863](https://github.com/linagora/cozy-stack/issues/4863).
 
-It serves as the specification for automated capacity exploration in `tests/load` and defines how the test harness measures system boundaries under stress.
+> [!IMPORTANT]
+> Every number marked **proposed** is a starting point for discussion, not
+> an agreed service level. Confirm it with the team before using it to gate
+> a release or to compare campaigns.
 
----
+## How a capacity is measured
 
-## Capacity Dimensions Overview
+A capacity is the highest level of one dimension at which every pass
+criterion still holds, with all other dimensions fixed. The harness uses
+three methods, chosen by the shape of the dimension:
 
-| Dimension / Limit | Unit | Primary Metric Axis | Test Step Sizes | Pass Criteria Summary |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Members per Organization** | `members` | Organization directory & group membership | 1k, 10k, 25k, 50k | P95 < 200ms, Error < 0.1%, RabbitMQ drain < 60s |
-| **2. Shares per Instance** | `shares` | Shared drive discovery & permission resolution | 100, 1k, 5k, 10k, 25k | P95 < 250ms, Error < 0.1%, Index refresh < 5s |
-| **3. Files per Instance** | `files` | Directory traversal & CouchDB Mango / view indexing | 10k, 100k, 500k, 1M | P95 < 150ms browse, Error < 0.05%, Index lag < 10s |
-| **4. Concurrent Requests** | `concurrent requests` / `VUs` | Sustained throughput & connection concurrency | 10, 25, 50, 100, 250, 500 | P95 < 300ms read / 500ms write, Error < 0.1%, Drain < 5s |
+| Method | Use it when | Implementation |
+| --- | --- | --- |
+| Point search | Each level needs an exact amount of work, its own data, and cleanup | `src/scripts/find-upload-capacity.ts` runs separate k6 points: baseline, doubling, bisection, confirmation |
+| k6 ramp | The load is sustained and the levels can share one run | `src/scenarios/shared-drive-ramp.ts`: one k6 run, samples tagged with `level`, judged in `handleSummary()` |
+| Step ladder | Each level needs data created first, and that data cannot be removed cheaply | Planned: create data up to the level, run a fixed probe workload, and stop at the first failing step. Needs the data generator below |
 
----
+Bisection does not fit the step ladder: going back down would mean deleting
+or recreating large datasets. A ladder result is therefore "passes at L,
+fails at the next step", not an exact number.
 
-## 1. Members per Organization
+## Measured today
 
-### Question Answered
-*What is the maximum number of member accounts a single organization can contain before group resolution, directory lookups, and event-driven membership synchronization degrade below acceptable service thresholds?*
+| Capacity | Unit | Command | Pass criteria |
+| --- | --- | --- | --- |
+| Concurrent uploads, per file size | simultaneous uploads | `make upload-capacity FILE_SIZE=…` | Every upload succeeds and reads back with the same checksum; success rate ≥ `MIN_SUCCESS_RATE` (0.99); upload p95 ≤ `P95_LIMIT_MS` or 2 × the 1-VU baseline; cleanup succeeds |
+| Sustained shared-drive activity | level L = L writers, 3L WebSocket readers, 2L changes readers | `make cozy-shared-drive-ramp` | Upload, changes, WebSocket handshake, and WebSocket auth success rates ≥ `MIN_SUCCESS_RATE`; upload and changes p95 ≤ `P95_LIMIT_MS` or 2 × the first level's p95 |
 
-- **Unit of result:** `members` (active user accounts registered within the organization).
+The shared-drive ramp runs with the drive owner's credentials on one stack.
+It does not exercise the recipient paths (see the README warning).
 
-### Dimensions
-- **Varying dimension:**
-  - Total organization member count: **1,000**, **10,000**, **25,000**, **50,000** members (as identified in #4866).
-- **Fixed dimensions:**
-  - 1 organization instance.
-  - Group density: 50 organizational groups, with each member belonging to an average of 3 groups.
-  - Background API traffic: steady light query rate (10 req/s reading member profiles and directory listings).
-  - Resource allocation: fixed container CPU and RAM limits on cozy-stack and CouchDB.
+## Planned dimensions
 
-### Pass Criteria
-- **P95 Latency:**
-  - Directory query (`GET /organizations/:id/members` or member search): **P95 < 200 ms**.
-  - Group membership resolution (`GET /groups/:id/members`): **P95 < 250 ms**.
-- **Error Rate:** **< 0.1%** non-2xx responses under concurrent queries.
-- **Queue Drain Time:**
-  - RabbitMQ user/group synchronization backlog must drain at **>= 500 events/second**.
-  - Total queue drain time for a batch of 1,000 membership mutation events must complete in **< 60 seconds** without unbounded queue accumulation.
+### 1. Members per organization
 
----
+**Question:** how many members can one organization have before membership
+changes take too long to reach every member instance?
 
-## 2. Shares per Instance
+**Why it scales badly:** every `b2b.group.*` event is applied in turn to
+every instance of the organization (`forEachOrgInstance` in
+`model/orgdirectory/groups.go`). The work for one membership change grows
+with the organization size, so the drain time of a batch of changes grows
+with it too.
 
-### Question Answered
-*What is the maximum number of active shared drives and permission references an instance can host before permission resolution, changes feeds, and drive listings exceed latency limits?*
+- **Unit:** member instances in the organization.
+- **Method:** step ladder at 1k, 10k, 25k, and 50k members.
+- **Fixed:** one organization, 50 groups, 3 groups per member on average,
+  a batch of 1,000 `b2b.group.member.added` and `b2b.group.member.removed`
+  events per step.
+- **Measured:**
+  - time from publishing the batch until the
+    `stack.b2b.group.lifecycle` queue is empty;
+  - `POST /data/io.cozy.contacts/_find` filtered by a group, on a member
+    instance, while the batch drains.
+- **Pass criteria (proposed):**
+  - the batch drains within **60 s**;
+  - no message is dead-lettered;
+  - afterwards, every member instance has the expected group membership
+    (convergence check);
+  - contact query p95 **< 200 ms**, error rate **< 0.1 %**.
+- **Prerequisites:** data generator; RabbitMQ queues declared in
+  `config/cozy/cozy.yaml` (the harness declares none today); Prometheus
+  scraping RabbitMQ for queue depth.
 
-- **Unit of result:** `shares` (number of active shared drives or share records on the instance).
+### 2. Shares per instance
 
-### Dimensions
-- **Varying dimension:**
-  - Active shares on instance: **100**, **1,000**, **5,000**, **10,000**, and **25,000** shares.
-- **Fixed dimensions:**
-  - 1 Cozy instance.
-  - File density per share: 100 files per drive.
-  - Member recipients per share: 5 recipients (mix of direct users and group references).
-  - Workload: 10 concurrent virtual users querying drive listings, checking file permissions, and polling changes feeds.
-  - Indexing: Mango / CouchDB views enabled as targeted by #4863.
+**Question:** how many shared drives can one instance hold before drive
+listings, permission checks, and changes feeds become too slow?
 
-### Pass Criteria
-- **P95 Latency:**
-  - Drive discovery (`GET /sharings/`): **P95 < 250 ms**.
-  - File access permission check within shared folder: **P95 < 50 ms**.
-  - Changes feed query (`GET /changes` with filter): **P95 < 300 ms**.
-- **Error Rate:** **< 0.1%** failures or HTTP 5xx responses.
-- **Queue Drain & Index Time:**
-  - CouchDB view / index regeneration upon adding new share references must settle within **< 5 seconds**.
+- **Unit:** active shared drives on the instance.
+- **Method:** step ladder at 100, 1k, 5k, 10k, and 25k drives.
+- **Fixed:** 100 files per drive, 5 recipients per drive (contacts and
+  groups), 10 VUs running the probe workload.
+- **Measured:**
+  - `GET /sharings/drives` (drive list);
+  - `GET /sharings/doctype/io.cozy.files`;
+  - `GET /sharings/drives/:id/:file-id` (every drive request resolves the
+    member and checks the route, so this covers permission resolution);
+  - `GET /sharings/drives/:id/_changes`;
+  - the first drive list request after adding 100 drives. CouchDB updates
+    views when they are read, so this captures the index update cost.
+- **Pass criteria (proposed):**
+  - drive list p95 **< 250 ms**;
+  - file request p95 **< 150 ms**;
+  - changes feed p95 **< 300 ms**;
+  - first drive list after a batch **< 5 s**;
+  - error rate **< 0.1 %**.
+- **Prerequisites:** data generator.
 
----
+### 3. Files per instance
 
-## 3. Files per Instance
+**Question:** how many files can one instance hold before browsing, lookups,
+and writes become too slow?
 
-### Question Answered
-*What is the maximum number of file documents an instance database can hold before directory listing, pagination, and tree updates degrade CouchDB view performance?*
+- **Unit:** documents in `io.cozy.files` (files and directories).
+- **Method:** step ladder at 10k, 100k, 500k, and 1M documents.
+- **Fixed:** a tree 3 to 5 levels deep with 50 to 200 entries per
+  directory, 20 VUs running the probe workload, S3 storage (MinIO in the
+  bundled stack).
+- **Measured:**
+  - `GET /files/:dir-id?page[limit]=100` (directory page);
+  - `GET /files/:file-id` (metadata by ID);
+  - `POST /files/:dir-id?Type=file` with a 1 KiB file;
+  - `POST /files/_find` (Mango query);
+  - the first `_find` and `GET /files/_changes` request after inserting
+    1,000 files, for the same index update reason as above.
+- **Pass criteria (proposed):**
+  - directory page p95 **< 150 ms**;
+  - metadata p95 **< 50 ms**;
+  - 1 KiB upload p95 **< 300 ms**;
+  - first query after a batch **< 10 s**;
+  - error rate **< 0.05 %**.
+- **Prerequisites:** data generator.
 
-- **Unit of result:** `files` (total file and folder metadata documents in the `io.cozy.files` doctype).
+### 4. Request rate per instance
 
-### Dimensions
-- **Varying dimension:**
-  - Total file count: **10,000**, **100,000**, **500,000**, **1,000,000** files.
-- **Fixed dimensions:**
-  - Directory structure: realistic hierarchical folder tree (depth 3–5 levels, average 50–200 files per folder).
-  - Workload: 20 concurrent readers navigating directories, requesting pagination, and querying file metadata by ID.
-  - Storage backend: CouchDB metadata store with local/Swift blob storage.
+**Question:** what request rate can one instance serve under a mixed
+workload before latency or errors exceed their limits?
 
-### Pass Criteria
-- **P95 Latency:**
-  - Directory browsing (`GET /files/:folder_id/browse` for 100 items): **P95 < 150 ms**.
-  - File metadata fetch by ID (`GET /files/:id`): **P95 < 50 ms**.
-  - File creation metadata write (`POST /files` excluding blob upload): **P95 < 300 ms**.
-- **Error Rate:** **< 0.05%** failed requests.
-- **Queue Drain & Index Time:**
-  - Incremental CouchDB index catch-up lag following a 1,000-file batch insertion: **< 10 seconds**.
+- **Unit:** requests per second (open model), with VUs as a secondary view.
+- **Method:** k6 ramp with `ramping-arrival-rate`, extending the
+  shared-drive ramp to a mixed workload.
+- **Fixed:** 10,000 files and 50 shared drives seeded beforehand; requests
+  split 70 % reads (directory pages, metadata, changes feeds) and 30 %
+  writes (1 KiB to 1 MiB uploads, metadata updates); WebSocket readers kept
+  at a fixed number per level, because connections are not requests.
+- **Measured:** `http_req_duration` tagged by operation, k6's
+  `ws_connecting`, and cozy-stack's `go_goroutines` and memory, which
+  Prometheus already scrapes.
+- **Pass criteria (proposed):**
+  - read p95 **< 300 ms**;
+  - write p95 **< 500 ms** for uploads up to 1 MiB;
+  - WebSocket connect p95 **< 100 ms**;
+  - error rate **< 0.1 %**;
+  - 30 s after each step, goroutines are back within 10 % of their level
+    before the step.
+- **Prerequisites:** data generator for the seeded state.
 
----
-## 4. Concurrent Requests per Instance
+## Conditions for every campaign
 
-### Question Answered
-*What is the maximum number of concurrent requests (or virtual users) a single Cozy instance can serve under mixed read/write traffic before saturating Go worker pools, socket buffers, or database connections?*
+- The bundled stack shares the machine with k6, so it validates the
+  harness, not capacity. Record capacity numbers in the dedicated load-test
+  environment.
+- Record the stack version, its configuration, and the CPU and memory limits
+  of cozy-stack and CouchDB with every result. `compose.yaml` sets no limits,
+  so the dedicated environment must set them.
+- Vary one dimension at a time and keep the others at the fixed values
+  above.
+- Every run creates its own data and cleans it up.
 
-- **Unit of result:** `concurrent requests` (simultaneous virtual users `VUs` or sustained `req/s`).
+## Prerequisites to build
 
-### Dimensions
-- **Varying dimension:**
-  - Load concurrency: **10**, **25**, **50**, **100**, **250**, **500** concurrent VUs.
-- **Fixed dimensions:**
-  - Pre-seeded data state: realistic baseline (10,000 files, 50 shared drives).
-  - Traffic profile: mixed real-world activity:
-    - 70% read operations (directory browse, stat, changes feed).
-    - 20% write operations (small/medium file upload, metadata touch).
-    - 10% WebSocket realtime connections.
-  - Network round-trip latency: LAN / local baseline (< 5 ms RTT).
-
-### Pass Criteria
-- **P95 Latency:**
-  - Read requests: **P95 < 300 ms**.
-  - Write requests: **P95 < 500 ms** (excluding payload transfer time).
-  - WebSocket connection handshake: **P95 < 100 ms**.
-- **Error Rate:** **< 0.1%** non-2xx responses or connection timeouts.
-- **Queue Drain & Stabilization:**
-  - Request queue and in-flight backpressure must fully drain within **< 5 seconds** after load step completion (no goroutine accumulation, memory stabilizes at quiescent plateau).
-
----
-
-## Architectural Impact on Load-Test Harness
-
-This capacity model directly dictates two core components of the load-test harness:
-
-1. **Generalized Capacity Engine (`src/lib/capacity/`)**:
-   - Replaces the upload-specific binary search in `find-upload-capacity.ts` with a modular engine capable of varying arbitrary dimensions (`VUs`, `members`, `shares`, `files`).
-   - Evaluates multidimensional pass criteria: composite P95 latency thresholds, max error rate, and queue drain time.
-
-2. **Pre-Seeded Data Generator (`src/scripts/seed-scale-data.ts`)**:
-   - Provides fast, automated provisioning of the test sizes (1k → 50k members, 100 → 25k shares, 10k → 1M files).
-   - Measures provision duration as a baseline benchmark.
-   - Supports clean teardown per test run to prevent CouchDB state corruption.
+1. **Data generator** (`src/scripts/seed-scale-data.ts`, planned): creates
+   members, groups, shares, and files up to a level in bulk, records how long
+   that took, and removes everything at the end.
+2. **RabbitMQ in the harness:** declare the `b2b.group.*` queues in
+   `config/cozy/cozy.yaml` and add a Prometheus scrape target for RabbitMQ.
+3. **Recipient paths:** a second stack with its own CouchDB. When the owner
+   instance is on the same stack, shared-drive requests from recipients skip
+   the HTTP proxy, so one stack cannot measure that path.
