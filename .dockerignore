@@ -4,5 +4,7 @@ scripts/node_modules/
 tests/load/node_modules/
 tests/load/results/
 tests/load/fixtures/*.bin
+# Load-test results and upload binaries (up to 1 GiB) change on every run.
+tests/load/data/
 .playwright-mcp/
 **/.DS_Store
