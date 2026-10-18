@@ -57,18 +57,21 @@ services:
       - load-test
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-02-28T09-55-16Z
+    # MinIO no longer publishes images to quay.io or Docker Hub. This frozen
+    # Bitnami image is the same RELEASE.2025-02-28T09-55-16Z build and starts
+    # the server from its own entrypoint.
+    image: bitnamilegacy/minio:2025.2.28
+    # Started as root, the entrypoint takes ownership of the data volume, even
+    # one created by the old root-run image, then runs MinIO unprivileged.
+    user: "0:0"
     profiles:
       - cozy
     restart: "${RESTART_POLICY:-no}"
-    command:
-      - server
-      - /data
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - minio-data:/data
+      - minio-data:/bitnami/minio/data
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
       interval: 5s
