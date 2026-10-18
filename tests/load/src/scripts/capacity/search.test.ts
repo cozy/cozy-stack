@@ -1,0 +1,301 @@
+import { deepEqual, equal } from 'node:assert/strict'
+import { describe, it } from 'node:test'
+
+import {
+  computeP95LimitMs,
+  getCapacityResultBound,
+  searchCapacity,
+  type CapacitySearchOptions,
+  type PointOutcome,
+  type PointRequest,
+} from './search.ts'
+
+type RecordedRequest = Pick<
+  PointRequest,
+  'iterationsPerVu' | 'p95LimitMs' | 'phase' | 'vus'
+>
+
+function makeOptions(
+  runPoint: (request: PointRequest) => PointOutcome,
+  overrides: Partial<CapacitySearchOptions> = {},
+): CapacitySearchOptions {
+  return {
+    baselineIterations: 50,
+    configuredP95LimitMs: null,
+    confirmationIterations: 20,
+    latencyMultiplier: 2,
+    maxVus: 16,
+    runPoint,
+    ...overrides,
+  }
+}
+
+function passUpTo(
+  maximumPassingVus: number,
+  requests: RecordedRequest[],
+): (request: PointRequest) => PointOutcome {
+  return (request: PointRequest): PointOutcome => {
+    requests.push(request)
+    return {
+      p95Ms: 100,
+      result: request.vus <= maximumPassingVus ? 'passed' : 'failed',
+    }
+  }
+}
+
+describe('searchCapacity', (): void => {
+  it('reports a lower bound when every level passes up to the cap', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(
+      makeOptions(passUpTo(Infinity, requests), { maxVus: 8 }),
+    )
+
+    deepEqual(result, {
+      baselineP95Ms: 100,
+      bound: 'lower_bound',
+      maximumVus: 8,
+      p95LimitMs: 200,
+      status: 'completed',
+    })
+    deepEqual(
+      requests.map(({ phase, vus, iterationsPerVu }) => [
+        phase,
+        vus,
+        iterationsPerVu,
+      ]),
+      [
+        ['baseline', 1, 50],
+        ['discovery', 2, 1],
+        ['discovery', 4, 1],
+        ['discovery', 8, 1],
+        ['confirmation', 8, 20],
+      ],
+    )
+  })
+
+  it('runs the baseline without a p95 limit and later points with the derived limit', (): void => {
+    const requests: RecordedRequest[] = []
+    searchCapacity(makeOptions(passUpTo(Infinity, requests), { maxVus: 2 }))
+
+    deepEqual(
+      requests.map(({ p95LimitMs }) => p95LimitMs),
+      [null, 200, 200],
+    )
+  })
+
+  it('uses the configured absolute p95 limit instead of the baseline multiplier', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(
+      makeOptions(passUpTo(Infinity, requests), {
+        configuredP95LimitMs: 750,
+        maxVus: 2,
+      }),
+    )
+
+    equal(result.status === 'completed' && result.p95LimitMs, 750)
+    deepEqual(
+      requests.map(({ p95LimitMs }) => p95LimitMs),
+      [null, 750, 750],
+    )
+  })
+
+  it('bisects between the last passing and first failing levels', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(makeOptions(passUpTo(5, requests)))
+
+    deepEqual(result, {
+      baselineP95Ms: 100,
+      bound: 'exact',
+      maximumVus: 5,
+      p95LimitMs: 200,
+      status: 'completed',
+    })
+    deepEqual(
+      requests.map(({ phase, vus }) => [phase, vus]),
+      [
+        ['baseline', 1],
+        ['discovery', 2],
+        ['discovery', 4],
+        ['discovery', 8],
+        ['discovery-retry', 8],
+        ['discovery', 6],
+        ['discovery-retry', 6],
+        ['discovery', 5],
+        ['confirmation', 5],
+      ],
+    )
+  })
+
+  it('runs a deciding point when a failing level passes on retry', (): void => {
+    const requests: RecordedRequest[] = []
+    const outcomes: Record<string, PointOutcome['result']> = {
+      'discovery-2': 'failed',
+      'discovery-retry-2': 'passed',
+      'discovery-decider-2': 'passed',
+    }
+    const result = searchCapacity(
+      makeOptions(
+        (request: PointRequest): PointOutcome => {
+          requests.push(request)
+          return {
+            p95Ms: 100,
+            result: outcomes[`${request.phase}-${request.vus}`] ?? 'passed',
+          }
+        },
+        { maxVus: 2 },
+      ),
+    )
+
+    equal(result.status === 'completed' && result.maximumVus, 2)
+    deepEqual(
+      requests.map(({ phase }) => phase),
+      [
+        'baseline',
+        'discovery',
+        'discovery-retry',
+        'discovery-decider',
+        'confirmation',
+      ],
+    )
+  })
+
+  it('searches downward with confirmation points when the candidate fails confirmation', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(
+      makeOptions(
+        (request: PointRequest): PointOutcome => {
+          requests.push(request)
+          const sustainedLimit = 3
+          const passed =
+            request.phase !== 'confirmation' || request.vus <= sustainedLimit
+          return { p95Ms: 100, result: passed ? 'passed' : 'failed' }
+        },
+        { maxVus: 8 },
+      ),
+    )
+
+    deepEqual(result, {
+      baselineP95Ms: 100,
+      bound: 'exact',
+      maximumVus: 3,
+      p95LimitMs: 200,
+      status: 'completed',
+    })
+    deepEqual(
+      requests
+        .filter(({ phase }) => phase === 'confirmation')
+        .map(({ vus, iterationsPerVu }) => [vus, iterationsPerVu]),
+      [
+        [8, 20],
+        [4, 20],
+        [2, 20],
+        [3, 20],
+      ],
+    )
+  })
+
+  it('reports zero when no level passes confirmation', (): void => {
+    const result = searchCapacity(
+      makeOptions(
+        (request: PointRequest): PointOutcome => ({
+          p95Ms: 100,
+          result: request.phase === 'confirmation' ? 'failed' : 'passed',
+        }),
+        { maxVus: 4 },
+      ),
+    )
+
+    equal(result.status === 'completed' && result.maximumVus, 0)
+  })
+
+  it('reports zero without further points when the baseline fails', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(makeOptions(passUpTo(0, requests)))
+
+    deepEqual(result, {
+      baselineP95Ms: 100,
+      bound: 'exact',
+      maximumVus: 0,
+      p95LimitMs: 200,
+      status: 'completed',
+    })
+    equal(requests.length, 1)
+  })
+
+  it('aborts when the baseline hits an infrastructure failure', (): void => {
+    const result = searchCapacity(
+      makeOptions(
+        (): PointOutcome => ({ p95Ms: null, result: 'infrastructure_failure' }),
+      ),
+    )
+
+    deepEqual(result, {
+      reason: 'baseline failed because of test infrastructure',
+      status: 'infrastructure_failure',
+    })
+  })
+
+  it('aborts when the baseline has no p95 measurement', (): void => {
+    const result = searchCapacity(
+      makeOptions((): PointOutcome => ({ p95Ms: null, result: 'passed' })),
+    )
+
+    deepEqual(result, {
+      reason: 'baseline produced no p95 measurement',
+      status: 'infrastructure_failure',
+    })
+  })
+
+  it('aborts with the level when discovery hits an infrastructure failure', (): void => {
+    const result = searchCapacity(
+      makeOptions(
+        (request: PointRequest): PointOutcome => ({
+          p95Ms: 100,
+          result: request.vus === 4 ? 'infrastructure_failure' : 'passed',
+        }),
+      ),
+    )
+
+    deepEqual(result, {
+      reason: 'discovery failed because of test infrastructure at 4 VUs',
+      status: 'infrastructure_failure',
+    })
+  })
+
+  it('confirms a single-VU cap without discovery points', (): void => {
+    const requests: RecordedRequest[] = []
+    const result = searchCapacity(
+      makeOptions(passUpTo(Infinity, requests), { maxVus: 1 }),
+    )
+
+    equal(result.status === 'completed' && result.bound, 'lower_bound')
+    deepEqual(
+      requests.map(({ phase }) => phase),
+      ['baseline', 'confirmation'],
+    )
+  })
+})
+
+describe('getCapacityResultBound', (): void => {
+  it('returns a lower bound when the configured cap passed', (): void => {
+    equal(getCapacityResultBound(8, 8, 0), 'lower_bound')
+  })
+
+  it('returns a lower bound for a single-VU configured cap', (): void => {
+    equal(getCapacityResultBound(1, 1, 0), 'lower_bound')
+  })
+
+  it('returns an exact bound when a failing level was measured', (): void => {
+    equal(getCapacityResultBound(7, 8, 8), 'exact')
+  })
+})
+
+describe('computeP95LimitMs', (): void => {
+  it('uses the baseline multiplier when no absolute limit is configured', (): void => {
+    equal(computeP95LimitMs(25, 20, null), 500)
+  })
+
+  it('uses the absolute limit when configured', (): void => {
+    equal(computeP95LimitMs(25, 20, 2_000), 2_000)
+  })
+})

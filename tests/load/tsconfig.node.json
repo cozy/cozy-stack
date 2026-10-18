@@ -15,7 +15,6 @@
     "src/lib/upload-consistency.test.ts",
     "src/lib/upload-target.ts",
     "src/lib/upload-target.test.ts",
-    "src/lib/capacity/**/*.ts",
     "src/mock/**/*.ts",
     "src/scripts/**/*.ts"
   ],

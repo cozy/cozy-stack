@@ -1,0 +1,289 @@
+export type CapacityPhase =
+  | 'baseline'
+  | 'discovery'
+  | 'discovery-retry'
+  | 'discovery-decider'
+  | 'confirmation'
+
+export type PointResult = 'passed' | 'failed' | 'infrastructure_failure'
+export type ResultBound = 'exact' | 'lower_bound'
+
+export type PointRequest = {
+  iterationsPerVu: number
+  p95LimitMs: number | null
+  phase: CapacityPhase
+  vus: number
+}
+
+export type PointOutcome = {
+  p95Ms: number | null
+  result: PointResult
+}
+
+export type CapacitySearchOptions = {
+  baselineIterations: number
+  configuredP95LimitMs: number | null
+  confirmationIterations: number
+  latencyMultiplier: number
+  log?: (message: string) => void
+  maxVus: number
+  runPoint: (request: PointRequest) => PointOutcome
+}
+
+export type CapacitySearchResult =
+  | {
+      baselineP95Ms: number
+      bound: ResultBound
+      maximumVus: number
+      p95LimitMs: number
+      status: 'completed'
+    }
+  | {
+      reason: string
+      status: 'infrastructure_failure'
+    }
+
+type SearchContext = {
+  log: (message: string) => void
+  options: CapacitySearchOptions
+  p95LimitMs: number
+}
+
+// The search only orders k6 points. Running a point, judging it, and keeping
+// the report stay with the caller, which makes the search testable without k6.
+
+export function computeP95LimitMs(
+  baselineP95Ms: number,
+  latencyMultiplier: number,
+  configuredP95LimitMs: number | null,
+): number {
+  return configuredP95LimitMs ?? baselineP95Ms * latencyMultiplier
+}
+
+export function getCapacityResultBound(
+  candidateVus: number,
+  configuredMaxVus: number,
+  firstFailingVus: number,
+): ResultBound {
+  return candidateVus === configuredMaxVus && firstFailingVus === 0
+    ? 'lower_bound'
+    : 'exact'
+}
+
+function abort(reason: string): CapacitySearchResult {
+  return { reason, status: 'infrastructure_failure' }
+}
+
+function evaluateBurstLevel(context: SearchContext, vus: number): PointOutcome {
+  const { options, p95LimitMs } = context
+  const runBurst = (phase: CapacityPhase): PointOutcome =>
+    options.runPoint({ iterationsPerVu: 1, p95LimitMs, phase, vus })
+  const firstOutcome = runBurst('discovery')
+
+  if (firstOutcome.result !== 'failed') {
+    return firstOutcome
+  }
+
+  context.log(`Retrying failing discovery point at ${vus} VUs\n`)
+
+  const secondOutcome = runBurst('discovery-retry')
+
+  if (secondOutcome.result === 'infrastructure_failure') {
+    return secondOutcome
+  }
+  if (secondOutcome.result === firstOutcome.result) {
+    return firstOutcome
+  }
+
+  context.log(`Running deciding discovery point at ${vus} VUs\n`)
+  return runBurst('discovery-decider')
+}
+
+function evaluateConfirmationLevel(
+  context: SearchContext,
+  vus: number,
+): PointOutcome {
+  return context.options.runPoint({
+    iterationsPerVu: context.options.confirmationIterations,
+    p95LimitMs: context.p95LimitMs,
+    phase: 'confirmation',
+    vus,
+  })
+}
+
+type BisectionResult =
+  | { highestPassingVus: number; status: 'completed' }
+  | { failingVus: number; status: 'infrastructure_failure' }
+
+function bisect(
+  low: number,
+  high: number,
+  initialPassingVus: number,
+  evaluate: (vus: number) => PointOutcome,
+): BisectionResult {
+  let highestPassingVus = initialPassingVus
+  let searchLow = low
+  let searchHigh = high
+
+  while (searchLow <= searchHigh) {
+    const searchMid = Math.floor((searchLow + searchHigh) / 2)
+    const outcome = evaluate(searchMid)
+
+    if (outcome.result === 'infrastructure_failure') {
+      return { failingVus: searchMid, status: 'infrastructure_failure' }
+    }
+
+    if (outcome.result === 'passed') {
+      highestPassingVus = searchMid
+      searchLow = searchMid + 1
+    } else {
+      searchHigh = searchMid - 1
+    }
+  }
+
+  return { highestPassingVus, status: 'completed' }
+}
+
+type DiscoveryResult =
+  | { firstFailingVus: number; lastPassingVus: number; status: 'completed' }
+  | { reason: string; status: 'infrastructure_failure' }
+
+function discover(context: SearchContext): DiscoveryResult {
+  const { maxVus } = context.options
+  let lastPassingVus = 1
+  let firstFailingVus = 0
+  let currentVus = 2
+
+  while (currentVus <= maxVus) {
+    const outcome = evaluateBurstLevel(context, currentVus)
+
+    if (outcome.result === 'infrastructure_failure') {
+      return {
+        reason: `discovery failed because of test infrastructure at ${currentVus} VUs`,
+        status: 'infrastructure_failure',
+      }
+    }
+
+    if (outcome.result === 'failed') {
+      firstFailingVus = currentVus
+      break
+    }
+
+    lastPassingVus = currentVus
+
+    if (currentVus === maxVus) {
+      break
+    }
+
+    currentVus = Math.min(currentVus * 2, maxVus)
+  }
+
+  if (firstFailingVus === 0) {
+    return { firstFailingVus, lastPassingVus, status: 'completed' }
+  }
+
+  const bisection = bisect(
+    lastPassingVus + 1,
+    firstFailingVus - 1,
+    lastPassingVus,
+    (vus: number): PointOutcome => evaluateBurstLevel(context, vus),
+  )
+
+  if (bisection.status === 'infrastructure_failure') {
+    return {
+      reason: `binary discovery failed because of test infrastructure at ${bisection.failingVus} VUs`,
+      status: 'infrastructure_failure',
+    }
+  }
+
+  return {
+    firstFailingVus,
+    lastPassingVus: bisection.highestPassingVus,
+    status: 'completed',
+  }
+}
+
+export function searchCapacity(
+  options: CapacitySearchOptions,
+): CapacitySearchResult {
+  const baselineOutcome = options.runPoint({
+    iterationsPerVu: options.baselineIterations,
+    p95LimitMs: null,
+    phase: 'baseline',
+    vus: 1,
+  })
+
+  if (baselineOutcome.result === 'infrastructure_failure') {
+    return abort('baseline failed because of test infrastructure')
+  }
+  if (baselineOutcome.p95Ms === null) {
+    return abort('baseline produced no p95 measurement')
+  }
+
+  const baselineP95Ms = baselineOutcome.p95Ms
+  const p95LimitMs = computeP95LimitMs(
+    baselineP95Ms,
+    options.latencyMultiplier,
+    options.configuredP95LimitMs,
+  )
+  const complete = (
+    maximumVus: number,
+    bound: ResultBound,
+  ): CapacitySearchResult => ({
+    baselineP95Ms,
+    bound,
+    maximumVus,
+    p95LimitMs,
+    status: 'completed',
+  })
+
+  if (baselineOutcome.result === 'failed') {
+    return complete(0, 'exact')
+  }
+
+  const context: SearchContext = {
+    log: options.log ?? ((): void => {}),
+    options,
+    p95LimitMs,
+  }
+  const discovery = discover(context)
+
+  if (discovery.status === 'infrastructure_failure') {
+    return abort(discovery.reason)
+  }
+
+  const candidateVus = discovery.lastPassingVus
+  const confirmationOutcome = evaluateConfirmationLevel(context, candidateVus)
+
+  if (confirmationOutcome.result === 'infrastructure_failure') {
+    return abort(
+      `confirmation failed because of test infrastructure at ${candidateVus} VUs`,
+    )
+  }
+
+  if (confirmationOutcome.result === 'passed') {
+    return complete(
+      candidateVus,
+      getCapacityResultBound(
+        candidateVus,
+        options.maxVus,
+        discovery.firstFailingVus,
+      ),
+    )
+  }
+
+  const confirmation = bisect(
+    1,
+    candidateVus - 1,
+    0,
+    (vus: number): PointOutcome => evaluateConfirmationLevel(context, vus),
+  )
+
+  if (confirmation.status === 'infrastructure_failure') {
+    return abort(
+      `confirmation search failed because of test infrastructure at ${confirmation.failingVus} VUs`,
+    )
+  }
+
+  return complete(confirmation.highestPassingVus, 'exact')
+}
