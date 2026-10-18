@@ -311,6 +311,10 @@ Shared drives can be tested in two modes:
    passed. The run stops early when more than half of the HTTP requests
    fail.
 
+   A failing level is a result, not an error: k6 still exits with 0. It
+   exits with an error only when cleanup fails or the run stops early, so
+   automation must read `max_sustained_level` from the result file.
+
 2. **Direct upload target mode in `concurrent-uploads.ts`**: sends pure upload traffic directly to an existing shared-drive directory root.
 
 To exercise the current API mode, pass an existing directory-root shared

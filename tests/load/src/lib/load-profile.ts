@@ -302,9 +302,17 @@ function readRate(metrics: SummaryMetrics, name: string): number | null {
     : null
 }
 
+// k6 reports an empty submetric with a p95 of 0, so a p95 only counts when
+// the trend also has samples. The ramp asks k6 for `count` for that reason.
 function readP95(metrics: SummaryMetrics, name: string): number | null {
-  const value = metrics[name]?.values?.['p(95)']
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
+  const values = metrics[name]?.values
+  const value = values?.['p(95)']
+
+  return (values?.count ?? 0) > 0 &&
+    typeof value === 'number' &&
+    Number.isFinite(value)
+    ? value
+    : null
 }
 
 function round(value: number, digits: number): number {
