@@ -6,6 +6,9 @@ services:
     profiles:
       - cozy
     restart: "${RESTART_POLICY:-no}"
+    # Unset limits mean unlimited; campaigns record the effective values.
+    cpus: ${COUCHDB_CPUS:-0}
+    mem_limit: ${COUCHDB_MEMORY:-0}
     environment:
       COUCHDB_USER: cozy
       COUCHDB_PASSWORD: cozy
@@ -90,6 +93,8 @@ services:
       args:
         COZY_ENV: development
     restart: "${RESTART_POLICY:-no}"
+    cpus: ${COZY_STACK_CPUS:-0}
+    mem_limit: ${COZY_STACK_MEMORY:-0}
     command:
       - cozy-stack
       - -c
