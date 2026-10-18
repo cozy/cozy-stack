@@ -281,6 +281,36 @@ Shared drives can be tested in two modes:
    $ make cozy-shared-drive-load DURATION=1m WRITER_VUS=3 WS_READER_VUS=5 CHANGES_READER_VUS=3
    ```
 
+   To find the highest activity level one instance sustains, run the same
+   mix as a ramp in a single k6 run:
+
+   ```console
+   $ make cozy-shared-drive-ramp RAMP_LEVELS=1,2,4,8,16 RAMP_STEP_DURATION=1m
+   ```
+
+   Level L runs L writers, 3L WebSocket readers, and 2L changes readers
+   (`RAMP_WRITERS_PER_LEVEL`, `RAMP_WS_READERS_PER_LEVEL`,
+   `RAMP_CHANGES_READERS_PER_LEVEL`). Each level gets a 10s transition and
+   a hold of `RAMP_STEP_DURATION`. Samples taken during the hold are tagged
+   with `level`; transitions are tagged apart and never judged.
+
+   After the run, `handleSummary()` judges each level. A level passes when
+   the upload, changes, WebSocket handshake, and WebSocket auth success
+   rates reach `MIN_SUCCESS_RATE` (default 0.99), and the upload and
+   changes p95 stay within `P95_LIMIT_MS`. Without an absolute limit, the
+   p95 limit is `LATENCY_MULTIPLIER` (default 2) times the first level's
+   p95. Prefer `P95_LIMIT_MS` when first-level latencies are only a few
+   milliseconds, because doubling them is within normal jitter.
+
+   The result is written to
+   `data/results/<EXECUTION_ID>-shared-drive-ramp.json`.
+   `max_sustained_level` is the last level before the first one that did
+   not pass. `result_bound` is `exact` when a level failed, `lower_bound`
+   when every level passed, and `inconclusive` when a level lacked samples
+   or was never reached. A level with missing metrics never counts as
+   passed. The run stops early when more than half of the HTTP requests
+   fail.
+
 2. **Direct upload target mode in `concurrent-uploads.ts`**: sends pure upload traffic directly to an existing shared-drive directory root.
 
 To exercise the current API mode, pass an existing directory-root shared

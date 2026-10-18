@@ -29,6 +29,12 @@ import {
 } from '../lib/duration.ts'
 import { parsePositiveIntegerEnv } from '../lib/env.ts'
 import {
+  getRampPhaseAt,
+  getRampTotalDurationMs,
+  type RampPhase,
+  type RampPlan,
+} from '../lib/load-profile.ts'
+import {
   getUploadTarget,
   type SharedDriveUploadTarget,
 } from '../lib/upload-target.ts'
@@ -87,17 +93,20 @@ export const options: Options = {
   },
 }
 
-interface SetupData {
+export interface SetupData {
   accessToken: string
   baseUrl: string
   driveId: string
+  rampPlan: RampPlan | null
   rootDirectoryId: string
   testDir: TestDirectory
   testDurationMs: number
   wsSessionDurationMs: number
 }
 
-export function setup(): SetupData {
+// shared-drive-ramp.ts reuses these loops and passes its plan here; a null
+// plan keeps the constant-VU behaviour of this entry point.
+export function createSetupData(rampPlan: RampPlan | null): SetupData {
   const accessToken = __ENV.COZY_ACCESS_TOKEN
   if (!accessToken) {
     throw new Error('COZY_ACCESS_TOKEN environment variable is required')
@@ -120,16 +129,22 @@ export function setup(): SetupData {
     timeout: '30s',
   })
 
-  const testDurationMs = parseDurationToMs(rawDuration)
-  const wsSessionDurationMs = getWsSessionDurationMs(
-    rawDuration,
-    __ENV.WS_SESSION_DURATION,
-  )
+  const testDurationMs =
+    rampPlan === null
+      ? parseDurationToMs(rawDuration)
+      : getRampTotalDurationMs(rampPlan)
+  // Ramp sessions end with the phase they started in, so by default they
+  // may last a whole transition plus hold.
+  const wsSessionDurationMs =
+    rampPlan !== null && !__ENV.WS_SESSION_DURATION
+      ? rampPlan.transitionMs + rampPlan.holdMs
+      : getWsSessionDurationMs(rawDuration, __ENV.WS_SESSION_DURATION)
 
   return {
     accessToken,
     baseUrl,
     driveId: uploadTarget.driveId,
+    rampPlan,
     rootDirectoryId: uploadTarget.rootDirectoryId,
     testDir,
     testDurationMs,
@@ -137,8 +152,32 @@ export function setup(): SetupData {
   }
 }
 
+export function setup(): SetupData {
+  return createSetupData(null)
+}
+
+// In ramp mode every sample carries the level being held, so the summary can
+// judge each level on its own. Samples taken during a transition are tagged
+// apart and never judged.
+function tagRampLevel(data: SetupData, elapsedMs: number): RampPhase | null {
+  if (data.rampPlan === null) {
+    return null
+  }
+
+  const phase = getRampPhaseAt(data.rampPlan, elapsedMs)
+  exec.vu.metrics.tags.level =
+    phase.level === null ? 'transition' : String(phase.level)
+  return phase
+}
+
+function getElapsedMs(): number {
+  return Date.now() - exec.scenario.startTime
+}
+
 // --- Scenario 1: Writers ---
 export function writerLoop(data: SetupData): void {
+  tagRampLevel(data, getElapsedMs())
+
   const vu = exec.vu.idInTest
   const iter = exec.vu.iterationInInstance
   const marker = [iter, vu, Date.now(), Math.floor(Math.random() * 0xffffffff)].join('-')
@@ -174,8 +213,12 @@ export function writerLoop(data: SetupData): void {
 
 // --- Scenario 2: WebSocket Readers ---
 export function wsReaderLoop(data: SetupData): void {
-  const scenarioEndTime = exec.scenario.startTime + data.testDurationMs
-  const timeRemainingMs = scenarioEndTime - Date.now()
+  const elapsedMs = getElapsedMs()
+  const phase = tagRampLevel(data, elapsedMs)
+  // A ramp session must not outlive its phase, or its samples would be
+  // judged against the wrong level.
+  const sessionEndsAtMs = phase === null ? data.testDurationMs : phase.endsAtMs
+  const timeRemainingMs = sessionEndsAtMs - elapsedMs
   if (timeRemainingMs < 1000) {
     sleep(1)
     return
@@ -239,6 +282,8 @@ export function wsReaderLoop(data: SetupData): void {
 let vuSince = 'now'
 
 export function changesReaderLoop(data: SetupData): void {
+  tagRampLevel(data, getElapsedMs())
+
   const headers = {
     Authorization: `Bearer ${data.accessToken}`,
     Accept: 'application/json',

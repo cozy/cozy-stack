@@ -38,7 +38,7 @@ HOST_GID ?= $(shell id -g)
 export HOST_UID
 export HOST_GID
 
-.PHONY: help doctor install typecheck config pull observability-up up cozy-up cozy-prepare cozy-shared-drive-prepare cozy-shared-drive-load cozy-upload cozy-upload-soak cozy-capacity cozy-capacity-all cozy-status cozy-logs cozy-down upload-binaries upload-binary upload-smoke upload upload-soak upload-capacity upload-capacity-all status logs down dashboard-url
+.PHONY: help doctor install typecheck config pull observability-up up cozy-up cozy-prepare cozy-shared-drive-prepare cozy-shared-drive-load cozy-shared-drive-ramp cozy-upload cozy-upload-soak cozy-capacity cozy-capacity-all cozy-status cozy-logs cozy-down upload-binaries upload-binary upload-smoke upload upload-soak upload-capacity upload-capacity-all status logs down dashboard-url
 
 help:
 	@echo "make install                                 Install the load-harness Node tools"
@@ -50,6 +50,7 @@ help:
 	@echo "make cozy-prepare                            Prepare the local Cozy test instance"
 	@echo "make cozy-shared-drive-prepare               Prepare a local shared drive for load testing"
 	@echo "make cozy-shared-drive-load                  Run the multi-scenario shared drive load test"
+	@echo "make cozy-shared-drive-ramp                  Find the highest sustained shared drive level"
 	@echo "make cozy-upload FILE_SIZE=1K VUS=1          Prepare and test the local Cozy stack"
 	@echo "make cozy-upload-soak FILE_SIZE=1M VUS=10 DURATION=10m"
 	@echo "make cozy-capacity FILE_SIZE=1K MAX_VUS=8    Measure the local Cozy stack"
@@ -102,6 +103,11 @@ cozy-upload-soak: cozy-prepare
 WRITER_VUS ?= 3
 WS_READER_VUS ?= 5
 CHANGES_READER_VUS ?= 3
+RAMP_LEVELS ?= 1,2,4,8,16
+RAMP_STEP_DURATION ?= 1m
+RAMP_WRITERS_PER_LEVEL ?= 1
+RAMP_WS_READERS_PER_LEVEL ?= 3
+RAMP_CHANGES_READERS_PER_LEVEL ?= 2
 
 cozy-shared-drive-prepare: cozy-prepare
 	@COZY_INSTANCE_DOMAIN="$(COZY_INSTANCE_DOMAIN)" COZY_BASE_URL="$(COZY_BASE_URL)" $(NODE_BIN)/tsx src/scripts/prepare-shared-drive.ts
@@ -126,6 +132,31 @@ cozy-shared-drive-load: upload-binary observability-up
 		--summary-export="/results/$(EXECUTION_ID)-shared-drive-summary.json" \
 		/scripts/shared-drive-activity.ts
 	@echo "Shared drive activity result: data/results/$(EXECUTION_ID)-shared-drive-summary.json"
+
+cozy-shared-drive-ramp: upload-binary observability-up
+	@mkdir -p data/results
+	@$(COMPOSE) run --rm \
+		-e BASE_URL="$(COZY_BASE_URL)" \
+		-e COZY_ACCESS_TOKEN="$(COZY_ACCESS_TOKEN)" \
+		-e UPLOAD_TARGET=shared-drive \
+		-e SHARED_DRIVE_ID="$(SHARED_DRIVE_ID)" \
+		-e SHARED_DRIVE_ROOT_ID="$(SHARED_DRIVE_ROOT_ID)" \
+		-e FILE_SIZE="$(FILE_SIZE)" \
+		-e RAMP_LEVELS="$(RAMP_LEVELS)" \
+		-e RAMP_STEP_DURATION="$(RAMP_STEP_DURATION)" \
+		-e RAMP_WRITERS_PER_LEVEL="$(RAMP_WRITERS_PER_LEVEL)" \
+		-e RAMP_WS_READERS_PER_LEVEL="$(RAMP_WS_READERS_PER_LEVEL)" \
+		-e RAMP_CHANGES_READERS_PER_LEVEL="$(RAMP_CHANGES_READERS_PER_LEVEL)" \
+		-e MIN_SUCCESS_RATE="$(MIN_SUCCESS_RATE)" \
+		-e P95_LIMIT_MS="$(P95_LIMIT_MS)" \
+		-e LATENCY_MULTIPLIER="$(LATENCY_MULTIPLIER)" \
+		-e EXECUTION_ID="$(EXECUTION_ID)" \
+		k6 run -o experimental-prometheus-rw \
+		--tag campaignid="$(EXECUTION_ID)" \
+		--tag filesize="$(FILE_SIZE)" \
+		--summary-export="/results/$(EXECUTION_ID)-shared-drive-ramp-summary.json" \
+		/scripts/shared-drive-ramp.ts
+	@echo "Shared drive ramp result: data/results/$(EXECUTION_ID)-shared-drive-ramp.json"
 
 cozy-capacity: cozy-prepare
 	@$(MAKE) upload-capacity BASE_URL="$(COZY_BASE_URL)" FILE_SIZE="$(FILE_SIZE)" MAX_VUS="$(MAX_VUS)" LATENCY_MULTIPLIER="$(LATENCY_MULTIPLIER)" P95_LIMIT_MS="$(P95_LIMIT_MS)" MIN_SUCCESS_RATE="$(MIN_SUCCESS_RATE)" BASELINE_ITERATIONS="$(BASELINE_ITERATIONS)" CONFIRMATION_ITERATIONS="$(CONFIRMATION_ITERATIONS)" CONSISTENCY_CHUNK_SIZE_BYTES="$(CONSISTENCY_CHUNK_SIZE_BYTES)" UPLOAD_TARGET="$(UPLOAD_TARGET)" SHARED_DRIVE_ID="$(SHARED_DRIVE_ID)" SHARED_DRIVE_ROOT_ID="$(SHARED_DRIVE_ROOT_ID)" CAPACITY_RUN_ID="$(CAPACITY_RUN_ID)" FORCE_CAPACITY_RUN="$(FORCE_CAPACITY_RUN)"

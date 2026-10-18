@@ -11,6 +11,8 @@
     "src/lib/duration.test.ts",
     "src/lib/env.ts",
     "src/lib/env.test.ts",
+    "src/lib/load-profile.ts",
+    "src/lib/load-profile.test.ts",
     "src/lib/upload-consistency.ts",
     "src/lib/upload-consistency.test.ts",
     "src/lib/upload-target.ts",
