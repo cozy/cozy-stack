@@ -9,5 +9,5 @@
     "src/lib/**/*.ts",
     "src/scenarios/**/*.ts"
   ],
-  "exclude": ["node_modules", "src/scripts", "src/lib/capacity", "**/*.test.ts"]
+  "exclude": ["node_modules", "src/scripts", "**/*.test.ts"]
 }
