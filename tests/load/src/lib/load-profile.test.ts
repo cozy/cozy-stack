@@ -45,8 +45,11 @@ function rate(value: number | undefined): { values: Record<string, number> } {
     : { values: { fails: 1 - value, passes: value, rate: value } }
 }
 
+// k6 keeps an empty placeholder submetric with a p95 of 0 and a count of 0.
 function trend(value: number | undefined): { values: Record<string, number> } {
-  return value === undefined ? { values: {} } : { values: { 'p(95)': value } }
+  return value === undefined
+    ? { values: { count: 0, 'p(95)': 0 } }
+    : { values: { count: 10, 'p(95)': value } }
 }
 
 function makeMetrics(samples: Record<number, LevelSample>): SummaryMetrics {
@@ -270,6 +273,18 @@ describe('evaluateRampLevels', (): void => {
     deepEqual(report.levels[1]?.reasons, ['ws auth rate has no samples'])
     equal(report.max_sustained_level, 1)
     equal(report.result_bound, 'inconclusive')
+  })
+
+  it('treats a p95 without samples as missing, not as zero', (): void => {
+    const metrics = makeMetrics({ 1: healthy, 2: healthy })
+    metrics[
+      rampLevelMetricName('shared_drive_changes_duration_ms', 2)
+    ] = { values: { 'p(95)': 0 } }
+
+    const report = evaluateRampLevels(metrics, plan, criteria)
+
+    equal(report.levels[1]?.status, 'not_measured')
+    deepEqual(report.levels[1]?.reasons, ['changes p95 has no samples'])
   })
 
   it('marks levels the run never reached', (): void => {

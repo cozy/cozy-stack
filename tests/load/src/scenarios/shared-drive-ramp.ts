@@ -50,7 +50,17 @@ export const options: Options = {
       startVUs: 0,
     },
   },
-  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
+  // `count` lets handleSummary() tell an empty level from a p95 of 0.
+  summaryTrendStats: [
+    'avg',
+    'min',
+    'med',
+    'max',
+    'p(90)',
+    'p(95)',
+    'p(99)',
+    'count',
+  ],
   thresholds: buildRampThresholds(rampPlan),
 }
 
