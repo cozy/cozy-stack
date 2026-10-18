@@ -6,7 +6,7 @@ as an on-demand container, stores metrics in Prometheus, and provisions a
 Grafana dashboard.
 
 The harness includes authenticated exact-work and fixed-duration file-upload
-workloads for personal drives, a work-in-progress shared-drive mode, and an
+workloads for personal drives, shared-drive activity and upload workloads, and an
 adaptive search for the maximum upload concurrency of one Cozy instance.
 Organization membership and other file workloads remain separate future
 scenarios.
@@ -262,20 +262,25 @@ the upload p95 and upload success thresholds still measure only the upload
 requests. The downloads remain part of the workload and may overlap with
 slower uploads, as they would in an immediate read-after-write check.
 
-### Shared-drive upload mode (work in progress)
+### Shared-drive load testing
 
-`concurrent-uploads.ts` has a shared-drive target mode; there is not a separate
-shared-drive scenario yet.
+> [!WARNING]
+> **Owner-only workload**: The `shared-drive-activity.ts` scenario runs against the drive owner's instance and credentials. It does not exercise recipient/member sync paths, cross-instance replication, or multi-member permission propagation. Testing multi-instance recipient workflows remains a separate future scenario.
 
-> **Work in progress:** the current mode sends every upload from one configured
-> instance and access token. It is useful for checking the shared-drive API
-> routes, but it does not yet represent concurrent activity from the different
-> instances with which a drive is shared.
+Shared drives can be tested in two modes:
 
-The complete scenario will prepare an owner and several recipient instances,
-share one drive with them, and distribute concurrent uploads across their
-individual access tokens. Until that lifecycle is implemented, do not treat
-results from this mode as shared-drive capacity results.
+1. **Combined activity scenario (`shared-drive-activity.ts`)**: exercises concurrent collaborative activity combining:
+   - **File writers**: concurrent uploads into the shared drive.
+   - **WebSocket readers**: persistent connections to `/sharings/drives/:id/realtime` listening for real-time `CREATED`/`UPDATED` events.
+   - **Changes feed readers**: periodic polling of `/sharings/drives/:id/_changes`.
+
+   To prepare the shared drive on a local Cozy instance and run the activity scenario:
+   ```console
+   $ make cozy-shared-drive-prepare
+   $ make cozy-shared-drive-load DURATION=1m WRITER_VUS=3 WS_READER_VUS=5 CHANGES_READER_VUS=3
+   ```
+
+2. **Direct upload target mode in `concurrent-uploads.ts`**: sends pure upload traffic directly to an existing shared-drive directory root.
 
 To exercise the current API mode, pass an existing directory-root shared
 drive's sharing ID and root directory ID. Read both identifiers from
