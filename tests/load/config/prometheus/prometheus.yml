@@ -23,3 +23,35 @@ scrape_configs:
     static_configs:
       - targets:
           - cozy-stack:6060
+
+  # Stack dependencies of the bundled Cozy stack. Down when the stack runs
+  # elsewhere, like cozy-stack-local.
+  - job_name: rabbitmq
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    static_configs:
+      - targets:
+          - rabbitmq:15692
+
+  # Per-queue depth, for membership-event drain times (#4866).
+  - job_name: rabbitmq-queues
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    metrics_path: /metrics/detailed
+    params:
+      family:
+        - queue_coarse_metrics
+    static_configs:
+      - targets:
+          - rabbitmq:15692
+
+  - job_name: couchdb
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    metrics_path: /_node/_local/_prometheus
+    basic_auth:
+      username: cozy
+      password: cozy
+    static_configs:
+      - targets:
+          - couchdb:5984

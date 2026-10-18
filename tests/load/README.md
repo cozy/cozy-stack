@@ -50,13 +50,15 @@ tests/load/
 │   ├── lib/             reusable Cozy and consistency helpers
 │   ├── scripts/         Node setup and capacity tools
 │   └── mock/            streaming API used by the upload smoke test
+├── campaigns/           campaign definitions run by make campaign
 ├── config/
 │   ├── cozy/
 │   ├── prometheus/
 │   └── grafana/
 ├── data/
 │   ├── upload-binaries/ generated input files, ignored by Git
-│   └── results/         summaries and capacity reports, ignored by Git
+│   └── results/         summaries, capacity reports, and campaign
+│                        directories, ignored by Git
 ├── Makefile
 └── compose.yaml
 ```
@@ -449,11 +451,65 @@ a stack started directly on the host. The stack panels show scrape health,
 request rate, error rate, server latency, CPU, memory, goroutines, file
 descriptor usage, garbage collection, and upload-related worker queues.
 
+For the bundled stack, Prometheus also scrapes CouchDB
+(`/_node/_local/_prometheus`) and RabbitMQ (port 15692, including per-queue
+depth). The overview's last row shows CouchDB requests, request time, error
+responses, open databases and files, and RabbitMQ memory and queued messages.
+
+The **Twake Drive shared-drive activity** dashboard follows the ramp level by
+level: success rates, WebSocket events and changes delivered per upload level,
+upload, changes, and WebSocket connect p95, VUs, and stack load.
+
 The stack HTTP metrics are labelled by method and status code, but not by
 route, file size, instance, or k6 campaign. During a controlled upload campaign,
 `POST` responses with status `201` are mostly file uploads, with one directory
 creation per test point. Use the shared dashboard time range to correlate stack
 and k6 metrics; use the k6 upload metrics for exact scenario attribution.
+
+## Campaigns
+
+A campaign runs several measurements in a row and keeps everything about the
+run together:
+
+```console
+$ make campaign CAMPAIGN=quick
+$ make campaign CAMPAIGN=breaking-point
+```
+
+`campaigns/quick.sh` measures 1 MiB upload capacity on a personal drive and a
+shared drive, then runs the shared-drive ramp to level 16, in about 30 to 60
+minutes. `campaigns/breaking-point.sh` pushes every suite until errors, lost
+data, or missing events, with uploads slower than 5 minutes counted as errors;
+it takes several hours. A definition is a `campaign()` function calling
+`upload_capacity`, `shared_drive_prepare`, `shared_drive_ramp`, or `run_step`.
+
+Each run writes `data/results/campaigns/<run id>-<name>/`:
+
+- `run.log`: the full output;
+- `stats.log`: container CPU and memory every 10s, to tell whether k6 or the
+  stack saturated first;
+- `environment.txt`: git commit, topology, host, and the configured and
+  effective CPU and memory limits;
+- `steps.tsv`: one line per step with its campaign ID, times, and exit code;
+- `summary.md`: one line per step with its result and a Grafana link for its
+  time range. Set `GRAFANA_URL` when Grafana is not on `localhost`.
+
+### Topology and resource limits
+
+k6 runs on the same host as the stack unless a separate load generator is
+used, so its CPU use competes with Cozy. Campaigns record `LOAD_TOPOLOGY`
+(default `single-host`), and every k6 run tags its metrics with `topology`.
+Compare results only between runs with the same topology and limits.
+
+CPU and memory limits for cozy-stack and CouchDB come from the environment or
+`.env`, and are unlimited when unset:
+
+```dotenv
+COZY_STACK_CPUS=2
+COZY_STACK_MEMORY=4g
+COUCHDB_CPUS=1
+COUCHDB_MEMORY=2g
+```
 
 ## Adding another scenario
 
@@ -546,6 +602,10 @@ $ make cozy-prepare
 $ make cozy-upload FILE_SIZE=1K VUS=1
 $ make cozy-upload-soak FILE_SIZE=1M VUS=8 DURATION=10m
 $ make cozy-capacity FILE_SIZE=1K MAX_VUS=8
+$ make cozy-shared-drive-prepare
+$ make cozy-shared-drive-load DURATION=1m
+$ make cozy-shared-drive-ramp
+$ make campaign CAMPAIGN=quick
 $ make cozy-status
 $ make cozy-logs
 $ make cozy-down
@@ -560,7 +620,12 @@ $ make down
 
 `make down` preserves the Prometheus and Grafana volumes. Every run writes a
 JSON summary under `data/results/` and tags Prometheus metrics with campaign,
-execution, file-size, concurrency, and phase identifiers.
+execution, file-size, concurrency, phase, and topology identifiers.
+
+k6 drops its `url` system tag (`K6_SYSTEM_TAGS` in `compose.yaml`): upload
+names and changes sequence tokens would otherwise create new Prometheus series
+for every request. Requests are identified by their fixed `name` tag instead,
+such as `POST /files/:dir-id`.
 
 ## Deployment
 

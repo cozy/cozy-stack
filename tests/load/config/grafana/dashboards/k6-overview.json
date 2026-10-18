@@ -211,6 +211,90 @@
       "targets": [{"expr": "workers_queues_len{job=\"$stackjob\",worker_type=~\"antivirus|thumbnail|thumbnailck|trash-files\"}", "legendFormat": "{{worker_type}}", "refId": "A"}],
       "title": "Upload-related worker queues",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 43},
+      "id": 20,
+      "panels": [],
+      "title": "Stack dependencies (bundled stack)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44},
+      "id": 21,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (method) (rate(couchdb_httpd_request_methods{job=\"couchdb\"}[$__rate_interval]))", "legendFormat": "{{method}}", "refId": "A"}],
+      "title": "CouchDB requests by method",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 44},
+      "id": 22,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "couchdb_request_time_seconds{job=\"couchdb\",quantile=~\"0.95|0.99\"}", "legendFormat": "p{{quantile}}", "refId": "A"}],
+      "title": "CouchDB request time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 52},
+      "id": 23,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (code) (rate(couchdb_httpd_status_codes{job=\"couchdb\",code=~\"4..|5..\"}[$__rate_interval]))", "legendFormat": "{{code}}", "refId": "A"}],
+      "title": "CouchDB error responses",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 52},
+      "id": 24,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "couchdb_open_databases_total{job=\"couchdb\"}", "legendFormat": "open databases", "refId": "A"},
+        {"expr": "couchdb_open_os_files_total{job=\"couchdb\"}", "legendFormat": "open OS files", "refId": "B"}
+      ],
+      "title": "CouchDB open databases and files",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 52},
+      "id": 25,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "rabbitmq_process_resident_memory_bytes{job=\"rabbitmq\"}", "legendFormat": "resident memory", "refId": "A"}],
+      "title": "RabbitMQ memory",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 60},
+      "id": 26,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "sum(rabbitmq_queue_messages_ready{job=\"rabbitmq\"})", "legendFormat": "ready", "refId": "A"},
+        {"expr": "sum(rabbitmq_queue_messages_unacked{job=\"rabbitmq\"})", "legendFormat": "unacked", "refId": "B"}
+      ],
+      "title": "RabbitMQ messages",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 60},
+      "id": 27,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "rabbitmq_detailed_queue_messages_ready{job=\"rabbitmq-queues\"}", "legendFormat": "{{queue}}", "refId": "A"}],
+      "title": "RabbitMQ ready messages by queue",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",
@@ -309,5 +393,5 @@
   "timezone": "browser",
   "title": "Twake Drive k6 Overview",
   "uid": "twake-drive-k6",
-  "version": 4
+  "version": 5
 }

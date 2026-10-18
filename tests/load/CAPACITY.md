@@ -158,8 +158,12 @@ workload before latency or errors exceed their limits?
   harness, not capacity. Record capacity numbers in the dedicated load-test
   environment.
 - Record the stack version, its configuration, and the CPU and memory limits
-  of cozy-stack and CouchDB with every result. `compose.yaml` sets no limits,
-  so the dedicated environment must set them.
+  of cozy-stack and CouchDB with every result. Limits are unset by default;
+  set them with `COZY_STACK_CPUS`, `COZY_STACK_MEMORY`, `COUCHDB_CPUS`, and
+  `COUCHDB_MEMORY`. `make campaign` records the commit, the topology, and the
+  effective limits in each campaign directory.
+- Results from a single host, where k6 shares the CPUs with the stack, are
+  labelled `topology=single-host`. Compare them only with each other.
 - Vary one dimension at a time and keep the others at the fixed values
   above.
 - Every run creates its own data and cleans it up.
