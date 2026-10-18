@@ -1,22 +1,14 @@
 import { spawnSync } from 'node:child_process'
-import {
-  chmodSync,
-  existsSync,
-  readFileSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const scriptDirectory = dirname(fileURLToPath(import.meta.url))
-const harnessDirectory = resolve(scriptDirectory, '..', '..')
-const stackConfigPath = '/cozy-config/cozy.yaml'
-const environmentKeys = ['BASE_URL', 'COZY_ACCESS_TOKEN'] as const
+import {
+  getEnvironmentFilePath,
+  harnessDirectory,
+  saveEnvironmentFile,
+} from './env.ts'
 
-type EnvironmentKey = (typeof environmentKeys)[number]
-type EnvironmentUpdates = Record<EnvironmentKey, string>
+const stackConfigPath = '/cozy-config/cozy.yaml'
 
 export type CommandResult = {
   status: number
@@ -217,68 +209,6 @@ function getAccessToken(
   return accessToken
 }
 
-function getUpdatedEnvironmentLines(
-  existingLines: string[],
-  updates: EnvironmentUpdates,
-): string[] {
-  const remainingKeys = new Set<EnvironmentKey>(environmentKeys)
-  const updatedLines = existingLines.map((line: string): string => {
-    const matchingKey = environmentKeys.find((key: EnvironmentKey): boolean =>
-      line.startsWith(`${key}=`),
-    )
-
-    if (matchingKey === undefined) {
-      return line
-    }
-
-    remainingKeys.delete(matchingKey)
-    return `${matchingKey}=${updates[matchingKey]}`
-  })
-
-  for (const remainingKey of remainingKeys) {
-    updatedLines.push(`${remainingKey}=${updates[remainingKey]}`)
-  }
-
-  return updatedLines
-}
-
-function saveEnvironmentFile(
-  environmentPath: string,
-  updates: EnvironmentUpdates,
-): string {
-  for (const value of Object.values(updates)) {
-    if (/\r|\n/.test(value)) {
-      throw new Error('Environment values must stay on one line')
-    }
-  }
-
-  const existingContent = existsSync(environmentPath)
-    ? readFileSync(environmentPath, 'utf8')
-    : ''
-  const existingLines = existingContent
-    .split(/\r?\n/)
-    .filter(
-      (line: string, index: number, lines: string[]): boolean =>
-        index < lines.length - 1 || line.length > 0,
-    )
-  const updatedLines = getUpdatedEnvironmentLines(existingLines, updates)
-  const temporaryPath = `${environmentPath}.tmp.${process.pid}`
-
-  try {
-    writeFileSync(temporaryPath, `${updatedLines.join('\n')}\n`, {
-      encoding: 'utf8',
-      mode: 0o600,
-    })
-    renameSync(temporaryPath, environmentPath)
-    chmodSync(environmentPath, 0o600)
-    return environmentPath
-  } finally {
-    if (existsSync(temporaryPath)) {
-      unlinkSync(temporaryPath)
-    }
-  }
-}
-
 function prepareLocalCozyInstance(): number {
   try {
     const instanceDomain =
@@ -287,10 +217,7 @@ function prepareLocalCozyInstance(): number {
     const softwareId =
       process.env.COZY_CLIENT_SOFTWARE_ID || 'twake-drive-load-local'
     const tokenExpiration = process.env.COZY_TOKEN_EXPIRATION || '24h'
-    const environmentPath = resolve(
-      harnessDirectory,
-      process.env.COZY_ENV_FILE || '.env',
-    )
+    const environmentPath = getEnvironmentFilePath()
     const instanceResult = ensureInstance(instanceDomain)
     const clientId = ensureOAuthClient(instanceDomain, softwareId)
     const accessToken = getAccessToken(
