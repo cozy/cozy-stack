@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,11 +14,18 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/labstack/echo/v4"
 )
+
+var errInstanceBusy = errors.New("the instance is busy, please retry later")
+
+// lockRetryAfter is the delay, in seconds, that clients are asked to wait
+// before retrying a request that timed out waiting for a lock.
+const lockRetryAfter = "10"
 
 // ErrorHandler is the default error handler of our APIs.
 func ErrorHandler(err error, c echo.Context) {
@@ -30,6 +38,10 @@ func ErrorHandler(err error, c echo.Context) {
 	var ok bool
 	if _, ok = err.(*echo.HTTPError); ok {
 		// nothing to do
+	} else if errors.Is(err, lock.ErrTooManyRetries) {
+		// The instance is overloaded, not broken: the client can retry later.
+		je = jsonapi.ServiceUnavailable(errInstanceBusy)
+		res.Header().Set(echo.HeaderRetryAfter, lockRetryAfter)
 	} else if os.IsExist(err) {
 		je = jsonapi.Conflict(err)
 	} else if os.IsNotExist(err) {
