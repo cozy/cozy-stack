@@ -37,7 +37,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 9},
       "id": 4,
       "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "targets": [
@@ -49,15 +49,24 @@
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "description": "CREATED events received by all WebSocket readers, per second. If every reader gets every event, this equals uploads per second times the number of WebSocket readers at that level. Grouped by the ramp level the file was uploaded at, read from its name, so a notification that arrives after its level ended still counts for that level. \"unattributed\" is for files uploaded during a transition between levels.",
+      "fieldConfig": {"defaults": {"unit": "suffix: /s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 9},
       "id": 5,
       "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-      "targets": [
-        {"expr": "sum by (level) (rate(k6_shared_drive_ws_events_total_total{campaignid=~\"$campaignid\",level=~\"$level\",event=\"CREATED\"}[$__rate_interval]))", "legendFormat": "ws CREATED, level {{level}}", "refId": "A"},
-        {"expr": "sum by (level) (rate(k6_shared_drive_changes_items_total_total{campaignid=~\"$campaignid\",level=~\"$level\"}[$__rate_interval]))", "legendFormat": "changes, level {{level}}", "refId": "B"}
-      ],
-      "title": "Delivered per second by upload level",
+      "targets": [{"expr": "sum by (level) (rate(k6_shared_drive_ws_events_total_total{campaignid=~\"$campaignid\",level=~\"$level\",event=\"CREATED\"}[$__rate_interval]))", "legendFormat": "files uploaded at level {{level}}", "refId": "A"}],
+      "title": "WebSocket: file-created notifications received per second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "New files found by all changes-feed readers (GET /sharings/drives/:id/_changes), per second. If every reader gets every file, this equals uploads per second times the number of changes readers at that level. Grouped by the ramp level the file was uploaded at, read from its name, so a notification that arrives after its level ended still counts for that level. \"unattributed\" is for files uploaded during a transition between levels.",
+      "fieldConfig": {"defaults": {"unit": "suffix: /s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 9},
+      "id": 14,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "sum by (level) (rate(k6_shared_drive_changes_items_total_total{campaignid=~\"$campaignid\",level=~\"$level\"}[$__rate_interval]))", "legendFormat": "files uploaded at level {{level}}", "refId": "A"}],
+      "title": "Changes feed: new files received per second",
       "type": "timeseries"
     },
     {
