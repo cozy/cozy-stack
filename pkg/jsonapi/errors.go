@@ -166,3 +166,12 @@ func BadGateway(err error) *Error {
 		Detail: err.Error(),
 	}
 }
+
+// ServiceUnavailable returns a 503 formatted error
+func ServiceUnavailable(err error) *Error {
+	return &Error{
+		Status: http.StatusServiceUnavailable,
+		Title:  "Service Unavailable",
+		Detail: err.Error(),
+	}
+}
