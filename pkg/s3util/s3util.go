@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -44,8 +46,15 @@ func CheckBucket(ctx context.Context, client *minio.Client, bucket string) error
 	}
 	exists, err := client.BucketExists(ctx, bucket)
 	if err != nil {
-		// Report only the S3 response status/code; raw errors may carry credentials.
 		resp := minio.ToErrorResponse(err)
+		if resp.StatusCode == 0 && resp.Code == "" {
+			detail := err.Error()
+			for _, secret := range []string{creds.SecretAccessKey, creds.AccessKeyID} {
+				detail = strings.ReplaceAll(detail, secret, "[REDACTED]")
+				detail = strings.ReplaceAll(detail, url.QueryEscape(secret), "[REDACTED]")
+			}
+			return fmt.Errorf("s3: bucket %q at %q is inaccessible: %s", bucket, endpoint, detail)
+		}
 		return fmt.Errorf("s3: bucket %q at %q is inaccessible (status=%d code=%s)",
 			bucket, endpoint, resp.StatusCode, resp.Code)
 	}
