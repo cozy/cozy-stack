@@ -102,6 +102,8 @@ security features. Please do not use this binary as your production server.
 		}
 		target := config.GetConfig().Fs
 		target.URL = config.MigrationTargetURL()
+		// The default transport may trust only the Swift endpoint's private CA.
+		target.Transport = nil
 		if err := config.InitS3Connection(target); err != nil {
 			// Migration target is auxiliary: log and continue instead of aborting startup; the worker guards on config.HasS3Client and refuses to run until it is reachable.
 			logger.WithNamespace("stack").Errorf(
