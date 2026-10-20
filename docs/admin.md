@@ -467,6 +467,54 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/fixers/member-copies/:org_id
+
+Delete the members the organization directory copied into the member instances
+of an organization, once the `twake:contacts:common` feed has filled its
+organization instance. Run it after a republication of the organization is
+fully consumed. The organization instance must exist, its context must set
+`common_contacts`, and the feed must have written at least one contact (with a
+`carddavPath`) on it. Instances whose context does not set `common_contacts`
+are skipped. Personal contacts, contacts written for sharing and copies the
+feed took over (with a `carddavPath`) are kept. The contacts are deleted in
+bulk, so the `share-group` trigger does not revoke the members of the groups.
+It is safe to run twice.
+
+`removed` counts the deleted contacts by instance.
+
+It responds with `404 Not Found` when the organization has no instance or no
+organization instance, and with `412 Precondition Failed` when the context of
+the organization instance does not set `common_contacts` or the feed has not
+filled it yet.
+
+#### Query-String
+
+| Parameter | Description                                          |
+| --------- | ---------------------------------------------------- |
+| dry_run   | `true` to report what would be removed, but not save |
+
+#### Request
+
+```http
+POST /instances/fixers/member-copies/6740b0e4e0c5c1001f2ef9d1?dry_run=true HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "removed": {
+    "alice.cozy.localhost": 42,
+    "bob.cozy.localhost": 42
+  }
+}
+```
+
 ### POST /instances/:domain/export
 
 Starts an export for the given instance. The CouchDB documents will be saved in
