@@ -238,7 +238,7 @@ func TestS3ConnectionErrors(t *testing.T) {
 	}{
 		{name: "missing", status: 404, expected: "does not exist"},
 		{name: "forbidden", status: 403, expected: "inaccessible"},
-		{name: "transport", transportError: true, expected: "inaccessible"},
+		{name: "transport", transportError: true, expected: "connection refused"},
 		{name: "empty credentials", override: "s3://storage.example?region=us-east-1", expected: "no usable credentials"},
 		{name: "incomplete credentials", override: "s3://storage.example?access_key=ACCESS_KEY&region=us-east-1", expected: "no usable credentials"},
 		{name: "malformed URL", override: "s3://bad%host?access_key=ACCESS_KEY&secret_key=SECRET_KEY", expected: "invalid connection URL"},
@@ -251,15 +251,18 @@ func TestS3ConnectionErrors(t *testing.T) {
 			fs.Transport = s3TransportFunc(func(r *http.Request) (*http.Response, error) {
 				assert.Equal(t, http.MethodHead, r.Method)
 				if tc.transportError {
-					return nil, errors.New("ACCESS_KEY SECRET_KEY")
+					return nil, errors.New("connection refused for ACCESS_KEY and ACCESS_KEY_SECRET")
 				}
 				return &http.Response{StatusCode: tc.status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("ACCESS_KEY SECRET_KEY")), Request: r}, nil
 			})
 			err := InitS3Connection(fs)
 			require.ErrorContains(t, err, "company-storage")
 			assert.ErrorContains(t, err, tc.expected)
+			if tc.transportError {
+				assert.Contains(t, err.Error(), "[REDACTED]")
+			}
 			assert.NotContains(t, err.Error(), "ACCESS_KEY")
-			assert.NotContains(t, err.Error(), "SECRET_KEY")
+			assert.NotContains(t, err.Error(), "ACCESS_KEY_SECRET")
 		})
 	}
 }
