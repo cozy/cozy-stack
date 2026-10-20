@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -41,18 +42,13 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 		}
 	}
 
-	group, err := contact.FindGroup(inst, groupID)
-	if err != nil {
-		return err
-	}
-	contacts, err := group.GetAllContacts(inst)
+	group, members, err := groupMembers(inst, groupID, readOnly)
 	if err != nil {
 		return err
 	}
 
 	groupIndex := len(s.Groups)
-	for _, contact := range contacts {
-		m := buildMemberFromContact(contact, readOnly)
+	for _, m := range members {
 		m.Groups = []int{groupIndex}
 		m.OnlyInGroups = true
 		_, idx, err := s.addMember(inst, m)
@@ -71,6 +67,53 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	}
 	s.Groups = append(s.Groups, g)
 	return nil
+}
+
+// groupMembers finds the group and turns its contacts into members. The user
+// of inst is left out, since they are in the groups of the org instance.
+func groupMembers(inst *instance.Instance, groupID string, readOnly bool) (*contact.Group, []Member, error) {
+	group, db, err := findGroup(inst, groupID)
+	if err != nil {
+		return nil, nil, err
+	}
+	contacts, err := group.GetAllContacts(db)
+	if err != nil {
+		return nil, nil, err
+	}
+	selfURL := inst.PageURL("", nil)
+	selfEmail, _ := inst.SettingsEMail()
+	var members []Member
+	for _, c := range contacts {
+		m := buildMemberFromContact(c, readOnly)
+		if m.Instance == selfURL || (m.Email != "" && strings.EqualFold(m.Email, selfEmail)) {
+			continue
+		}
+		members = append(members, m)
+	}
+	return group, members, nil
+}
+
+// findGroup looks a B2B group up on the org instance when the contacts are
+// common, then on the instance itself, and also returns the instance where
+// its contacts are. A member may not see the other groups of the org instance.
+func findGroup(inst *instance.Instance, groupID string) (*contact.Group, *instance.Instance, error) {
+	if inst.HasCommonContacts() && orgdirectory.IsManagedDirectoryGroupID(groupID) {
+		orgInst, err := findOrgInstance(inst)
+		if err != nil {
+			return nil, nil, err
+		}
+		if orgInst != nil {
+			group, err := contact.FindGroup(orgInst, groupID)
+			if err == nil && orgdirectory.IsManagedDirectoryDoc(&group.JSONDoc) {
+				return group, orgInst, nil
+			}
+			if err != nil && !couchdb.IsNotFoundError(err) && !couchdb.IsNoDatabaseError(err) {
+				return nil, nil, err
+			}
+		}
+	}
+	group, err := contact.FindGroup(inst, groupID)
+	return group, inst, err
 }
 
 // RevokeGroup revokes a group of members on the sharer Cozy. After that, the

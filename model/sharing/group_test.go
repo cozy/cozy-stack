@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -861,4 +862,85 @@ func TestRevokeDeletedGroupFromRecipient(t *testing.T) {
 		require.NoError(t, deleteGroup())
 		assert.Equal(t, 1, requestCount(), "the revoked group must not be delegated twice")
 	})
+}
+
+func TestAddGroupFromOrgInstance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	conf := config.GetConfig()
+	previous := conf.Contexts
+	conf.Contexts = map[string]interface{}{"groups-on-org": map[string]interface{}{"common_contacts": true}}
+	t.Cleanup(func() { conf.Contexts = previous })
+
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	orgID := "ag" + suffix
+	orgDomain := "acme-" + suffix + ".example"
+	newInstance := func(domain, contextName, email string) *instance.Instance {
+		inst, err := lifecycle.Create(&lifecycle.Options{Domain: domain, OrgDomain: orgDomain, OrgID: orgID, ContextName: contextName, Email: email})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(inst.Domain) })
+		return inst
+	}
+	org := newInstance(orgID+".ag.localhost", "groups-on-org", "")
+	alice := newInstance("alice-"+suffix+".ag.localhost", "groups-on-org", "alice@cozy.tools")
+
+	team := contact.NewGroup()
+	team.SetID(orgdirectory.GroupDocID(orgID, "team"))
+	team.M["name"] = "Team"
+	team.M[orgdirectory.DirectoryMetadataKey] = map[string]interface{}{"managed": true}
+	require.NoError(t, couchdb.CreateNamedDocWithDB(org, team))
+	createContactInGroups(t, org, "Alice", []string{team.ID()})
+	createContactInGroups(t, org, "Bob", []string{team.ID()})
+	// A stale copy on the member instance, emptied by the cleanup.
+	stale := contact.NewGroup()
+	stale.SetID(team.ID())
+	stale.M["name"] = "Team"
+	require.NoError(t, couchdb.CreateNamedDocWithDB(alice, stale))
+
+	s := &Sharing{
+		Active: true,
+		Owner:  true,
+		Members: []Member{
+			{Status: MemberStatusOwner, Name: "Alice", Email: "alice@cozy.tools"},
+		},
+	}
+	require.NoError(t, s.AddGroup(alice, team.ID(), false))
+	require.Len(t, s.Groups, 1)
+	assert.Equal(t, "Team", s.Groups[0].Name)
+	require.Len(t, s.Members, 2, "the sharer is not added from the org group")
+	assert.Equal(t, "bob@cozy.tools", s.Members[1].Email)
+	assert.Equal(t, []int{0}, s.Members[1].Groups)
+
+	// A nested drive created with the group reads it on the org instance too.
+	members, err := MembersFromContacts(alice, []string{team.ID()}, nil, false)
+	require.NoError(t, err)
+	require.Len(t, members, 1, "the sharer is not added from the org group")
+	assert.Equal(t, "bob@cozy.tools", members[0].Email)
+
+	own := createGroup(t, alice, "Friends")
+	createContactInGroups(t, alice, "Charlie", []string{own.ID()})
+	require.NoError(t, s.AddGroup(alice, own.ID(), false))
+	require.Len(t, s.Members, 3, "a personal group is still found on the instance")
+	assert.Equal(t, "charlie@cozy.tools", s.Members[2].Email)
+
+	// The other groups of the org instance can't be shared by a member.
+	admins := createGroup(t, org, "Admins")
+	createContactInGroups(t, org, "Dave", []string{admins.ID()})
+	unmanaged := contact.NewGroup()
+	unmanaged.SetID(orgdirectory.GroupDocID(orgID, "unmanaged"))
+	unmanaged.M["name"] = "Unmanaged"
+	require.NoError(t, couchdb.CreateNamedDocWithDB(org, unmanaged))
+	for _, id := range []string{admins.ID(), unmanaged.ID()} {
+		err := s.AddGroup(alice, id, false)
+		assert.True(t, couchdb.IsNotFoundError(err), "%s: %v", id, err)
+	}
+
+	// Without the common contacts, the groups are read on the instance only.
+	outside := newInstance("outside-"+suffix+".ag.localhost", "", "")
+	_, err = MembersFromContacts(outside, []string{team.ID()}, nil, false)
+	assert.True(t, couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err), "%v", err)
 }

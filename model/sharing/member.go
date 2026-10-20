@@ -211,16 +211,12 @@ func MembersFromContacts(inst *instance.Instance, groupIDs, contactIDs []string,
 		members = append(members, m)
 	}
 	for _, id := range groupIDs {
-		group, err := contact.FindGroup(inst, id)
+		_, inGroup, err := groupMembers(inst, id, readOnly)
 		if err != nil {
 			return nil, err
 		}
-		contacts, err := group.GetAllContacts(inst)
-		if err != nil {
-			return nil, err
-		}
-		for _, c := range contacts {
-			if m := buildMemberFromContact(c, readOnly); m.Email != "" || m.Instance != "" {
+		for _, m := range inGroup {
+			if m.Email != "" || m.Instance != "" {
 				members = append(members, m)
 			}
 		}
@@ -302,15 +298,13 @@ func FindContactByEmail(inst *instance.Instance, email string) (*contact.Contact
 	if addr, err := stdmail.ParseAddress(email); err != nil || addr.Address != email {
 		return nil, false, ErrInvalidEmail
 	}
-	if inst.OrgID != "" || inst.OrgDomain != "" {
-		orgInst, err := orgdirectory.FindOrganizationInstance(context.Background(), inst.OrgID, inst.OrgDomain)
-		if err != nil && !errors.Is(err, instance.ErrNotFound) {
-			return nil, false, err
-		}
-		if orgInst != nil {
-			if c, err := findContactByEmail(orgInst, email); c != nil || err != nil {
-				return c, false, err
-			}
+	orgInst, err := findOrgInstance(inst)
+	if err != nil {
+		return nil, false, err
+	}
+	if orgInst != nil {
+		if c, err := findContactByEmail(orgInst, email); c != nil || err != nil {
+			return c, false, err
 		}
 	}
 	if c, err := findContactByEmail(inst, email); c != nil || err != nil {
@@ -318,6 +312,19 @@ func FindContactByEmail(inst *instance.Instance, email string) (*contact.Contact
 	}
 	c, err := contact.Create(inst, contact.CreateOptions{Email: email, External: true})
 	return c, err == nil, err
+}
+
+// findOrgInstance returns the organization instance of inst, or nil when it
+// has none.
+func findOrgInstance(inst *instance.Instance) (*instance.Instance, error) {
+	if inst.OrgID == "" && inst.OrgDomain == "" {
+		return nil, nil
+	}
+	orgInst, err := orgdirectory.FindOrganizationInstance(context.Background(), inst.OrgID, inst.OrgDomain)
+	if errors.Is(err, instance.ErrNotFound) {
+		return nil, nil
+	}
+	return orgInst, err
 }
 
 func findContactByEmail(db prefixer.Prefixer, email string) (*contact.Contact, error) {
@@ -497,7 +504,7 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 	}
 
 	for _, groupID := range groupIDs {
-		group, err := contact.FindGroup(inst, groupID)
+		group, members, err := groupMembers(inst, groupID, readOnly)
 		if err != nil {
 			return err
 		}
@@ -509,13 +516,8 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 		}
 		api.groups = append(api.groups, g)
 
-		contacts, err := group.GetAllContacts(inst)
-		if err != nil {
-			return err
-		}
 		groupIndex := len(s.Groups)
-		for _, contact := range contacts {
-			m := buildMemberFromContact(contact, readOnly)
+		for _, m := range members {
 			m.Groups = []int{groupIndex}
 			m.OnlyInGroups = true
 			api.members = append(api.members, m)
