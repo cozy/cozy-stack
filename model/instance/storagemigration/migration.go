@@ -509,12 +509,18 @@ func waitForQuietStorage(db prefixer.Prefixer, quietPeriod time.Duration) error 
 		return err
 	}
 	time.Sleep(quietPeriod)
-	after, err := storageSequences(db)
-	if err != nil {
-		return err
-	}
-	if before != after {
-		return errors.New("storagemigration: file storage changed during the quiet period; retry when the instance is idle")
+	for i, doctype := range []string{consts.Files, consts.FilesVersions} {
+		changes, err := couchdb.GetChanges(db, &couchdb.ChangesRequest{
+			DocType: doctype,
+			Since:   before[i],
+			Limit:   1,
+		})
+		if err != nil {
+			return fmt.Errorf("storagemigration: read %s changes since update sequence: %w", doctype, err)
+		}
+		if len(changes.Results) > 0 {
+			return errors.New("storagemigration: file storage changed during the quiet period; retry when the instance is idle")
+		}
 	}
 	return nil
 }

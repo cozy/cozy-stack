@@ -384,15 +384,16 @@ func TestMigrateRejectsDryRunWithPurge(t *testing.T) {
 
 func TestWaitForQuietStorage(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		changed string
-		failAt  int32
+		name      string
+		changed   string
+		failAt    int32
+		wantError string
 	}{
 		{name: "quiet"},
-		{name: "files changed", changed: consts.Files},
-		{name: "versions changed", changed: consts.FilesVersions},
-		{name: "initial status unavailable", failAt: 1},
-		{name: "final status unavailable", failAt: 4},
+		{name: "files changed", changed: consts.Files, wantError: "file storage changed during the quiet period"},
+		{name: "versions changed", changed: consts.FilesVersions, wantError: "file storage changed during the quiet period"},
+		{name: "initial status unavailable", failAt: 1, wantError: "update sequence:"},
+		{name: "changes unavailable", failAt: 4, wantError: "changes since update sequence:"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			config.UseTestFile(t)
@@ -405,13 +406,21 @@ func TestWaitForQuietStorage(t *testing.T) {
 					fmt.Fprint(w, `{"error":"forbidden","reason":"denied"}`)
 					return
 				}
+				if path.Base(r.URL.Path) == "_changes" {
+					doctype := path.Base(path.Dir(r.URL.Path))
+					assert.Contains(t, []string{couchdb.EscapeCouchdbName(consts.Files), couchdb.EscapeCouchdbName(consts.FilesVersions)}, doctype)
+					assert.Equal(t, doctype+"-a", r.URL.Query().Get("since"))
+					assert.Equal(t, "1", r.URL.Query().Get("limit"))
+					if doctype == couchdb.EscapeCouchdbName(tc.changed) {
+						fmt.Fprintf(w, `{"last_seq":%q,"pending":0,"results":[{"id":"changed","seq":%q}]}`, doctype+"-b", doctype+"-b")
+					} else {
+						fmt.Fprintf(w, `{"last_seq":%q,"pending":0,"results":[]}`, doctype+"-different-opaque-encoding")
+					}
+					return
+				}
 				doctype := path.Base(r.URL.Path)
 				assert.Contains(t, []string{couchdb.EscapeCouchdbName(consts.Files), couchdb.EscapeCouchdbName(consts.FilesVersions)}, doctype)
-				seq := doctype + "-a"
-				if n > 2 && doctype == couchdb.EscapeCouchdbName(tc.changed) {
-					seq = doctype + "-b"
-				}
-				fmt.Fprintf(w, `{"update_seq":%q}`, seq)
+				fmt.Fprintf(w, `{"update_seq":%q}`, doctype+"-a")
 			}))
 			defer srv.Close()
 			u, err := url.Parse(srv.URL + "/")
@@ -423,15 +432,13 @@ func TestWaitForQuietStorage(t *testing.T) {
 			cfg.CouchDB.Client = srv.Client()
 
 			err = waitForQuietStorage(&migrationPrefixer{prefix: "quiet-test"}, time.Millisecond)
-			switch {
-			case tc.failAt != 0:
-				require.ErrorContains(t, err, "update sequence:")
-				assert.Equal(t, tc.failAt, requests.Load())
-			case tc.changed != "":
-				require.ErrorContains(t, err, "file storage changed during the quiet period")
-			default:
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, tc.wantError)
+			} else {
 				require.NoError(t, err)
-				assert.EqualValues(t, 4, requests.Load())
+			}
+			if tc.failAt != 0 {
+				assert.Equal(t, tc.failAt, requests.Load())
 			}
 		})
 	}
