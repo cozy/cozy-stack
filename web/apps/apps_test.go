@@ -28,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/stack"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -153,6 +154,55 @@ func TestApps(t *testing.T) {
 		assertNotFound(e, slug, testInstance.Domain, "/index.html")
 		assertNotFound(e, slug, testInstance.Domain, "/public/hello.html")
 		assertInternalServerError(e, slug, testInstance.Domain, "/invalid")
+	})
+
+	t.Run("OpenGraph", func(t *testing.T) {
+		eAnon := testutils.CreateTestClient(t, ts.URL)
+
+		file, err := vfs.Create(testInstance.VFS(), "/opengraph-report.pdf")
+		require.NoError(t, err)
+		require.NoError(t, file.Close())
+		doc, err := testInstance.VFS().FileByPath("/opengraph-report.pdf")
+		require.NoError(t, err)
+
+		createShareCode := func(subject string, password interface{}) string {
+			code, err := testInstance.MakeJWT(consts.ShareAudience, subject, consts.Files, "", time.Now())
+			require.NoError(t, err)
+			rules := permission.Set{
+				permission.Rule{
+					Type:   consts.Files,
+					Verbs:  permission.Verbs(permission.GET),
+					Values: []string{doc.ID()},
+				},
+			}
+			_, err = permission.CreateShareSet(
+				testInstance,
+				&permission.Permission{Type: permission.TypeWebapp, Permissions: rules},
+				consts.Apps+"/"+slug, map[string]string{subject: code}, nil,
+				permission.Permission{Permissions: rules, Password: password}, nil, false,
+			)
+			require.NoError(t, err)
+			return code
+		}
+
+		body := eAnon.GET("/public").
+			WithQuery("sharecode", createShareCode("public", nil)).
+			WithHost(slug + "." + testInstance.Domain).
+			Expect().Status(200).
+			Body()
+		body.Contains(`<meta property="og:title" content="opengraph-report.pdf" />`)
+		body.Contains(`<meta property="og:description" content="` + testInstance.Translate("Share by link OpenGraph Description") + `" />`)
+		body.Contains(`<meta property="og:image" content="https://cozywithapps.example.net/assets/images/opengraph/pdf.`)
+
+		eAnon.GET("/public").
+			WithQuery("sharecode", createShareCode("protected", "the_password!")).
+			WithHost(slug + "." + testInstance.Domain).
+			Expect().Status(401)
+
+		eAnon.GET("/public").
+			WithHost(slug + "." + testInstance.Domain).
+			Expect().Status(200).
+			Body().NotContains("og:title")
 	})
 
 	t.Run("ServeWithClientsLimitExceeded", func(t *testing.T) {

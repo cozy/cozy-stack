@@ -787,6 +787,9 @@ msgstr "Continue"
 msgid "Share by link Password Invalid"
 msgstr "Invalid password"
 
+msgid "Share by link OpenGraph Description"
+msgstr "Twake Drive. あらゆるビジネスニーズに対応する、暗号化されたオープンソースのデータストレージ"
+
 msgid "Onboarding Resend activation mail"
 msgstr "Send again the activation email"
 
