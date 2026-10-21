@@ -51,13 +51,15 @@ export async function createSharedDrive({
   baseUrl,
   accessToken,
   driveName = DEFAULT_DRIVE_NAME,
+  fetcher = fetch,
 }: {
   baseUrl: string
   accessToken: string
   driveName?: string | undefined
+  fetcher?: typeof fetch
 }): Promise<SharedDriveInfo> {
   const url = `${baseUrl.replace(/\/+$/, '')}/sharings/drives`
-  const res = await fetch(url, {
+  const res = await fetcher(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,

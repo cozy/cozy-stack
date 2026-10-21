@@ -1,5 +1,11 @@
 SHELL := /bin/bash
+.DEFAULT_GOAL := help
 -include .env
+
+# Keep unset optional values unset so the Node CLI can apply its defaults.
+SEED_SETTINGS := SEED_ADMIN_URL SEED_STACK_URL SEED_ADMIN_USERNAME SEED_ADMIN_PASSWORD SEED_DOMAIN_SUFFIX \
+                 SEED_DOMAIN SEED_FILES SEED_DRIVES SEED_REQUEST_TIMEOUT_MS
+$(foreach setting,$(SEED_SETTINGS),$(if $(filter undefined,$(origin $(setting))),,$(eval export $(setting))))
 
 COMPOSE := docker compose
 COZY_COMPOSE := $(COMPOSE) --profile cozy
@@ -51,6 +57,8 @@ export LOAD_TOPOLOGY GRAFANA_URL
 help:
 	@echo "make install                                 Install the load-harness Node tools"
 	@echo "make typecheck                               Typecheck k6 and Node TypeScript"
+	@echo "make seed-scale SEED_FILES=1000 SEED_DRIVES=10  Build a disposable fixture through Stack APIs"
+	@echo "make seed-scale-cleanup SEED_DOMAIN=...        Delete that disposable fixture instance"
 	@echo "make up                                      Start dashboards and the local mock"
 	@echo "make upload-binaries                         Generate every upload binary"
 	@echo "make upload-smoke                            Run two concurrent 1K mock uploads"
@@ -81,6 +89,13 @@ $(NODE_MODULES_MARKER): package.json package-lock.json
 	@touch "$@"
 
 install: $(NODE_MODULES_MARKER)
+
+.PHONY: seed-scale seed-scale-cleanup
+seed-scale: $(NODE_MODULES_MARKER)
+	@$(NODE_BIN)/tsx src/scripts/seed-scale-data.ts seed $${SEED_DOMAIN:+"$$SEED_DOMAIN"}
+
+seed-scale-cleanup: $(NODE_MODULES_MARKER)
+	@$(NODE_BIN)/tsx src/scripts/seed-scale-data.ts cleanup "$$SEED_DOMAIN"
 
 typecheck: $(NODE_MODULES_MARKER)
 	@npm run typecheck
