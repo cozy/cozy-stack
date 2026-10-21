@@ -3,7 +3,7 @@
 
 
 # Multi-stage image: this step builds cozy-stack
-FROM golang:1.25-bookworm as build
+FROM golang:1.26.10-bookworm as build
 WORKDIR /app
 
 ARG COZY_ENV=production
