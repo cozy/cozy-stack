@@ -19,6 +19,12 @@ msgstr "bonjour %s"
 
 msgid "context"
 msgstr "contexte"
+
+msgid "only in locale"
+msgstr "seulement dans la locale"
+
+msgid "empty in context"
+msgstr "vide dans le contexte"
 `))
 
 	LoadLocale("fr", contextName, []byte(`
@@ -30,6 +36,9 @@ msgstr "bonjour %s"
 
 msgid "context"
 msgstr "contexte foo"
+
+msgid "empty in context"
+msgstr ""
 `))
 
 	s := Translate("english", "fr", contextName)
@@ -46,6 +55,11 @@ msgstr "contexte foo"
 	assert.Equal(t, "contexte foo", s)
 	s = Translate("context", "fr", "bar")
 	assert.Equal(t, "contexte", s)
+
+	s = Translate("only in locale", "fr", contextName)
+	assert.Equal(t, "seulement dans la locale", s)
+	s = Translate("empty in context", "fr", contextName)
+	assert.Equal(t, "vide dans le contexte", s)
 }
 
 func TestTranslatorHTML(t *testing.T) {

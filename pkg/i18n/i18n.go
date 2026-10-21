@@ -15,16 +15,6 @@ import (
 
 var translations = make(map[string]*gotext.Po)
 
-// translator is an interface to break go vet's printf analysis chain.
-// The key is a controlled translation key from our codebase, not user input.
-type translator interface {
-	Get(str string, vars ...interface{}) string
-}
-
-func getTranslation(t translator, key string) string {
-	return t.Get(key)
-}
-
 // LoadLocale creates the translation object for a locale from the content of a .po file
 func LoadLocale(locale, contextName string, rawPO []byte) {
 	po := gotext.NewPo()
@@ -60,23 +50,11 @@ func TranslatorHTML(locale, contextName string) func(key string, vars ...interfa
 
 // Translate translates the given key on the specified locale.
 func Translate(key, locale, contextName string, vars ...interface{}) string {
-	if po, ok := translations[contextName+"/"+locale]; ok {
-		translated := getTranslation(po, key)
-		if translated != key && translated != "" {
-			if len(vars) > 0 {
-				return fmt.Sprintf(translated, vars...)
-			}
-			return translated
-		}
+	if po, ok := translations[contextName+"/"+locale]; ok && po.IsTranslated(key) {
+		return po.Get(key, vars...)
 	}
-	if po, ok := translations[locale]; ok {
-		translated := getTranslation(po, key)
-		if translated != key && translated != "" {
-			if len(vars) > 0 {
-				return fmt.Sprintf(translated, vars...)
-			}
-			return translated
-		}
+	if po, ok := translations[locale]; ok && po.IsTranslated(key) {
+		return po.Get(key, vars...)
 	}
 	if po, ok := translations[consts.DefaultLocale]; ok {
 		translated := po.Get(key, vars...)
