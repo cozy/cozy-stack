@@ -64,7 +64,7 @@ func TestServers_handle_ipv4_ipv6_on_localhost(t *testing.T) {
 	assert.Equal(t, "pong major", string(raw))
 
 	// Call the host on IPv6
-	res, err = http.Get("http://::1:38423/ping")
+	res, err = http.Get("http://[::1]:38423/ping")
 	require.NoError(t, err)
 	defer res.Body.Close()
 
