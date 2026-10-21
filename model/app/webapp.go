@@ -37,6 +37,8 @@ type Route struct {
 	Folder string `json:"folder"`
 	Index  string `json:"index"`
 	Public bool   `json:"public"`
+	// OpenGraph enables the OpenGraph tags of share-by-link pages on this route
+	OpenGraph bool `json:"opengraph,omitempty"`
 }
 
 // NotFound returns true for a blank route (ie not found by FindRoute)

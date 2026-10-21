@@ -299,12 +299,16 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	}
 
 	// For share by link, show the password page if it is password protected.
+	var og *openGraph
 	code := c.QueryParam("sharecode")
 	token, err := middlewares.TransformShortcodeToJWT(i, code)
 	if err == nil {
 		claims, err := middlewares.ExtractClaims(c, i, token)
 		if err == nil && claims.AudienceString() == consts.ShareAudience {
 			pdoc, err := permission.GetForShareCode(i, token)
+			if err == nil && route.OpenGraph {
+				og = newOpenGraph(i, webapp, pdoc)
+			}
 			if err == nil && pdoc.Password != nil && !middlewares.HasCookieForPassword(c, i, pdoc.ID()) {
 				return renderPasswordPage(c, i, pdoc.ID())
 			}
@@ -344,7 +348,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	// XXX: Force include Warnings template in all app indexes
 	tmplText := string(buf)
 	if closeTagIdx := strings.Index(tmplText, "</head>"); closeTagIdx >= 0 {
-		tmplText = tmplText[:closeTagIdx] + "\n{{.Warnings}}\n{{.IntentData}}\n" + tmplText[closeTagIdx:]
+		tmplText = tmplText[:closeTagIdx] + "\n{{.Warnings}}\n{{.IntentData}}\n{{.OpenGraph}}\n" + tmplText[closeTagIdx:]
 	} else {
 		needsOpenTag := true
 		if openTagIdx := strings.Index(tmplText, "<head>"); openTagIdx >= 0 {
@@ -361,7 +365,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 				tmplText += "\n<head>"
 			}
 
-			tmplText += "\n{{.Warnings}}\n{{.IntentData}}\n</head>\n" + after
+			tmplText += "\n{{.Warnings}}\n{{.IntentData}}\n{{.OpenGraph}}\n</head>\n" + after
 		}
 	}
 
@@ -384,6 +388,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		}
 	}
 	params := buildServeParams(c, i, webapp, intentDoc, isLoggedIn, sessID)
+	params.openGraph = og
 
 	generated := &bytes.Buffer{}
 	if err := tmpl.Execute(generated, params); err != nil {
@@ -558,6 +563,8 @@ type serveParams struct {
 	webapp     *app.WebappManifest
 	instance   *instance.Instance
 	isLoggedIn bool
+
+	openGraph *openGraph
 }
 
 func (s serveParams) CozyData() (string, error) {
@@ -684,6 +691,10 @@ func (s serveParams) DefaultWallpaper() string {
 
 func (s serveParams) Warnings() (template.HTML, error) {
 	return warningsHTML(s.instance, s.isLoggedIn)
+}
+
+func (s serveParams) OpenGraph() template.HTML {
+	return s.openGraph.HTML()
 }
 
 func (s serveParams) IntentData() (template.HTML, error) {

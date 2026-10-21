@@ -84,6 +84,13 @@ public page on `/public`, and shared assets in `/assets`:
 }
 ```
 
+A public route can also set `"opengraph": true`. When such a route is opened
+with the `sharecode` of a share by link, the stack injects OpenGraph tags in the
+`<head>` of its index, so that the link gets a preview when pasted in a chat or
+on a social network: the name of the shared file or folder, a thumbnail for its
+type, and a description in the locale of the instance. A password-protected
+link has no preview.
+
 If an application has no routes in its manifest, the stack will create one
 route, this default one:
 

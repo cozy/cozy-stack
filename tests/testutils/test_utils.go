@@ -332,9 +332,10 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 					Public: false,
 				},
 				"/public": apps.Route{
-					Folder: "/public",
-					Index:  "index.html",
-					Public: true,
+					Folder:    "/public",
+					Index:     "index.html",
+					Public:    true,
+					OpenGraph: true,
 				},
 				"/invalid": apps.Route{
 					Folder: "/",
@@ -389,7 +390,7 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = createFile(instance, pubdir, "index.html", `this is a file in public/ {{.CozyData}}`)
+	err = createFile(instance, pubdir, "index.html", `<html><head></head><body>this is a file in public/ {{.CozyData}}</body></html>`)
 	if err != nil {
 		return "", err
 	}

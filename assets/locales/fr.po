@@ -1401,6 +1401,9 @@ msgstr "Continuer"
 msgid "Share by link Password Invalid"
 msgstr "Mot de passe incorrect"
 
+msgid "Share by link OpenGraph Description"
+msgstr "Twake Drive. Solution de stockage de données chiffré Open Source pour tous types d’usages professionnels"
+
 msgid "Onboarding Resend activation mail"
 msgstr "Envoyer à nouveau l'email de finalisation d'inscription"
 
