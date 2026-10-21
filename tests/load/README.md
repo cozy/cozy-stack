@@ -9,6 +9,7 @@ The harness includes authenticated exact-work and fixed-duration file-upload
 workloads for personal drives, shared-drive activity and upload workloads, and an
 adaptive search for the maximum upload concurrency of one Cozy instance.
 See [CAPACITY.md](./CAPACITY.md) for the operational capacity model and pass criteria.
+See [SEEDING.md](./SEEDING.md) for API-only fixtures and the separate snapshot workflow.
 Organization membership and other file workloads remain separate future
 scenarios.
 

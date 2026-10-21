@@ -2,7 +2,7 @@ import { equal, ok, rejects } from 'node:assert/strict'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, it } from 'node:test'
+import { describe, it, test } from 'node:test'
 
 import {
   createSharedDrive,
@@ -41,6 +41,27 @@ describe('updateEnvFileWithSharedDrive', (): void => {
       }
     }
   })
+})
+
+test('createSharedDrive accepts a supplied transport without changing the default fetch', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('default fetch must not run') })
+  let calls = 0
+  const drive = await createSharedDrive({
+    baseUrl: 'http://fixture.invalid:8080', accessToken: 'test-token', driveName: 'Seed drive 1',
+    fetcher: async (url, init) => {
+      calls++
+      equal(url, 'http://fixture.invalid:8080/sharings/drives')
+      equal(init?.method, 'POST')
+      const body = JSON.parse(String(init?.body))
+      equal(body.data.attributes.name, 'Seed drive 1')
+      return new Response(JSON.stringify({ data: { id: 'sharing-1', attributes: {
+        rules: [{ values: ['root-1'] }],
+      } } }), { status: 201 })
+    },
+  })
+  equal(calls, 1)
+  equal(drive.sharingId, 'sharing-1')
+  equal(drive.rootDirectoryId, 'root-1')
 })
 
 describe('ensureSharedDrive', (): void => {
