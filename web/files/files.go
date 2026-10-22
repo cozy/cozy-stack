@@ -2549,10 +2549,10 @@ func checkPerm(c echo.Context, v permission.Verb, d *vfs.DirDoc, f *vfs.FileDoc)
 
 // checkMoveDestination enforces the extra authorization required when a
 // PATCH behaves like a move (changes the parent directory): the destination
-// must exist, the caller needs POST on it, and moves touching a shared drive
-// are rejected here.
+// must exist, the caller needs POST on it, and moves crossing a shared drive
+// boundary are rejected here.
 //
-// ponytail: strict rejection — shared-drive moves must go through
+// ponytail: strict rejection — drive-crossing moves must go through
 // POST /sharings/drives/move; lift when the shared-aware move task
 // implements delegation.
 func checkMoveDestination(c echo.Context, fs vfs.VFS, patch *docPatch, dir *vfs.DirDoc, file *vfs.FileDoc) error {
@@ -2578,21 +2578,16 @@ func checkMoveDestination(c echo.Context, fs vfs.VFS, patch *docPatch, dir *vfs.
 	if err := middlewares.AllowVFS(c, permission.POST, newParent); err != nil {
 		return err
 	}
-	resolver := sharing.NewAccessResolver(middlewares.GetInstance(c))
-	if err := checkSharedDrive(resolver, dir, file); err != nil {
-		return err
-	}
-	return checkSharedDrive(resolver, newParent, nil)
-}
-
-// checkSharedDrive rejects the move if the doc (dir or file) belongs to a
-// shared drive.
-func checkSharedDrive(r *sharing.AccessResolver, d *vfs.DirDoc, f *vfs.FileDoc) error {
-	shared, err := r.HasDriveSharing(d, f)
+	oldParent, err := fs.DirByID(currentDirID)
 	if err != nil {
 		return err
 	}
-	if shared {
+	resolver := sharing.NewAccessResolver(middlewares.GetInstance(c))
+	crosses, err := resolver.CrossesDriveBoundary(oldParent, newParent)
+	if err != nil {
+		return err
+	}
+	if crosses {
 		return jsonapi.NewError(http.StatusUnprocessableEntity,
 			"moving to or from a shared drive must use POST /sharings/drives/move")
 	}

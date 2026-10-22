@@ -6961,20 +6961,20 @@ func TestFilesPatchRejectsSharedDriveMoves(t *testing.T) {
 			`"relationships":{"parent":{"data":{"type":"io.cozy.files","id":"` + destID + `"}}}}}`
 	}
 
-	t.Run("MoveFileInsideDriveDenied", func(t *testing.T) {
+	t.Run("MoveFileInsideDriveAllowed", func(t *testing.T) {
 		eA.PATCH("/files/"+insideFileID).
 			WithHeader("Authorization", "Bearer "+env.acmeToken).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(movePayload(insideFileID, insideSubDirID))).
-			Expect().Status(422)
+			Expect().Status(200)
 	})
 
-	t.Run("BatchMoveFileInsideDriveDenied", func(t *testing.T) {
+	t.Run("BatchMoveDriveFileToOutsideDenied", func(t *testing.T) {
 		// Batch PATCH aborts on the shared-drive rejection: the top-level
 		// error handler renders it as a single 422 error, not a 500.
 		batch := `{"data":[{"type":"io.cozy.files","id":"` + insideFileID + `",` +
 			`"attributes":{},` +
-			`"relationships":{"parent":{"data":{"type":"io.cozy.files","id":"` + insideSubDirID + `"}}}}]}`
+			`"relationships":{"parent":{"data":{"type":"io.cozy.files","id":"` + outsideDirID + `"}}}}]}`
 		eA.PATCH("/files/").
 			WithHeader("Authorization", "Bearer "+env.acmeToken).
 			WithHeader("Content-Type", "application/json").

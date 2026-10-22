@@ -1476,9 +1476,9 @@ file/directory to update, and the second one uses the path.
 Some specific attributes of the patch can be used:
 
 - `dir_id` attribute can be updated to move a file or directory. Moving
-  requires POST permission on the destination directory, and moving a file or
-  directory from or into a shared drive is rejected: such moves must use
-  `POST /sharings/drives/move` instead
+  requires POST permission on the destination directory. Moving a file or
+  directory inside a shared drive is allowed, but moving it into or out of one
+  is rejected: such moves must use `POST /sharings/drives/move` instead
 - `move_to_trash` boolean to specify that the file needs to be moved to the
   trash
 - `permanent_delete` boolean to specify that the files needs to be deleted
