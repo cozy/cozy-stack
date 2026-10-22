@@ -49,6 +49,7 @@ func TestFlush(t *testing.T) {
 	}
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
+	useRedis(t)
 	ctx := context.Background()
 	alice := &sharing.Member{Email: "alice@example.net"}
 	bob := &sharing.Member{Email: "bob@example.net"}
@@ -222,9 +223,12 @@ func flushTriggers(t *testing.T, org *instance.Instance) []job.Trigger {
 }
 
 // flushMessage returns the message of the flush scheduled for the drive, and
-// deletes its trigger so that the test runs the flush itself.
+// deletes its trigger and ends its window so that the test runs the flush
+// itself.
 func flushMessage(t *testing.T, org *instance.Instance, s *sharing.Sharing) *FlushMessage {
 	t.Helper()
+	st, _ := getStore()
+	require.NoError(t, st.c.Del(st.ctx, windowKey(driveKey(org, s.SID))).Err())
 	for _, trigger := range flushTriggers(t, org) {
 		infos := trigger.Infos()
 		var msg FlushMessage

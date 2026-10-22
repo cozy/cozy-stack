@@ -44,6 +44,7 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1464,6 +1465,12 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 	})
 
 	t.Run("MemberChangesOpenAnActivityWindow", func(t *testing.T) {
+		opt, err := redis.ParseURL("redis://localhost:6379/15")
+		require.NoError(t, err)
+		previous := config.GetConfig().SessionStorage
+		config.GetConfig().SessionStorage = redis.NewClient(opt)
+		t.Cleanup(func() { config.GetConfig().SessionStorage = previous })
+
 		s, err := sharing.FindSharing(ownerInstance, sharingID)
 		require.NoError(t, err)
 		s.Reference = &sharing.Reference{Source: "twake-space", ID: "space-1", Revision: 1, Ready: true, Activity: true}
