@@ -3,6 +3,7 @@ package sharing
 import (
 	"os"
 	"path"
+	"slices"
 	"sort"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -85,21 +86,37 @@ func (r *AccessResolver) ResolveForMember(targetID string, member *Member) (*Eff
 	})
 }
 
-// HasDriveSharing reports whether at least one drive sharing applies to the
-// target, i.e. the target is a drive root or lives under one. The target doc
-// is passed by the caller (exactly one of dir/file must be non-nil) to avoid
-// re-fetching a doc the caller already has.
-func (r *AccessResolver) HasDriveSharing(dir *vfs.DirDoc, file *vfs.FileDoc) (bool, error) {
-	sharings, _, err := r.applicableSharingsForDoc(dir, file)
+// CrossesDriveBoundary reports whether moving a doc from one directory to
+// another enters or leaves a drive, nested ones included, i.e. whether
+// different drive sharings apply to the two directories. A drive rooted at
+// the moved doc is under neither of them: it moves along with the doc.
+func (r *AccessResolver) CrossesDriveBoundary(from, to *vfs.DirDoc) (bool, error) {
+	fromIDs, err := r.driveSharingIDs(from)
 	if err != nil {
 		return false, err
 	}
+	toIDs, err := r.driveSharingIDs(to)
+	if err != nil {
+		return false, err
+	}
+	return !slices.Equal(fromIDs, toIDs), nil
+}
+
+// driveSharingIDs returns the sorted IDs of the drive sharings applying to the
+// directory, i.e. rooted at it or at one of its ancestors. Only the drives the
+// instance is a member of are kept.
+func (r *AccessResolver) driveSharingIDs(dir *vfs.DirDoc) ([]string, error) {
+	sharings, _, err := r.applicableSharingsForDoc(dir, nil)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(sharings))
 	for _, s := range sharings {
 		if s.Drive && s.MemberFor(r.inst) != nil {
-			return true, nil
+			ids = append(ids, s.SID)
 		}
 	}
-	return false, nil
+	return ids, nil
 }
 
 func (r *AccessResolver) resolve(targetID string, memberOf func(*Sharing) *Member) (*EffectiveAccess, error) {

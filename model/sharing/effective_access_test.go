@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -635,4 +636,60 @@ func TestAccessResolver_NearestWritableSharingSkipsReadOnly(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, sc)
 	})
+}
+
+func TestAccessResolver_CrossesDriveBoundary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance()
+	fs := inst.VFS()
+
+	drive := createTree(t, fs, H{"drive/": H{"sub/": H{}, "nested/": H{}}}, consts.RootDirID)
+	other := createTree(t, fs, H{"other/": H{}}, consts.RootDirID)
+	plain := createTree(t, fs, H{"plain/": H{}}, consts.RootDirID)
+	plain2 := createTree(t, fs, H{"plain2/": H{}}, consts.RootDirID)
+	classic := createTree(t, fs, H{"classic/": H{}}, consts.RootDirID)
+	foreign := createTree(t, fs, H{"foreign/": H{}}, consts.RootDirID)
+	sub, err := fs.DirByPath("/drive/sub")
+	require.NoError(t, err)
+	nested, err := fs.DirByPath("/drive/nested")
+	require.NoError(t, err)
+
+	createActiveDirSharing(t, inst, drive.ID())
+	createActiveDirSharing(t, inst, nested.ID())
+	createActiveDirSharing(t, inst, other.ID())
+	sClassic := createActiveDirSharing(t, inst, classic.ID())
+	sClassic.Drive = false
+	require.NoError(t, couchdb.UpdateDoc(inst, sClassic))
+	// A drive the instance is not a member of does not apply to it.
+	createActiveRecipientSharing(t, inst, foreign.ID(), false, "https://someone.else.example")
+
+	tests := []struct {
+		name     string
+		from, to *vfs.DirDoc
+		want     bool
+	}{
+		{"InsideDrive", drive, sub, false},
+		{"BetweenPlainFolders", plain, plain2, false},
+		{"IntoClassicSharing", plain, classic, false},
+		{"IntoForeignDrive", plain, foreign, false},
+		{"OutOfDrive", sub, plain, true},
+		{"IntoDrive", plain, drive, true},
+		{"IntoNestedDrive", sub, nested, true},
+		{"OutOfNestedDrive", nested, drive, true},
+		{"IntoAnotherDrive", drive, other, true},
+	}
+
+	resolver := NewAccessResolver(inst)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			crosses, err := resolver.CrossesDriveBoundary(tt.from, tt.to)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, crosses)
+		})
+	}
 }
