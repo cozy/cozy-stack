@@ -65,8 +65,9 @@ never changes the harness's normal `.env` or prints access tokens.
 ## Save and restore separately
 
 Snapshot management depends on the deployment and is **not implemented by this
-builder**. Keep it in separate infrastructure scripts rather than adding another
-Stack seeding API or a generic backup framework here.
+builder**. The separate [Compose fixture commands](SNAPSHOTS.md) provide
+`snapshot`, `restore` and `discard` for this harness's isolated local topology.
+They do not add another Stack seeding API or a generic backup framework.
 
 The first workflow should use an isolated cold baseline:
 
