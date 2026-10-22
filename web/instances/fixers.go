@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -185,6 +186,20 @@ func sharingsMovedFixer(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func revokedDrivesFixer(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	fixed, err := sharing.FixDrivesRevokedByOwner(inst)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, fixed)
 }
 
 type serviceMessage struct {

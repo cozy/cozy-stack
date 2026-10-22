@@ -1760,6 +1760,13 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 			// For shared drives on member instances, check that DriveToken credentials exist
 			credentialsChecks = s.checkSharingCredentials()
 			checks = append(checks, credentialsChecks...)
+			if len(credentialsChecks) == 0 {
+				revokedChecks, err := s.checkDriveRevokedByOwner()
+				if err != nil {
+					return err
+				}
+				checks = append(checks, revokedChecks...)
+			}
 		}
 
 		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
