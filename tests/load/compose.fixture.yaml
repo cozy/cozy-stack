@@ -1,0 +1,43 @@
+# Disposable topology only. Never use this file to operate the normal load stack.
+name: load-fixture
+
+x-fixture-labels: &fixture-labels
+  io.cozy.load.fixture: "true"
+
+services:
+  couchdb:
+    extends: { file: compose.yaml, service: couchdb }
+    labels: *fixture-labels
+  redis:
+    extends: { file: compose.yaml, service: redis }
+    labels: *fixture-labels
+  rabbitmq:
+    extends: { file: compose.yaml, service: rabbitmq }
+    labels: *fixture-labels
+  minio:
+    extends: { file: compose.yaml, service: minio }
+    labels: *fixture-labels
+  cozy-stack:
+    extends: { file: compose.yaml, service: cozy-stack }
+    labels: *fixture-labels
+    ports: !override
+      - "127.0.0.1:${FIXTURE_STACK_PORT:-18090}:8080"
+      - "127.0.0.1:${FIXTURE_ADMIN_PORT:-16090}:6060"
+
+networks:
+  load-test:
+    labels: *fixture-labels
+
+volumes:
+  couchdb-data:
+    labels: *fixture-labels
+  redis-data:
+    labels: *fixture-labels
+  rabbitmq-data:
+    labels: *fixture-labels
+  minio-data:
+    labels: *fixture-labels
+  cozy-stack-config:
+    labels: *fixture-labels
+  cozy-stack-data:
+    labels: *fixture-labels

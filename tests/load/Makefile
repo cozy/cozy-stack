@@ -7,6 +7,12 @@ SEED_SETTINGS := SEED_ADMIN_URL SEED_STACK_URL SEED_ADMIN_USERNAME SEED_ADMIN_PA
                  SEED_DOMAIN SEED_USERS SEED_FILES SEED_DRIVES SEED_REQUEST_TIMEOUT_MS
 $(foreach setting,$(SEED_SETTINGS),$(if $(filter undefined,$(origin $(setting))),,$(eval export $(setting))))
 
+FIXTURE_PROJECT ?=
+FIXTURE_SNAPSHOT ?=
+FIXTURE_STACK_PORT ?= 18090
+FIXTURE_ADMIN_PORT ?= 16090
+export FIXTURE_PROJECT FIXTURE_SNAPSHOT FIXTURE_STACK_PORT FIXTURE_ADMIN_PORT
+
 COMPOSE := docker compose
 COZY_COMPOSE := $(COMPOSE) --profile cozy
 NODE_BIN := ./node_modules/.bin
@@ -61,6 +67,10 @@ help:
 	@echo "make seed-scale-cleanup SEED_DOMAIN=...        Delete that disposable fixture instance"
 	@echo "make seed-org SEED_USERS=50                    Build an organization with empty user instances"
 	@echo "make seed-org-cleanup SEED_DOMAIN=...          Delete the organization fixture and its users"
+	@echo "make fixture-up FIXTURE_PROJECT=load-fixture-seed"
+	@echo "make fixture-snapshot FIXTURE_PROJECT=... FIXTURE_SNAPSHOT=/private/baseline"
+	@echo "make fixture-restore FIXTURE_PROJECT=... FIXTURE_SNAPSHOT=/private/baseline"
+	@echo "make fixture-discard FIXTURE_PROJECT=...       Remove only a marked disposable deployment"
 	@echo "make up                                      Start dashboards and the local mock"
 	@echo "make upload-binaries                         Generate every upload binary"
 	@echo "make upload-smoke                            Run two concurrent 1K mock uploads"
@@ -105,6 +115,14 @@ seed-org: $(NODE_MODULES_MARKER)
 
 seed-org-cleanup: $(NODE_MODULES_MARKER)
 	@$(NODE_BIN)/tsx src/scripts/seed-scale-data.ts cleanup-org "$$SEED_DOMAIN"
+
+.PHONY: fixture-up fixture-snapshot fixture-restore fixture-discard
+fixture-up fixture-discard: $(NODE_MODULES_MARKER)
+	@$(NODE_BIN)/tsx src/scripts/compose-fixture.ts $(patsubst fixture-%,%,$@) "$$FIXTURE_PROJECT"
+
+fixture-snapshot fixture-restore: $(NODE_MODULES_MARKER)
+	@$(NODE_BIN)/tsx src/scripts/compose-fixture.ts $(patsubst fixture-%,%,$@) "$$FIXTURE_PROJECT" \
+		"$$FIXTURE_SNAPSHOT"
 
 typecheck: $(NODE_MODULES_MARKER)
 	@npm run typecheck
