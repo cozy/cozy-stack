@@ -4,9 +4,7 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	multierror "github.com/hashicorp/go-multierror"
 )
 
 // isDriveRevokedByOwner tells if the owner of a shared drive no longer
@@ -59,32 +57,4 @@ func (s *Sharing) checkDriveRevokedByOwner() ([]map[string]interface{}, error) {
 		"type":  "drive_revoked_by_owner",
 		"owner": s.Members[0].Instance,
 	}}, nil
-}
-
-// FixDrivesRevokedByOwner revokes on a member instance the shared drives that
-// their owner has already revoked, as if the missed revocation notification
-// had been received. It returns the IDs of the revoked sharings.
-func FixDrivesRevokedByOwner(inst *instance.Instance) ([]string, error) {
-	drives, err := ListDrives(inst)
-	if err != nil {
-		return nil, err
-	}
-
-	var errm error
-	fixed := []string{}
-	for _, s := range drives {
-		revoked, err := s.isDriveRevokedByOwner()
-		if err == nil && revoked {
-			err = s.RevokeByNotification(inst)
-			if err == nil {
-				inst.Logger().WithNamespace("sharing").
-					Infof("Revoked shared drive %s, already revoked by its owner", s.SID)
-				fixed = append(fixed, s.SID)
-			}
-		}
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
-	}
-	return fixed, errm
 }

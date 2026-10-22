@@ -139,16 +139,16 @@ func TestDriveRevokedByOwner(t *testing.T) {
 				assert.NotContains(t, checks, wantCheck)
 			}
 
-			fixed, err := FixDrivesRevokedByOwner(recipientInst)
+			fixed, err := FixSharings(recipientInst)
 			require.NoError(t, err)
 			stored, err := FindSharing(recipientInst, recipient.SID)
 			require.NoError(t, err)
 			if !tt.wantRevoked {
-				assert.Empty(t, fixed)
+				assert.NotContains(t, fixed, wantCheck)
 				assert.True(t, stored.Active)
 				return
 			}
-			assert.Equal(t, []string{recipient.SID}, fixed)
+			assert.Contains(t, fixed, wantCheck)
 			assert.False(t, stored.Active)
 			assert.Empty(t, stored.Credentials)
 			_, err = recipientInst.VFS().FileByID(recipient.ShortcutID)

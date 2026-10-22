@@ -425,25 +425,33 @@ Delete the accounts which are not linked to a konnector
 POST /instances/alice.cozy.localhost/fixers/orphan-account HTTP/1.1
 ```
 
-### POST /instances/:domain/fixers/revoked-drives
+### POST /instances/:domain/fixers/sharings
 
-Revoke, on a member instance, the shared drives that are still active while
-their owner (on the same stack) has already revoked this member. It does what
-the missed revocation notification would have done. These sharings are
-reported as `drive_revoked_by_owner` by `POST /instances/:domain/checks/sharings`.
+Run the checks of `POST /instances/:domain/checks/sharings` (without the files
+and folders consistency check) and fix the issues that can be fixed
+automatically. The other issues are left as is. The fixed issues are:
+
+- `drive_revoked_by_owner`: the shared drive is revoked on the member
+  instance, as the missed revocation notification would have done.
 
 #### Request
 
 ```http
-POST /instances/bob.cozy.localhost/fixers/revoked-drives HTTP/1.1
+POST /instances/bob.cozy.localhost/fixers/sharings HTTP/1.1
 ```
 
 #### Response
 
-The IDs of the revoked sharings:
+The fixed issues, in the same format as the checks:
 
 ```json
-["9551a896eac63760f4f7e4898a77f2a0"]
+[
+  {
+    "id": "9551a896eac63760f4f7e4898a77f2a0",
+    "type": "drive_revoked_by_owner",
+    "owner": "https://alice.cozy.localhost"
+  }
+]
 ```
 
 ### POST /instances/fixers/emails
@@ -1082,7 +1090,7 @@ active while its owner, on the same stack, no longer recognizes the member
 (member revoked, drive token unknown, or sharing inactive or deleted on the
 owner). It happens when the revocation notification did not reach the member.
 The owner's instance URL will be returned in the `owner` attribute. It can be
-fixed with `POST /instances/:domain/fixers/revoked-drives`.
+fixed with `POST /instances/:domain/fixers/sharings`.
 
 ##### disk_quota_exceeded
 

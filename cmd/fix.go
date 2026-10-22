@@ -406,17 +406,19 @@ sharing synchronization.
 	},
 }
 
-var revokedDrivesFixer = &cobra.Command{
-	Use:   "revoked-drives <domain>",
-	Short: "Revoke the shared drives already revoked by their owner",
+var sharingsFixer = &cobra.Command{
+	Use:   "sharings <domain>",
+	Short: "Fix the issues found by the check of the io.cozy.sharings documents",
 	Long: `
-This fixer revokes, on a member instance, the shared drives that are still
-active while their owner has already revoked this member, as if the missed
-revocation notification had been received. They are reported as
-drive_revoked_by_owner by the "cozy-stack check sharings" command. Only the
-owners on the same stack can be checked.
+This fixer runs the "cozy-stack check sharings --fast" checks and fixes the
+issues that can be fixed automatically. The other issues are left as is.
 
-The IDs of the revoked sharings are printed, one per line.
+The fixed issues are:
+
+- drive_revoked_by_owner: the shared drive is revoked on the member instance,
+  as if the missed revocation notification had been received.
+
+The fixed issues are printed, one per line.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
@@ -424,7 +426,7 @@ The IDs of the revoked sharings are printed, one per line.
 		}
 		domain := args[0]
 		c := newAdminClient()
-		path := fmt.Sprintf("/instances/%s/fixers/revoked-drives", domain)
+		path := fmt.Sprintf("/instances/%s/fixers/sharings", domain)
 		res, err := c.Req(&request.Options{
 			Method: "POST",
 			Path:   path,
@@ -433,12 +435,13 @@ The IDs of the revoked sharings are printed, one per line.
 			return err
 		}
 		defer res.Body.Close()
-		var fixed []string
+		var fixed []map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&fixed); err != nil {
 			return err
 		}
-		for _, id := range fixed {
-			fmt.Fprintln(os.Stdout, id)
+		for _, f := range fixed {
+			j, _ := json.Marshal(f)
+			fmt.Fprintf(os.Stdout, "%s\n", j)
 		}
 		return nil
 	},
@@ -539,7 +542,7 @@ func init() {
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 	fixerCmdGroup.AddCommand(serviceTriggersFixer)
 	fixerCmdGroup.AddCommand(sharingsMovedFixer)
-	fixerCmdGroup.AddCommand(revokedDrivesFixer)
+	fixerCmdGroup.AddCommand(sharingsFixer)
 	fixerCmdGroup.AddCommand(indexesFixer)
 	fixerCmdGroup.AddCommand(emailsFixer)
 
