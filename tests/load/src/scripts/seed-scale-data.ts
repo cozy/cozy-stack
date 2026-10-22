@@ -87,7 +87,7 @@ function expectStatus(reply: Reply, status: number): Reply {
 interface Resource {
   id: string
   type?: string
-  attributes?: { domain?: string, uuid?: string, type?: string }
+  attributes?: { domain?: string, uuid?: string, type?: string, org_id?: string, org_domain?: string }
   relationships?: { referenced_by?: { data?: Array<{ type?: string, id?: string }> } }
 }
 function resource(reply: Reply): Resource {
@@ -97,11 +97,23 @@ function resource(reply: Reply): Resource {
   return data
 }
 
+function identity(item: Resource): boolean {
+  return [item?.id, item?.attributes?.domain, item?.attributes?.uuid].every((value) =>
+    typeof value === 'string' && value.length > 0 && !/[\s\x00-\x1f\x7f]/.test(value))
+}
+
+function partial(error: unknown, domain: string): CliError {
+  const message = error instanceof CliError ? error.message : 'Seed API operation failed'
+  return new CliError(`${message}. Instance ${domain} may be partial; ` +
+    'run explicit cleanup only after server writes have stopped (a timeout/disconnect is not proof).')
+}
+
 async function main(): Promise<void> {
   const [command, suppliedDomain, ...extra] = process.argv.slice(2)
-  check(['seed', 'cleanup'].includes(command ?? '') && !extra.length &&
-    (command !== 'cleanup' || suppliedDomain),
-  'Usage: seed [domain] | cleanup <domain>; credentials belong in environment variables')
+  check(['seed', 'cleanup', 'seed-org', 'cleanup-org'].includes(command ?? '') && !extra.length &&
+    (!command?.startsWith('cleanup') || suppliedDomain),
+  'Usage: seed[-org] [domain] | cleanup[-org] <domain>; credentials belong in environment variables')
+  const organization = command?.endsWith('-org')
   check(suppliedDomain || process.env.SEED_DOMAIN_SUFFIX,
     'SEED_DOMAIN_SUFFIX is required when no seed domain is supplied')
   const domain = suppliedDomain ?? `seed-${randomBytes(16).toString('hex')}.${process.env.SEED_DOMAIN_SUFFIX}`
@@ -129,24 +141,117 @@ async function main(): Promise<void> {
     console.log(`Cleanup complete: ${domain}`)
     return
   }
-  const stackURL = origin('SEED_STACK_URL')
-  const files = integer('SEED_FILES', '100', 1_000_000)
+  const orgID = domain.split('.')[0]!
+  const suffix = domain.slice(orgID.length)
+  const orgDomain = `${orgID}.seed.invalid`
+  const list = async (): Promise<Resource[]> => {
+    const items: Resource[] = []
+    const seen = new Set<string>()
+    const ids = new Set<string>()
+    const domains = new Set<string>()
+    let path = '/instances?page[limit]=10'
+    while (path) {
+      let url: URL
+      try {
+        check(typeof path === 'string' && !/[\s\\]/.test(path), '')
+        url = new URL(path, adminURL)
+        check(url.origin === adminURL.origin && url.pathname === '/instances' &&
+          !url.username && !url.password && !url.hash, '')
+        url.searchParams.sort()
+        check(!seen.has(url.href), '')
+        seen.add(url.href)
+      } catch { throw new CliError('Invalid instance pagination link or loop') }
+      const reply = expectStatus(await admin('GET', url.href), 200)
+      try {
+        const page = JSON.parse(reply.body)
+        check(Array.isArray(page?.data), 'Invalid instance list')
+        for (const item of page.data as Resource[]) {
+          check(identity(item) && !ids.has(item.id) && !domains.has(item.attributes!.domain!), '')
+          ids.add(item.id)
+          domains.add(item.attributes!.domain!)
+          items.push(item)
+        }
+        check(page.links == null || (typeof page.links === 'object' && !Array.isArray(page.links)), '')
+        const next: unknown = page.links?.next
+        check(next == null || (typeof next === 'string' && next.length > 0), '')
+        path = next ?? ''
+      } catch { throw new CliError('Invalid instance list') }
+    }
+    return items
+  }
+  const inScope = (item: Resource) =>
+    item.attributes?.org_id === orgID || item.attributes?.org_domain === orgDomain
+  const checkScope = (item: Resource) => {
+    check(identity(item) && item.attributes?.org_id === orgID && item.attributes.org_domain === orgDomain,
+      'Organization scope or identity mismatch')
+    check(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(item.attributes.uuid!),
+      'Organization fixture UUID identity mismatch')
+    const name = item.attributes.domain!
+    validateDomain(name)
+    check(name.slice(name.indexOf('.')) === suffix, 'Organization scope suffix mismatch')
+  }
+  const same = (a: Resource, b: Resource) => a.id === b.id &&
+    a.attributes?.domain === b.attributes?.domain && a.attributes?.uuid === b.attributes?.uuid &&
+    a.attributes?.org_id === b.attributes?.org_id && a.attributes?.org_domain === b.attributes?.org_domain
+  if (command === 'cleanup-org') {
+    try {
+      const rootReply = await admin('GET', instancePath)
+      const root = rootReply.status === 404 ? undefined : resource(expectStatus(rootReply, 200))
+      if (root) {
+        checkScope(root)
+        check(root.attributes?.domain === domain, 'Organization root identity mismatch')
+      }
+      const candidates = (await list()).filter(inScope)
+      for (const item of candidates) checkScope(item)
+      const listedRoot = candidates.find((item) => item.attributes?.domain === domain)
+      check(root ? listedRoot && same(root, listedRoot) : !listedRoot,
+        'Organization root registry identity mismatch')
+      const remove = async (item: Resource) => {
+        const path = `/instances/${item.attributes!.domain!}`
+        const current = resource(expectStatus(await admin('GET', path), 200))
+        checkScope(current)
+        check(same(item, current), 'Cleanup readback identity mismatch')
+        const deleted = await admin('DELETE', path)
+        check(deleted.status === 204 || deleted.status === 404, `Cleanup failed: HTTP ${deleted.status}`)
+        expectStatus(await admin('GET', path), 404)
+      }
+      for (const item of candidates) if (item !== listedRoot) await remove(item)
+      check((await list()).filter(inScope).every((item) => item.attributes?.domain === domain),
+        'Organization members remain; root retained')
+      if (root) await remove(root)
+      expectStatus(await admin('GET', instancePath), 404)
+      check(!(await list()).some(inScope), 'Organization scope remains after cleanup')
+      console.log(`Cleanup complete: ${domain}`)
+    } catch (error) { throw partial(error, domain) }
+    return
+  }
+  const users = organization ? integer('SEED_USERS', '3', 1000) : 0
+  const files = integer('SEED_FILES', organization ? '0' : '100', 1_000_000)
   const drives = integer('SEED_DRIVES', '0', 100_000)
-  check(files || drives, 'At least one file or drive is required')
-  console.log(`Seed instance: ${domain}`)
-  try {
-    const absent = await admin('GET', instancePath)
-    check(absent.status === 404, absent.status === 200 ? 'Instance already exists' :
-      `Instance lookup failed: HTTP ${absent.status}`)
+  check(organization || files || drives, 'At least one file or drive is required')
+  const stackURL = !organization || files || drives ? origin('SEED_STACK_URL') : undefined
+  const names = [domain, ...Array.from({ length: users }, () =>
+    `seed-${randomBytes(16).toString('hex')}${suffix}`)]
+  for (const name of names) console.log(`Seed instance: ${name}`)
+  const create = async (name: string): Promise<Resource> => {
     const uuid = randomUUID()
     const created = resource(expectStatus(await admin('POST', '/instances', {
-      Domain: domain, UUID: uuid, Locale: 'en', Email: `${uuid}@seed.invalid`,
+      Domain: name, UUID: uuid, Locale: 'en', Email: `${uuid}@seed.invalid`,
       PublicName: 'Disposable seed fixture', CouchCluster: '-1', SwiftLayout: '-1', AutoUpdate: 'false',
+      ...(organization ? { OrgID: orgID, OrgDomain: orgDomain } : {}),
     }), 201))
-    const matches = (item: Resource) => item.attributes?.domain === domain && item.attributes?.uuid === uuid
+    const matches = (item: Resource) => identity(item) &&
+      item.attributes?.domain === name && item.attributes?.uuid === uuid &&
+      (!organization || (item.attributes.org_id === orgID && item.attributes.org_domain === orgDomain))
     check(matches(created), 'Created instance identity mismatch')
-    const persisted = resource(expectStatus(await admin('GET', instancePath), 200))
+    const persisted = resource(expectStatus(await admin('GET', `/instances/${name}`), 200))
     check(matches(persisted) && persisted.id === created.id, 'Instance readback identity mismatch')
+    return persisted
+  }
+  const populate = async (domain: string): Promise<void> => {
+    if (!files && !drives) return
+    check(stackURL, 'SEED_STACK_URL is required for population')
+    if (organization) console.log(`Seed owner: ${domain}; files=${files}; drives=${drives}`)
     const accessToken = expectStatus(await admin('POST', '/instances/token', {
       Domain: domain, Audience: 'cli', Scope: 'io.cozy.files io.cozy.sharings',
     }), 200).body
@@ -184,12 +289,27 @@ async function main(): Promise<void> {
       check(root.id === drive.rootDirectoryId && root.type === 'io.cozy.files' &&
         root.attributes?.type === 'directory' && backlink, 'Shared-drive root or backlink mismatch')
     }
-    console.log(`Seed complete: ${domain}; files=${files}; drives=${drives}`)
-  } catch (error) {
-    const message = error instanceof CliError ? error.message : 'Seed API operation failed'
-    throw new CliError(`${message}. Instance ${domain} may be partial; ` +
-      'run explicit cleanup only after server writes have stopped (a timeout/disconnect is not proof).')
   }
+  try {
+    for (const name of names) {
+      const absent = await admin('GET', `/instances/${name}`)
+      check(absent.status === 404, absent.status === 200 ? 'Instance already exists' :
+        `Instance lookup failed: HTTP ${absent.status}`)
+    }
+    if (organization) check(!(await list()).some(inScope), 'Organization scope already exists')
+    const created: Resource[] = []
+    for (const name of names) {
+      created.push(await create(name))
+      if (!organization || name !== domain) await populate(name)
+    }
+    if (organization) {
+      const members = (await list()).filter(inScope)
+      check(members.length === created.length && created.every((expected) =>
+        members.some((item) => same(item, expected))), 'Organization membership mismatch')
+    }
+    const counts = `${organization ? `users=${users}; ` : ''}files=${files}; drives=${drives}`
+    console.log(`Seed complete: ${domain}; ${counts}`)
+  } catch (error) { throw partial(error, domain) }
 }
 
 main().catch((error: unknown) => {

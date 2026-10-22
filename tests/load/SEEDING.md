@@ -10,6 +10,12 @@ objects directly. No new Go package, admin endpoint or Stack configuration flag 
 needed. Generic data APIs can be added for suitable document types later; files
 and sharings must keep their dedicated creation APIs.
 
+## Organization fixtures
+
+For configurable user counts with optional per-user files and shared drives, see
+[ORGANIZATIONS.md](ORGANIZATIONS.md). Organization mode defaults to empty users;
+the single-instance defaults below are unchanged.
+
 ## Build once
 
 Use Node 22 or newer and run `npm ci` in `tests/load`. The target must be a
