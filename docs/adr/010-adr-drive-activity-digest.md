@@ -40,16 +40,16 @@ sequenceDiagram
     S->>J: schedule a flush at the end of the window
   end
   Note over J: end of the window
-  J->>K: move the counts aside
+  J->>K: read the counts of the window
   J->>J: group the folders under their top folder
   J->>R: one event per (drive, member, top folder)
-  J->>K: delete the counts moved aside
+  J->>K: delete the counts of the window
 ```
 
 - Per change, the cost is one write to the counter store. There is no CouchDB write, no job and no message.
-- The counter store is Redis when the stack has one, as for rate limits, and memory otherwise.
+- The counter store is Redis, one hash per window, written with single-key commands only. A stack without Redis publishes no digest.
 - The flush is an `@in` trigger with the window as its duration, created by the first change of a window.
-- The counter keeps, per folder, the number of files created, updated and deleted, and the first five names. Folders are grouped under their top folder (the folder directly under the drive root) at flush time, once per folder, not once per file. A file at the root of the drive counts under the drive's root folder.
+- The counter keeps, per folder, the number of files created, updated and deleted, and up to five names. Folders are grouped under their top folder (the folder directly under the drive root) at flush time, once per folder, not once per file. A file at the root of the drive counts under the drive's root folder.
 - A deleted file is one sent to the trash. It counts under the folder it was in.
 
 ### The event
@@ -99,8 +99,7 @@ contexts:
 ### Failures
 
 - Counter store unavailable: the change succeeds and is not counted. The digest is best effort and never fails a request.
-- RabbitMQ unavailable at flush time: the job is retried by the job system. The counts it moved aside are only deleted after publishing, so the retry publishes the same events with the same ids. Changes made meanwhile go to the next window.
-- A crash of the stack between two windows can lose the counts held in memory when there is no Redis.
+- RabbitMQ unavailable at flush time: the job is retried by the job system. The counts of the window are only deleted after publishing, so the retry publishes the same events with the same ids. Changes made meanwhile go to the next window.
 
 ## Consequences
 
