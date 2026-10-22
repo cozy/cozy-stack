@@ -406,6 +406,44 @@ sharing synchronization.
 	},
 }
 
+var revokedDrivesFixer = &cobra.Command{
+	Use:   "revoked-drives <domain>",
+	Short: "Revoke the shared drives already revoked by their owner",
+	Long: `
+This fixer revokes, on a member instance, the shared drives that are still
+active while their owner has already revoked this member, as if the missed
+revocation notification had been received. They are reported as
+drive_revoked_by_owner by the "cozy-stack check sharings" command. Only the
+owners on the same stack can be checked.
+
+The IDs of the revoked sharings are printed, one per line.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/revoked-drives", domain)
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var fixed []string
+		if err := json.NewDecoder(res.Body).Decode(&fixed); err != nil {
+			return err
+		}
+		for _, id := range fixed {
+			fmt.Fprintln(os.Stdout, id)
+		}
+		return nil
+	},
+}
+
 var indexesFixer = &cobra.Command{
 	Use:   "indexes <domain>",
 	Short: "Rebuild the CouchDB views and indexes",
@@ -501,6 +539,7 @@ func init() {
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 	fixerCmdGroup.AddCommand(serviceTriggersFixer)
 	fixerCmdGroup.AddCommand(sharingsMovedFixer)
+	fixerCmdGroup.AddCommand(revokedDrivesFixer)
 	fixerCmdGroup.AddCommand(indexesFixer)
 	fixerCmdGroup.AddCommand(emailsFixer)
 
