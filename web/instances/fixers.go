@@ -188,14 +188,14 @@ func sharingsMovedFixer(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func revokedDrivesFixer(c echo.Context) error {
+func sharingsFixer(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
 
-	fixed, err := sharing.FixDrivesRevokedByOwner(inst)
+	fixed, err := sharing.FixSharings(inst)
 	if err != nil {
 		return err
 	}
