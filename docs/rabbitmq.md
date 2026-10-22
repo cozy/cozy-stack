@@ -569,8 +569,8 @@ counts the files that members create, update and send to the trash through
 - `id` is the same when a flush is retried, so a consumer can drop the events
   it has already seen.
 - The window is the context setting `drive_activity.window`, 30 seconds by
-  default. The counts are held in Redis when the Stack has one, in memory
-  otherwise.
+  default. The counts are held in Redis, so a Stack without Redis publishes
+  no digest.
 
 ### Lifecycle
 

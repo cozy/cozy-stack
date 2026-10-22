@@ -15,20 +15,20 @@ import (
 
 const defaultWindow = 30 * time.Second
 
-// windowsBeforeReopen bounds how long a window stays open when its flush
-// never ran, after which the next change opens a new one.
-const windowsBeforeReopen = 10
-
 // Count records a change made by member in the drive s. The change itself is
 // already done, so the digest is best effort: Count only logs its errors.
 func Count(inst *instance.Instance, s *sharing.Sharing, member *sharing.Member, kind string, file *vfs.FileDoc) {
 	if file == nil || member == nil || member.Email == "" || !s.ReportsActivity() {
 		return
 	}
+	st, ok := getStore()
+	if !ok {
+		return
+	}
 	window := windowOf(inst)
 	start := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	c := change{member: member.Email, folder: file.DirID, kind: kind, name: file.DocName}
-	opened, err := getStore().add(driveKey(inst, s.SID), c, start, windowsBeforeReopen*window)
+	start, opened, err := st.add(driveKey(inst, s.SID), c, start, window)
 	if err != nil {
 		inst.Logger().WithNamespace("drive-activity").
 			Warnf("Cannot count a change in drive %s: %s", s.SID, err)

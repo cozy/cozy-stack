@@ -78,7 +78,10 @@ func workFlush(ctx *job.TaskContext) error {
 // flush publishes the counts taken for the window, and only then drops them,
 // so that a retry publishes the same events.
 func flush(ctx context.Context, pub messaging.Publisher, inst *instance.Instance, msg *FlushMessage) error {
-	st := getStore()
+	st, ok := getStore()
+	if !ok {
+		return nil
+	}
 	drive := driveKey(inst, msg.SharingID)
 	counts, err := st.take(drive, msg.Window)
 	if err != nil {
