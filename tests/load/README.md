@@ -3,7 +3,10 @@
 This directory contains the first infrastructure milestone for
 [issue #4864](https://github.com/linagora/cozy-stack/issues/4864). It runs k6
 as an on-demand container, stores metrics in Prometheus, and provisions a
-Grafana dashboard.
+Grafana dashboards.
+
+For classified workload limits, tested bounds and fanout readiness evidence, see
+[Stack Capacity Overview](CAPACITY-OVERVIEW.md). The existing diagnostic dashboards remain available.
 
 The harness includes authenticated exact-work and fixed-duration file-upload
 workloads for personal drives, shared-drive activity and upload workloads, and an

@@ -3,6 +3,11 @@ global:
   evaluation_interval: 5s
 
 scrape_configs:
+  - job_name: capacity-results
+    static_configs:
+      - targets:
+          - capacity-results:9465
+
   - job_name: prometheus
     static_configs:
       - targets:

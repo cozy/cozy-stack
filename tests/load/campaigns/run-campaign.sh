@@ -96,6 +96,12 @@ shared_drive_ramp() {
   run_step "$name" shared-drive-ramp "$RUN_ID-$name" cozy-shared-drive-ramp EXECUTION_ID="$RUN_ID-$name" "$@"
 }
 
+org_drive_fanout() {
+  local name=$1
+  shift
+  run_step "$name" org-drive-fanout "$RUN_ID-$name" org-drive-fanout EXECUTION_ID="$RUN_ID-$name" "$@"
+}
+
 echo "Campaign $CAMPAIGN, run $RUN_ID, directory $RUN_DIR"
 # shellcheck source=/dev/null
 source "$DEFINITION"

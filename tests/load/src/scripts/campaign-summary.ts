@@ -8,7 +8,7 @@ import { harnessDirectory } from './env.ts'
 // Summarizes one campaign directory written by campaigns/run-campaign.sh:
 // one line per step with its result and a Grafana link for its time range.
 
-export type CampaignStepKind = 'upload-capacity' | 'shared-drive-ramp' | 'prepare'
+export type CampaignStepKind = 'upload-capacity' | 'shared-drive-ramp' | 'org-drive-fanout' | 'prepare'
 
 export type CampaignStep = {
   endedAt: string
@@ -33,6 +33,7 @@ const GRAFANA_MARGIN_MS = 60_000
 const dashboards: Record<string, string> = {
   'shared-drive-ramp': 'twake-drive-shared-drive/twake-drive-shared-drive-activity',
   'upload-capacity': 'twake-drive-k6/twake-drive-k6-overview',
+  'org-drive-fanout': 'twake-drive-capacity/stack-capacity-overview',
 }
 
 export function parseSteps(tsv: string): CampaignStep[] {
@@ -87,6 +88,30 @@ function describeRamp(result: JsonRecord): string {
   return `maximum sustained level = ${maximum}; level ${String(firstNotPassed.level)} ${String(firstNotPassed.status)}: ${reasons}`
 }
 
+function describeFanout(result: JsonRecord): string {
+  const capacity = isJsonRecord(result.capacity) ? result.capacity : {}
+  const lower = capacity.lower
+  const validLower = typeof lower === 'number' && Number.isSafeInteger(lower) && lower > 0
+  if (result.status === 'passed' && capacity.kind === 'lower_bound' && validLower) {
+    return `member batch ≥ ${lower} recipients (ready, access and revocation verified)`
+  }
+  const upper = capacity.upper_exclusive
+  const validBracket = result.status === 'failed' && capacity.kind === 'bracket' && validLower &&
+    typeof upper === 'number' && Number.isSafeInteger(upper) && upper > lower
+  if (validBracket) return `tested member batch bracket [${lower}, ${upper})`
+  const points = Array.isArray(result.points) ? result.points.filter(isJsonRecord) : []
+  const last = points.at(-1)
+  if (!last) return 'inconclusive'
+  const owner = isJsonRecord(last.owner) ? last.owner : {}
+  const add = isJsonRecord(owner.add) ? owner.add : {}
+  const recipients = Array.isArray(last.recipients) ? last.recipients.filter(isJsonRecord) : []
+  const proofs = recipients.filter(r => isJsonRecord(r.add) && r.add.converged === true).length
+  const count = (value: unknown): string => typeof value === 'number' &&
+    Number.isSafeInteger(value) && value >= 0 ? String(value) : 'unknown'
+  return `inconclusive; batch ${count(last.n)}; owner ready ${count(add.ready_recipients)}; ` +
+    `recipient access proofs ${proofs}`
+}
+
 export function describeStepResult(step: CampaignStep, result: JsonRecord | null): string {
   if (step.kind === 'prepare' || step.id === '') {
     return step.exitCode === 0 ? 'done' : `failed (exit ${step.exitCode})`
@@ -95,10 +120,13 @@ export function describeStepResult(step: CampaignStep, result: JsonRecord | null
     return `no result file (exit ${step.exitCode})`
   }
 
+  if (step.kind === 'org-drive-fanout') return describeFanout(result)
   return step.kind === 'shared-drive-ramp' ? describeRamp(result) : describeUploadCapacity(result)
 }
 
-export function buildGrafanaLink(grafanaUrl: string, step: CampaignStep): string | null {
+export function buildGrafanaLink(
+  grafanaUrl: string, step: CampaignStep, campaignId = step.id,
+): string | null {
   const dashboard = dashboards[step.kind]
   const from = Date.parse(step.startedAt)
   const to = Date.parse(step.endedAt)
@@ -108,6 +136,10 @@ export function buildGrafanaLink(grafanaUrl: string, step: CampaignStep): string
   }
 
   const base = grafanaUrl.replace(/\/+$/, '')
+  if (step.kind === 'org-drive-fanout') {
+    return `${base}/d/${dashboard}?var-campaign=${encodeURIComponent(campaignId)}` +
+      `&from=${from - GRAFANA_MARGIN_MS}&to=${to + GRAFANA_MARGIN_MS}`
+  }
   return `${base}/d/${dashboard}?var-campaignid=${encodeURIComponent(step.id)}&from=${from - GRAFANA_MARGIN_MS}&to=${to + GRAFANA_MARGIN_MS}`
 }
 
@@ -115,7 +147,7 @@ export function formatCampaignSummary(input: CampaignSummaryInput): string {
   const { environment } = input
   const rows = input.steps.map((step: CampaignStep): string => {
     const result = describeStepResult(step, input.results.get(step.id) ?? null)
-    const link = buildGrafanaLink(input.grafanaUrl, step)
+    const link = buildGrafanaLink(input.grafanaUrl, step, step.kind === 'org-drive-fanout' ? input.runId : step.id)
     return `| ${step.name} | ${result} |${link === null ? '' : ` [Grafana](${link})`} |`
   })
 
@@ -140,6 +172,9 @@ function resultPath(step: CampaignStep): string | null {
   }
   if (step.kind === 'shared-drive-ramp') {
     return join(results, `${step.id}-shared-drive-ramp.json`)
+  }
+  if (step.kind === 'org-drive-fanout' && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(step.id)) {
+    return join(results, `${step.id}-org-drive-fanout.json`)
   }
   return null
 }

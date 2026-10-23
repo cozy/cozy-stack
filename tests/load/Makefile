@@ -7,6 +7,8 @@ SEED_SETTINGS := SEED_ADMIN_URL SEED_STACK_URL SEED_ADMIN_USERNAME SEED_ADMIN_PA
                  SEED_DOMAIN SEED_USERS SEED_FILES SEED_DRIVES SEED_CONTEXT_NAME SEED_REQUEST_TIMEOUT_MS
 $(foreach setting,$(SEED_SETTINGS),$(if $(filter undefined,$(origin $(setting))),,$(eval export $(setting))))
 
+FANOUT_REPORT ?= data/results/$(EXECUTION_ID)-org-drive-fanout.json
+
 FANOUT_SETTINGS := FANOUT_ORG_DOMAIN FANOUT_LEVELS FANOUT_TIMEOUT_MS FANOUT_POLL_MS \
                    FANOUT_POLL_CONCURRENCY FANOUT_STABLE_MS FANOUT_REPORT
 $(foreach setting,$(FANOUT_SETTINGS),$(if $(filter undefined,$(origin $(setting))),,$(eval export $(setting))))
@@ -76,6 +78,7 @@ help:
 	@echo "make fixture-snapshot FIXTURE_PROJECT=... FIXTURE_SNAPSHOT=/private/baseline"
 	@echo "make fixture-restore FIXTURE_PROJECT=... FIXTURE_SNAPSHOT=/private/baseline"
 	@echo "make fixture-discard FIXTURE_PROJECT=...       Remove only a marked disposable deployment"
+	@echo "make capacity-dashboard-url                  Open the Stack Capacity Overview"
 	@echo "make up                                      Start dashboards and the local mock"
 	@echo "make upload-binaries                         Generate every upload binary"
 	@echo "make upload-smoke                            Run two concurrent 1K mock uploads"
@@ -143,7 +146,8 @@ pull:
 	@$(COMPOSE) --profile runner pull
 
 observability-up:
-	@$(COMPOSE) up -d --remove-orphans prometheus grafana
+	@mkdir -p data/results
+	@$(COMPOSE) up -d capacity-results prometheus grafana
 
 up: observability-up
 	@$(COMPOSE) up -d --remove-orphans mock
@@ -276,6 +280,10 @@ logs:
 
 down:
 	@$(COMPOSE) down
+
+.PHONY: capacity-dashboard-url
+capacity-dashboard-url:
+	@printf '%s/d/twake-drive-capacity/stack-capacity-overview\n' "$(GRAFANA_URL)"
 
 dashboard-url:
 	@port="$$( $(COMPOSE) port grafana 3000 | sed 's/.*://' )"; echo "http://localhost:$$port/"
