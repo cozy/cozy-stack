@@ -903,6 +903,11 @@ func ImportCiphers(c echo.Context) error {
 			"error": "invalid JSON",
 		})
 	}
+	for _, rel := range req.FolderRelationships {
+		if rel.Cipher < 0 || rel.Cipher >= len(req.Ciphers) || rel.Folder < 0 || rel.Folder >= len(req.Folders) {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid folder relationship"})
+		}
+	}
 
 	// Import the folders
 	folders := make([]interface{}, len(req.Folders))
@@ -927,7 +932,7 @@ func ImportCiphers(c echo.Context) error {
 			})
 		}
 		for _, kv := range req.FolderRelationships {
-			if kv.Cipher == i && kv.Folder < len(folders) {
+			if kv.Cipher == i {
 				cipher.FolderID = folders[kv.Folder].(*bitwarden.Folder).ID()
 			}
 		}
