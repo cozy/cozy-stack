@@ -296,6 +296,27 @@ test('healthy all-N nonconvergence yields a sparse bracket and retains running a
   equal(f.calls.filter(r => r.method === 'DELETE').length, 1)
 })
 
+test('an observation still in flight at the phase deadline misses the SLA like a late reply', async t => {
+  for (const mode of ['headers', 'body']) await t.test(mode, async t => {
+    const f = await fixture(t, (r, res) => {
+      if (r.headers.host !== domain(2) || r.url.pathname !== '/sharings/drive-2') return
+      // Neither stall ends, so the runner's own request deadline cuts the read.
+      if (mode === 'body') res.writeHead(200).write('{')
+      return true
+    })
+    const result = await f.run({ FANOUT_LEVELS: '1,2,4', FANOUT_TIMEOUT_MS: '300', FANOUT_POLL_MS: '160' })
+    equal(result.code, 1, result.stdout)
+    equal(result.report.status, 'failed', result.stdout)
+    deepEqual(result.report.capacity, { kind: 'bracket', lower: 1, upper_exclusive: 2, max: null })
+    equal(result.report.error, 'Observation SLA deadline exceeded')
+    const failed = result.report.points[1]
+    equal(failed.add.mutation, 'accepted')
+    equal(failed.add.status, 'failed')
+    equal(failed.retained_autoaccept_work_may_continue, true)
+    equal(f.calls.filter(r => r.method === 'DELETE').length, 1)
+  })
+})
+
 // Advance only the post-response deadline check, without racing real request timers.
 // The next-turn acknowledgement runs after the observer's rejection has settled.
 const observerClock = 'data:text/javascript,' + encodeURIComponent(`
@@ -472,16 +493,12 @@ test('single mutation transport failures are unknown and never retried or remove
   })
 })
 
-test('malformed or stalled observations are inconclusive, never capacity saturation', async t => {
-  for (const mode of ['json', 'identity', 'late-body', 'overflow']) await t.test(mode, async t => {
+test('malformed observations are inconclusive, never capacity saturation', async t => {
+  for (const mode of ['json', 'identity', 'overflow']) await t.test(mode, async t => {
     const f = await fixture(t, (r, res) => {
       if (r.headers.host !== domain(1) || r.url.pathname !== '/sharings/drive-1') return
       if (mode === 'json') res.end(`{${secret}`)
-      else if (mode === 'late-body') {
-        res.writeHead(200)
-        res.write('{')
-        setTimeout(() => res.end(secret), 250).unref()
-      } else if (mode === 'overflow') res.end('x'.repeat(1_048_577))
+      else if (mode === 'overflow') res.end('x'.repeat(1_048_577))
       else {
         r.transform = value => {
           value.data.attributes.members[0].instance = `https://${domain(3)}/`

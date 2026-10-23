@@ -4,7 +4,7 @@ import { closeSync, mkdirSync, openSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
-import { FixtureError, request, type Reply } from './fixture-http.ts'
+import { FixtureDeadline, FixtureError, request, type Reply } from './fixture-http.ts'
 
 class FanoutError extends Error {}
 class Deadline extends Error {}
@@ -462,6 +462,15 @@ async function main(): Promise<void> {
           proof.observed_elapsed_ms = now() - (deadline - timeout)
           return good
         }
+        // Reads get only the time left before the phase deadline: one cut short has missed the
+        // SLA exactly like a late reply, rather than failing as an observer.
+        const timed = async (read: () => Promise<boolean>): Promise<boolean> => {
+          try {
+            return await read()
+          } catch (error) {
+            throw error instanceof FixtureDeadline ? new Deadline() : error
+          }
+        }
         // Resolves with the end of the first round of the final all-good streak, so callers can
         // report convergence separately from the stability window.
         const observe = async (removed: boolean, start: number): Promise<number> => {
@@ -470,9 +479,9 @@ async function main(): Promise<void> {
           while (now() < deadline) {
             let good = true
             await bounded([
-              async () => { good = await ownerCheck(removed, deadline) && good },
+              async () => { good = await timed(() => ownerCheck(removed, deadline)) && good },
               ...selected.map((a, i) => async () => {
-                good = await recipientCheck(a, removed, deadline, i) && good
+                good = await timed(() => recipientCheck(a, removed, deadline, i)) && good
               }),
             ], concurrency)
             const observed = now()

@@ -3,6 +3,8 @@ import * as https from 'node:https'
 import { isIP } from 'node:net'
 
 export class FixtureError extends Error {}
+// Only the complete-response deadline below; callers may map it to their own budget.
+export class FixtureDeadline extends FixtureError {}
 export type Reply = { status: number, body: string }
 
 // No redirects or retries: a failed request can still have committed upstream writes.
@@ -40,7 +42,7 @@ export function request(
     req.on('error', () => reject(new FixtureError('API request failed')))
     // A complete-response deadline, not a socket inactivity timeout (trickles must not extend it).
     deadline = setTimeout(() => {
-      reject(new FixtureError('API request deadline exceeded'))
+      reject(new FixtureDeadline('API request deadline exceeded'))
       response?.destroy()
       req.destroy()
     }, timeout)
