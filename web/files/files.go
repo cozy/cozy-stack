@@ -1401,6 +1401,8 @@ func FileDownload(c echo.Context, sharedDrive *sharing.Sharing) error {
 		if doc, err = instance.VFS().FileByID(docID); err != nil {
 			return WrapVfsError(err)
 		}
+	} else {
+		return jsonapi.NewError(http.StatusBadRequest, "Path, Id or VersionId is required")
 	}
 
 	err = checkPerm(c, "GET", nil, doc)

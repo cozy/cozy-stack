@@ -2732,6 +2732,14 @@ func TestFiles(t *testing.T) {
 			Header("Content-Disposition").Equal(`attachment; filename="archive.zip"`)
 	})
 
+	t.Run("FileDownloadMissingTarget", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/downloads").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(400)
+	})
+
 	t.Run("FileCreateAndDownloadByPath", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
