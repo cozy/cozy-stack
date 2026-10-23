@@ -2,7 +2,7 @@ import { deepEqual, equal, rejects } from 'node:assert/strict'
 import { createServer, type RequestListener } from 'node:http'
 import { test, type TestContext } from 'node:test'
 
-import { FixtureError, request } from './fixture-http.ts'
+import { FixtureDeadline, FixtureError, request } from './fixture-http.ts'
 
 async function fixture(t: TestContext, handler: RequestListener): Promise<URL> {
   const server = createServer(handler)
@@ -72,7 +72,8 @@ test('complete-response deadline covers stalled headers, stalled bodies and tric
       res.once('close', () => { clearInterval(pulse); clearTimeout(finish); close() })
     })
     await rejects(request(url, 'GET', { Authorization: 'private-header' }, 100), (error: unknown) =>
-      error instanceof FixtureError && error.message === 'API request deadline exceeded')
+      error instanceof FixtureDeadline && error instanceof FixtureError &&
+      error.message === 'API request deadline exceeded')
     await closed
     equal(calls, 1)
   })

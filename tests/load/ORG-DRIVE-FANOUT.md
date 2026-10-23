@@ -94,6 +94,8 @@ every recipient's own sharing is active/ready, and each can read the actual driv
 root/control bytes. `pending`, `seen`, owner `active`, shortcut existence, HTTP 200
 or an empty job queue alone are not acceptance proofs. Timers include the mutation
 request and observation; late completion cannot count as meeting the budget.
+An observation read still in flight when the budget ends is cut off and counts as
+a missed deadline, the same as a late reply.
 Recipient peer rosters can retain unresolved entries, so the runner checks each
 recipient's own member and the owner's complete cohort, not every peer snapshot.
 
