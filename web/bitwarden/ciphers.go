@@ -139,7 +139,7 @@ func titleizeKeys(data bitwarden.MapData) map[string]interface{} {
 			k = "SSN"
 		}
 		key := []byte(k)
-		if 'a' <= key[0] && key[0] <= 'z' {
+		if len(key) > 0 && 'a' <= key[0] && key[0] <= 'z' {
 			key[0] -= 'a' - 'A'
 		}
 		res[string(key)] = v
