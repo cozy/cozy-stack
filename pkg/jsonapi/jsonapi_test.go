@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -12,6 +13,15 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestBindNullInput(t *testing.T) {
+	for _, body := range []string{"null", `{"data":[null]}`} {
+		_, err := BindCompound(strings.NewReader(body))
+		assert.Equal(t, BadJSON(), err)
+	}
+	_, err := BindRelations(httptest.NewRequest(http.MethodPost, "/", strings.NewReader("null")))
+	assert.Equal(t, BadJSON(), err)
+}
 
 func TestJsonapi(t *testing.T) {
 	config.UseTestFile(t)
