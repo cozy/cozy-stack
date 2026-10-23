@@ -257,6 +257,9 @@ func UpdateDoc(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc); err != nil {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
+	if doc.M == nil {
+		return jsonapi.BadJSON()
+	}
 
 	doc.Type = doctype
 

@@ -49,6 +49,23 @@ func TestData(t *testing.T) {
 		},
 	})
 
+	t.Run("RejectNullDocuments", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		_, token := setup.GetTestClient(Type + " " + consts.Accounts)
+		for _, doctype := range []string{Type, consts.Accounts} {
+			e.PUT("/data/"+doctype+"/null-document").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte("null")).
+				Expect().Status(400)
+			e.POST("/data/"+doctype+"/").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte("null")).
+				Expect().Status(400)
+		}
+	})
+
 	t.Run("SuccessGet", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
