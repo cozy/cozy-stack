@@ -1,11 +1,8 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import * as http from 'node:http'
-import * as https from 'node:https'
-import { isIP } from 'node:net'
 
+import { FixtureError as CliError, request, type Reply } from './fixture-http.ts'
 import { createSharedDrive } from './prepare-shared-drive.ts'
 
-class CliError extends Error {}
 function check(value: unknown, message: string): asserts value {
   if (!value) throw new CliError(message)
 }
@@ -40,45 +37,6 @@ function origin(name: string): URL {
   }
 }
 
-type Reply = { status: number, body: string }
-function request(
-  url: URL, method: string, headers: Record<string, string>, timeout: number, body: string | Buffer = '',
-): Promise<Reply> {
-  let deadline: NodeJS.Timeout | undefined
-  return new Promise<Reply>((resolve, reject) => {
-    let response: http.IncomingMessage | undefined
-    const transport = url.protocol === 'https:' ? https : http
-    const hostname = url.hostname.replace(/^\[|\]$/g, '')
-    const req = transport.request(url, {
-      method, headers: { ...headers, 'Content-Length': String(Buffer.byteLength(body)) },
-      // Otherwise HTTPS derives TLS identity from the overridden tenant Host header.
-      ...(url.protocol === 'https:' ? { servername: isIP(hostname) ? '' : hostname } : {}),
-    }, (res) => {
-      response = res
-      const chunks: Buffer[] = []
-      let size = 0
-      res.on('data', (chunk: Buffer) => {
-        size += chunk.length
-        if (size > 65_536) {
-          reject(new CliError('API response exceeds 64 KiB'))
-          res.destroy()
-          req.destroy()
-        } else chunks.push(chunk)
-      })
-      res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }))
-      res.on('aborted', () => reject(new CliError('API response incomplete')))
-      res.on('error', () => reject(new CliError('API response failed')))
-    })
-    req.on('error', () => reject(new CliError('API request failed')))
-    deadline = setTimeout(() => {
-      reject(new CliError('API request deadline exceeded'))
-      response?.destroy()
-      req.destroy()
-    }, timeout)
-    req.end(body)
-  }).finally(() => clearTimeout(deadline))
-}
-
 function expectStatus(reply: Reply, status: number): Reply {
   check(reply.status === status, `Unexpected API status: HTTP ${reply.status}`)
   return reply
@@ -87,7 +45,9 @@ function expectStatus(reply: Reply, status: number): Reply {
 interface Resource {
   id: string
   type?: string
-  attributes?: { domain?: string, uuid?: string, type?: string, org_id?: string, org_domain?: string }
+  attributes?: {
+    domain?: string, uuid?: string, type?: string, org_id?: string, org_domain?: string, context?: string
+  }
   relationships?: { referenced_by?: { data?: Array<{ type?: string, id?: string }> } }
 }
 function resource(reply: Reply): Resource {
@@ -225,6 +185,9 @@ async function main(): Promise<void> {
     } catch (error) { throw partial(error, domain) }
     return
   }
+  const contextName = process.env.SEED_CONTEXT_NAME
+  check(contextName === undefined || (contextName.length > 0 && !/[\s\x00-\x1f\x7f]/.test(contextName)),
+    'SEED_CONTEXT_NAME must be nonempty and contain no whitespace or control characters')
   const users = organization ? integer('SEED_USERS', '3', 1000) : 0
   const files = integer('SEED_FILES', organization ? '0' : '100', 1_000_000)
   const drives = integer('SEED_DRIVES', '0', 100_000)
@@ -239,9 +202,11 @@ async function main(): Promise<void> {
       Domain: name, UUID: uuid, Locale: 'en', Email: `${uuid}@seed.invalid`,
       PublicName: 'Disposable seed fixture', CouchCluster: '-1', SwiftLayout: '-1', AutoUpdate: 'false',
       ...(organization ? { OrgID: orgID, OrgDomain: orgDomain } : {}),
+      ...(contextName ? { ContextName: contextName } : {}),
     }), 201))
     const matches = (item: Resource) => identity(item) &&
       item.attributes?.domain === name && item.attributes?.uuid === uuid &&
+      (!contextName || item.attributes.context === contextName) &&
       (!organization || (item.attributes.org_id === orgID && item.attributes.org_domain === orgDomain))
     check(matches(created), 'Created instance identity mismatch')
     const persisted = resource(expectStatus(await admin('GET', `/instances/${name}`), 200))

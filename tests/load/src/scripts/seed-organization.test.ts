@@ -129,6 +129,48 @@ test('organization membership follows every registry page for 10, 50 and 100 use
   })
 })
 
+test('organization instances select and read back the requested server context', async (t) => {
+  const context = 'load-org-sharing'
+  const f = await fixture(t, (r, res) => {
+    if (r.method === 'POST' && r.url.pathname === '/instances') {
+      const params = r.url.searchParams
+      const name = params.get('Domain')!
+      const data = { id: `id-${f.instances.size}`, attributes: {
+        domain: name, uuid: params.get('UUID')!, org_id: params.get('OrgID')!,
+        org_domain: params.get('OrgDomain')!, context: params.get('ContextName'),
+      } }
+      f.instances.set(name, data)
+      res.writeHead(201).end(JSON.stringify({ data }))
+      return true
+    }
+  })
+  const result = await f.run(['seed-org', domain], { SEED_USERS: '2', SEED_CONTEXT_NAME: context })
+  equal(result.code, 0, result.output)
+  const writes = creations(f.requests)
+  equal(writes.length, 3)
+  ok(writes.every(r => r.url.searchParams.get('ContextName') === context))
+})
+
+test('requested server context cannot be silently replaced during instance creation', async (t) => {
+  const f = await fixture(t)
+  const result = await f.run(['seed-org', domain], { SEED_CONTEXT_NAME: 'load-org-sharing' })
+  equal(result.code, 1, result.output)
+  match(result.output, /identity mismatch/)
+  equal(creations(f.requests).length, 1)
+  ok(f.requests.every(r => r.method !== 'DELETE' && r.url.pathname !== '/instances/token'))
+})
+
+test('invalid server context names fail before requests or fixture logging', async (t) => {
+  const f = await fixture(t)
+  for (const context of ['', ' ', 'load\nsharing', 'load\tsharing']) {
+    const result = await f.run(['seed-org', domain], { SEED_CONTEXT_NAME: context })
+    equal(result.code, 1, result.output)
+    match(result.output, /SEED_CONTEXT_NAME/)
+    equal(f.requests.length, 0)
+    ok(!result.output.includes('Seed instance:'))
+  }
+})
+
 test('seed-org defaults to a metadata-only organization and three distinct user instances', async (t) => {
   const f = await fixture(t)
   const result = await f.run()
