@@ -9,6 +9,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/labstack/echo/v4"
 )
 
 type testDoc struct {
@@ -27,7 +29,18 @@ func TestRealtime(t *testing.T) {
 	inst := setup.GetTestInstance()
 	_, token := setup.GetTestClient("io.cozy.foos io.cozy.bars io.cozy.bazs")
 	ts := setup.GetTestServer("/realtime", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
+
+	t.Run("RejectEmptyDocuments", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		for _, body := range []string{"", "null"} {
+			e.POST("/realtime/io.cozy.foos/foo-one").
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(body)).
+				Expect().Status(http.StatusBadRequest)
+		}
+	})
 
 	t.Run("WSNoAuth", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)

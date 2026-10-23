@@ -328,6 +328,9 @@ func Notify(c echo.Context) error {
 	if err := c.Bind(&payload); err != nil {
 		return jsonapi.BadRequest(err)
 	}
+	if payload.M == nil {
+		return jsonapi.BadJSON()
+	}
 	payload.SetID(id)
 	payload.Type = doctype
 	if err := middlewares.Allow(c, permission.POST, &payload); err != nil {
