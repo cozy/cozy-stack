@@ -26,6 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTitleizeKeysEmptyKey(t *testing.T) {
+	assert.Equal(t, map[string]interface{}{"": "value", "Type": 0},
+		titleizeKeys(bitwarden.MapData{"": "value", "type": 0}))
+}
+
 func TestBitwarden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
