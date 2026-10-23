@@ -129,6 +129,18 @@ test('organization membership follows every registry page for 10, 50 and 100 use
   })
 })
 
+test('ordinary instances without a UUID do not block organization seeding or cleanup', async (t) => {
+  const f = await fixture(t)
+  const plain = 'load.localhost:8080'
+  f.instances.set(plain, { id: 'id-plain', attributes: { domain: plain } } as unknown as Instance)
+  const seeded = await f.run(['seed-org', domain], { SEED_USERS: '2' })
+  equal(seeded.code, 0, seeded.output)
+  equal(creations(f.requests).length, 3)
+  const cleaned = await f.run(['cleanup-org', domain])
+  equal(cleaned.code, 0, cleaned.output)
+  deepEqual([...f.instances.keys()], [plain])
+})
+
 test('organization instances select and read back the requested server context', async (t) => {
   const context = 'load-org-sharing'
   const f = await fixture(t, (r, res) => {

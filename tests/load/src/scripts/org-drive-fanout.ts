@@ -69,7 +69,9 @@ interface Proof {
   own_status: string | null, active: boolean | null,
   root_status: number | null, marker_status: number | null, marker_matches: boolean | null
 }
-interface Phase { status: string, elapsed_ms: number | null, mutation: string, http_status: number | null }
+interface Phase {
+  status: string, elapsed_ms: number | null, converged_ms: number | null, mutation: string, http_status: number | null
+}
 interface OwnerProof {
   converged: boolean, active: boolean, org_drive: boolean, ready_recipients: number,
   revoked_recipients: number, observed_elapsed_ms: number
@@ -189,9 +191,10 @@ async function main(): Promise<void> {
       expect(await admin('GET', `/instances/${root}`), 404)
       await new Promise<void>((resolve, reject) => {
         const seeder = fileURLToPath(new URL('./seed-scale-data.ts', import.meta.url))
+        // The seeder's domains and failure reason go to stderr; stdout is reserved for the report.
         const child = spawn(process.execPath, ['--import', 'tsx', seeder, 'seed-org', root], {
           env: { ...process.env, SEED_USERS: String(maxN), SEED_FILES: '0', SEED_DRIVES: '0' },
-          stdio: 'ignore',
+          stdio: ['ignore', 2, 2],
         })
         child.once('error', () => {
           reject(new FanoutError('Organization seeder failed; partial organization retained'))
@@ -228,14 +231,15 @@ async function main(): Promise<void> {
       check(Array.isArray(page?.data), 'Invalid instance registry')
       for (const item of page.data) {
         const a = item?.attributes
-        check(typeof item?.id === 'string' && item.id && a &&
-          typeof a.domain === 'string' && a.domain && typeof a.uuid === 'string' && a.uuid,
+        // Instances created without a UUID are ordinary; organization members are checked below.
+        check(typeof item?.id === 'string' && item.id && a && typeof a.domain === 'string' && a.domain &&
+          (a.uuid == null || a.uuid === '' || typeof a.uuid === 'string'),
         'Invalid or duplicate registry identity')
-        const uniqueIdentity = !ids.has(item.id) && !domains.has(a.domain) && !uuids.has(a.uuid)
+        const uniqueIdentity = !ids.has(item.id) && !domains.has(a.domain) && !(a.uuid && uuids.has(a.uuid))
         check(uniqueIdentity, 'Invalid or duplicate registry identity')
         ids.add(item.id)
         domains.add(a.domain)
-        uuids.add(a.uuid)
+        if (a.uuid) uuids.add(a.uuid)
         registry.push(item)
       }
       const validLinks = page.links == null || (typeof page.links === 'object' && !Array.isArray(page.links))
@@ -325,8 +329,10 @@ async function main(): Promise<void> {
       const p: Point = {
         n, status: 'inconclusive', phase: 'setup', mutation_concurrency: 1, observer_concurrency: concurrency,
         fixtures: { contact_ids: [] },
-        add: { status: 'not_started', elapsed_ms: null, mutation: 'not_sent', http_status: null },
-        remove: { status: 'not_started', elapsed_ms: null, mutation: 'not_sent', http_status: null },
+        add: { status: 'not_started', elapsed_ms: null, converged_ms: null, mutation: 'not_sent', http_status: null },
+        remove: {
+          status: 'not_started', elapsed_ms: null, converged_ms: null, mutation: 'not_sent', http_status: null,
+        },
         recipients: selected.map(a => ({ domain: a.domain, add: null, remove: null })),
         retained_autoaccept_work_may_continue: false,
       }
@@ -456,7 +462,9 @@ async function main(): Promise<void> {
           proof.observed_elapsed_ms = now() - (deadline - timeout)
           return good
         }
-        const observe = async (removed: boolean, start: number) => {
+        // Resolves with the end of the first round of the final all-good streak, so callers can
+        // report convergence separately from the stability window.
+        const observe = async (removed: boolean, start: number): Promise<number> => {
           const deadline = start + timeout
           let stableSince: number | undefined
           while (now() < deadline) {
@@ -470,7 +478,7 @@ async function main(): Promise<void> {
             const observed = now()
             if (observed > deadline) throw new Deadline()
             stableSince = good ? stableSince ?? observed : undefined
-            if (stableSince !== undefined && observed - stableSince >= stable) return
+            if (stableSince !== undefined && observed - stableSince >= stable) return stableSince
             const remaining = deadline - now()
             // Do not squeeze an extra, almost-certainly timed-out round into a fractional tail.
             if (remaining <= poll) {
@@ -511,7 +519,7 @@ async function main(): Promise<void> {
             phase.http_status = reply.status
             phase.mutation = reply.status === (removed ? 204 : 200) ? 'accepted' : 'http_error'
             expect(reply, removed ? 204 : 200)
-            await observe(removed, start)
+            phase.converged_ms = await observe(removed, start) - start
             phase.status = 'passed'
             p.retained_autoaccept_work_may_continue = false
           } catch (error) {

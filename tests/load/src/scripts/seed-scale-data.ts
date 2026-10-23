@@ -57,8 +57,11 @@ function resource(reply: Reply): Resource {
   return data
 }
 
-function identity(item: Resource): boolean {
-  return [item?.id, item?.attributes?.domain, item?.attributes?.uuid].every((value) =>
+// Instances created without a UUID (e.g. `cozy-stack instances add`) are ordinary
+// registry entries; only fixture instances must carry one.
+function identity(item: Resource, requireUUID = true): boolean {
+  const fields = [item?.id, item?.attributes?.domain, ...(requireUUID ? [item?.attributes?.uuid] : [])]
+  return fields.every((value) =>
     typeof value === 'string' && value.length > 0 && !/[\s\x00-\x1f\x7f]/.test(value))
 }
 
@@ -126,7 +129,7 @@ async function main(): Promise<void> {
         const page = JSON.parse(reply.body)
         check(Array.isArray(page?.data), 'Invalid instance list')
         for (const item of page.data as Resource[]) {
-          check(identity(item) && !ids.has(item.id) && !domains.has(item.attributes!.domain!), '')
+          check(identity(item, false) && !ids.has(item.id) && !domains.has(item.attributes!.domain!), '')
           ids.add(item.id)
           domains.add(item.attributes!.domain!)
           items.push(item)

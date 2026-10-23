@@ -103,7 +103,10 @@ file access. The empty organization drive must remain active on its owner.
 The cohort starts with group-only grants: removing a group does not promise loss
 of access when a recipient has another direct, group or ancestor-sharing grant.
 
-The report retains per-instance outcomes and add/remove timings. Sparse sampled
+The report retains per-instance outcomes and add/remove timings. Each phase's
+`converged_ms` is when every check first passed, to within one observation round;
+`elapsed_ms` also includes the `FANOUT_STABLE_MS` window, and `FANOUT_TIMEOUT_MS`
+must cover both. Sparse sampled
 levels produce a tested bracket `[last passing, first failing)`, not an exact
 maximum. All passing levels give a lower bound. Configuration errors, uncertain
 mutations, failed observations or unverified revocation make the result

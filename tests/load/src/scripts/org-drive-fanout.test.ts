@@ -170,6 +170,9 @@ test('real child ramps group fanout, proves every recipient access and one-opera
     ok(p.recipients.every((r: any) => r.add.converged && r.remove.converged))
     ok(p.recipients.every((r: any) => r.add.observed_elapsed_ms > 0 && r.remove.observed_elapsed_ms > 0))
     ok(p.add.elapsed_ms >= 20 && p.remove.elapsed_ms >= 20)
+    for (const phase of [p.add, p.remove]) {
+      ok(phase.converged_ms >= 0 && phase.elapsed_ms - phase.converged_ms >= 20, JSON.stringify(phase))
+    }
     equal(p.fixtures.contact_ids.length, p.n)
     equal(p.owner.add.ready_recipients, p.n)
     equal(p.owner.remove.revoked_recipients, p.n)
@@ -567,6 +570,15 @@ test('new reports are private, byte-identical JSON and existing paths are refuse
   equal(await readFile(path, 'utf8'), result.stdout)
 })
 
+test('ordinary instances without a UUID stay outside the organization cohort', async t => {
+  const f = await fixture(t)
+  f.instances.push({ id: 'instance-plain', attributes: { domain: 'load.localhost:8080' } } as unknown as Instance)
+  const result = await f.run({ FANOUT_LEVELS: '1' })
+  equal(result.code, 0, result.stdout + result.stderr)
+  equal(result.report.status, 'passed')
+  ok(f.calls.every(r => r.headers.host !== 'load.localhost:8080'))
+})
+
 test('fresh mode invokes real metadata-only seeder and never silently adopts an existing root', async t => {
   const f = await fixture(t)
   f.instances.splice(0)
@@ -783,6 +795,7 @@ test('a failed real seed child leaves its disclosed partial organization without
   const result = await f.run({ FANOUT_ORG_DOMAIN: undefined, FANOUT_LEVELS: '1' })
   equal(result.code, 1)
   match(result.report.error, /seeder failed/)
+  match(result.stderr, /API request failed/)
   ok(result.stderr.includes(result.report.organization_domain))
   equal(result.report.points.length, 0)
   equal(f.calls.filter(r => r.method === 'DELETE').length, 0)
