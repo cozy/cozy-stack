@@ -99,10 +99,9 @@ function getMeasuredFailure(
   return ''
 }
 
-// A content mismatch fails the point first: k6 aborts on it, which would
-// otherwise look like an interrupted run. Other infrastructure problems come
-// next, because a point that did not run completely or cleanly must not count
-// as a capacity measurement.
+// Cleanup failure must stop the search even when content mismatched. With clean
+// cleanup, a mismatch fails the point before interruption checks: k6 aborts on
+// it, which would otherwise look like an infrastructure failure.
 export function classifyUploadPoint(
   input: UploadPointClassificationInput,
 ): UploadPointClassification {
@@ -118,14 +117,22 @@ export function classifyUploadPoint(
   if (metrics === null) {
     return infrastructureFailure('summary is missing required metrics')
   }
-  if (metrics.consistencyRate !== null && metrics.consistencyRate < 1) {
+  const contentMismatch =
+    metrics.consistencyRate !== null && metrics.consistencyRate < 1
+  const mismatchReason = 'uploaded content did not match after download'
+
+  if (metrics.cleanupRate !== 1) {
+    return infrastructureFailure(
+      contentMismatch
+        ? `test-directory cleanup failed; ${mismatchReason}`
+        : 'test-directory cleanup failed',
+    )
+  }
+  if (contentMismatch) {
     return {
-      reason: 'uploaded content did not match after download',
+      reason: mismatchReason,
       result: 'failed',
     }
-  }
-  if (metrics.cleanupRate !== 1) {
-    return infrastructureFailure('test-directory cleanup failed')
   }
   if (
     isInterruptedCapacityPoint(

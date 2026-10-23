@@ -1,6 +1,7 @@
 import { deepEqual, equal } from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { searchCapacity, type PointRequest } from './search.ts'
 import {
   classifyUploadPoint,
   isInterruptedCapacityPoint,
@@ -133,7 +134,7 @@ describe('classifyUploadPoint', (): void => {
         makeInput({
           metrics: {
             ...passingMetrics,
-            cleanupRate: 0,
+            cleanupRate: 1,
             completedIterations: 2,
             consistencyRate: 0.5,
           },
@@ -145,6 +146,75 @@ describe('classifyUploadPoint', (): void => {
         result: 'failed',
       },
     )
+  })
+
+  for (const { completedIterations, runnerExitCode } of [
+    { completedIterations: 4, runnerExitCode: 0 },
+    { completedIterations: 2, runnerExitCode: 108 },
+  ]) {
+    it(`prioritizes cleanup over content mismatch after ${completedIterations} iterations`, (): void => {
+      deepEqual(
+        classifyUploadPoint(
+          makeInput({
+            metrics: {
+              ...passingMetrics,
+              cleanupRate: 0,
+              completedIterations,
+              consistencyRate: 0.5,
+            },
+            runnerExitCode,
+          }),
+        ),
+        {
+          reason: 'test-directory cleanup failed; uploaded content did not match after download',
+          result: 'infrastructure_failure',
+        },
+      )
+    })
+  }
+
+  it('stops capacity probes after cleanup fails with a content mismatch', (): void => {
+    const requests: PointRequest[] = []
+    const result = searchCapacity({
+      baselineIterations: 4,
+      configuredP95LimitMs: 200,
+      confirmationIterations: 4,
+      maxVus: 8,
+      runPoint: (request) => {
+        requests.push(request)
+        const expectedIterations = request.iterationsPerVu * request.vus
+        const cleanupFailed = request.vus === 4
+        const metrics: UploadPointMetrics = {
+          ...passingMetrics,
+          cleanupRate: cleanupFailed ? 0 : 1,
+          completedIterations: cleanupFailed ? 2 : expectedIterations,
+          consistencyRate: cleanupFailed ? 0.5 : 1,
+        }
+        const classification = classifyUploadPoint(
+          makeInput({
+            expectedIterations,
+            metrics,
+            p95LimitMs: request.p95LimitMs,
+            runnerExitCode: cleanupFailed ? 108 : 0,
+          }),
+        )
+
+        return { p95Ms: metrics.p95Ms, result: classification.result }
+      },
+    })
+
+    deepEqual(
+      requests.map(({ phase, vus }) => [phase, vus]),
+      [
+        ['baseline', 1],
+        ['discovery', 2],
+        ['discovery', 4],
+      ],
+    )
+    deepEqual(result, {
+      reason: 'discovery failed because of test infrastructure at 4 VUs',
+      status: 'infrastructure_failure',
+    })
   })
 
   it('reports cleanup failures before measured failures', (): void => {

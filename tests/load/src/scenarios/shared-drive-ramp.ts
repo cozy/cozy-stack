@@ -19,8 +19,9 @@ export {
 } from './shared-drive-activity.ts'
 
 // Runs the shared-drive activity mix at increasing levels in one k6 run and
-// reports the highest level that met every criterion. k6 owns the ramp; no
-// Node coordinator is involved.
+// reports completed passing/failing bounds, never a capacity from a partial
+// hold or failed cleanup. Explicit hold signals exclude setup/teardown time.
+// k6 owns the ramp; no Node coordinator is involved.
 
 const rampPlan = parseRampPlan(__ENV)
 const rampCriteria = parseRampCriteria(__ENV)

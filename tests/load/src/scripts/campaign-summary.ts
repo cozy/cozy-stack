@@ -73,6 +73,9 @@ function describeUploadCapacity(result: JsonRecord): string {
 }
 
 function describeRamp(result: JsonRecord): string {
+  if (result.status === 'infrastructure_failure' || result.max_sustained_level === null) {
+    return `stopped: ${String(result.failure_reason ?? 'ramp capacity is unavailable')}`
+  }
   const maximum = String(result.max_sustained_level)
   if (result.result_bound === 'lower_bound') {
     return `maximum sustained level ≥ ${maximum} (every level passed)`
@@ -80,12 +83,15 @@ function describeRamp(result: JsonRecord): string {
 
   const levels = Array.isArray(result.levels) ? result.levels.filter(isJsonRecord) : []
   const firstNotPassed = levels.find((level: JsonRecord): boolean => level.status !== 'passed')
-  if (firstNotPassed === undefined) {
-    return `maximum sustained level = ${maximum}`
-  }
-
-  const reasons = Array.isArray(firstNotPassed.reasons) ? firstNotPassed.reasons.join('; ') : ''
-  return `maximum sustained level = ${maximum}; level ${String(firstNotPassed.level)} ${String(firstNotPassed.status)}: ${reasons}`
+  const reasons = Array.isArray(firstNotPassed?.reasons) ? firstNotPassed.reasons.join('; ') : ''
+  const detail = firstNotPassed === undefined ? ''
+    : `; level ${String(firstNotPassed.level)} ${String(firstNotPassed.status)}: ${reasons}`
+  // Older reports called a failed sampled level "exact"; do not repeat that claim.
+  const upper = result.first_failed_level ??
+    (firstNotPassed?.status === 'failed' ? firstNotPassed.level : null)
+  return typeof upper === 'number'
+    ? `sustained level bracket [${maximum}, ${upper})${detail}`
+    : `inconclusive; highest completed passing level ${maximum}${detail}`
 }
 
 function describeFanout(result: JsonRecord): string {
