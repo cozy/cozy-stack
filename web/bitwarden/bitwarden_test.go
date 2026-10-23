@@ -764,6 +764,22 @@ func TestBitwarden(t *testing.T) {
 		assert.Equal(t, nbFolders+1, nb)
 	})
 
+	t.Run("ImportInvalidFolderRelationship", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		before, err := couchdb.CountAllDocs(inst, consts.BitwardenFolders)
+		require.NoError(t, err)
+		for _, indices := range [][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
+			e.POST("/bitwarden/api/ciphers/import").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte(fmt.Sprintf(`{"folders":[{"name":"folder"}],"ciphers":[{"type":1,"name":"login"}],"folderRelationships":[{"key":%d,"value":%d}]}`, indices[0], indices[1]))).
+				Expect().Status(http.StatusBadRequest)
+		}
+		after, err := couchdb.CountAllDocs(inst, consts.BitwardenFolders)
+		require.NoError(t, err)
+		assert.Equal(t, before, after)
+	})
+
 	t.Run("Organization", func(t *testing.T) {
 		var orgaID string
 
