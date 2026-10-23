@@ -72,6 +72,36 @@ describe('describeStepResult', (): void => {
     )
   })
 
+  it('reports a stopped ramp when cleanup invalidated otherwise passing samples', (): void => {
+    equal(describeStepResult({ ...uploadStep, kind: 'shared-drive-ramp', exitCode: 99 }, {
+      failure_reason: 'test-directory cleanup failed',
+      levels: [{ level: 8, reasons: [], status: 'passed' }],
+      max_sustained_level: null,
+      result_bound: 'inconclusive',
+      status: 'infrastructure_failure',
+    }), 'stopped: test-directory cleanup failed')
+  })
+
+  it('does not claim a sparse ramp maximum in campaign summaries', (): void => {
+    equal(describeStepResult({ ...uploadStep, kind: 'shared-drive-ramp' }, {
+      first_failed_level: 16,
+      levels: [{ level: 8, reasons: [], status: 'passed' },
+        { level: 16, reasons: ['upload success rate is too low'], status: 'failed' }],
+      max_sustained_level: 8,
+      result_bound: 'bracket',
+      status: 'completed',
+    }), 'sustained level bracket [8, 16); level 16 failed: upload success rate is too low')
+  })
+
+  it('labels a partial hold inconclusive rather than an exact capacity', (): void => {
+    equal(describeStepResult({ ...uploadStep, kind: 'shared-drive-ramp', exitCode: 108 }, {
+      levels: [{ level: 8, reasons: [], status: 'passed' },
+        { level: 16, reasons: ['hold did not complete'], status: 'not_measured' }],
+      max_sustained_level: 8,
+      result_bound: 'inconclusive',
+    }), 'inconclusive; highest completed passing level 8; level 16 not_measured: hold did not complete')
+  })
+
   it('reports the sustained ramp level and the first failing reasons', (): void => {
     equal(
       describeStepResult(
@@ -85,7 +115,7 @@ describe('describeStepResult', (): void => {
           result_bound: 'exact',
         },
       ),
-      'maximum sustained level = 1; level 2 failed: ws auth rate 0.5 is below 0.99',
+      'sustained level bracket [1, 2); level 2 failed: ws auth rate 0.5 is below 0.99',
     )
   })
 

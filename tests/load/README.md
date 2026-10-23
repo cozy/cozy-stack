@@ -315,16 +315,26 @@ Shared drives can be tested in two modes:
 
    The result is written to
    `data/results/<EXECUTION_ID>-shared-drive-ramp.json`.
-   `max_sustained_level` is the last level before the first one that did
-   not pass. `result_bound` is `exact` when a level failed, `lower_bound`
-   when every level passed, and `inconclusive` when a level lacked samples
-   or was never reached. A level with missing metrics never counts as
-   passed. The run stops early when more than half of the HTTP requests
-   fail.
+   `max_sustained_level` is the highest fully completed passing level before
+   the first level that did not pass. Each level records `hold_completed` from
+   `shared_drive_ramp_hold_completed`: a new worker iteration after the hold
+   boundary emits the signal; the changes-reader drain covers the final hold.
+   Setup/teardown time and a late in-flight request cannot complete a hold.
+   A sampled partial hold is `not_measured`, never a sustained level.
 
-   A failing level is a result, not an error: k6 still exits with 0. It
-   exits with an error only when cleanup fails or the run stops early, so
-   automation must read `max_sustained_level` from the result file.
+   `result_bound` is `bracket` when a completed level failed: passing 8 and
+   failing 16 reports `[8, 16)`, with `first_failed_level: 16`, not an exact
+   maximum of 8. It is `lower_bound` when every level passed and `inconclusive`
+   when a hold was partial, metrics were missing, or a level was not reached.
+   A level with missing metrics never counts as passed. The run stops early
+   when more than half of the HTTP requests fail after the first 30 seconds.
+
+   A failing completed level is a result, not an error: k6 still exits with 0.
+   Cleanup failure (including an absent/empty cleanup metric) invalidates the
+   report: `status: infrastructure_failure`, a cleanup `failure_reason`,
+   `result_bound: inconclusive` and `max_sustained_level: null`. Raw per-level
+   diagnostics remain available. Automation must check status and result bounds,
+   not just the maximum or k6 exit code; campaign summaries use the same rules.
 
 2. **Direct upload target mode in `concurrent-uploads.ts`**: sends pure upload traffic directly to an existing shared-drive directory root.
 

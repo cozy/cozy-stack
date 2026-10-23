@@ -56,13 +56,14 @@ export type SummaryMetrics = Record<
 >
 
 export type RampLevelStatus = 'passed' | 'failed' | 'not_measured' | 'not_run'
-export type RampResultBound = 'exact' | 'lower_bound' | 'inconclusive'
+export type RampResultBound = 'bracket' | 'lower_bound' | 'inconclusive'
 
 export type RampLevelResult = {
   changes_delivery_ratio: number | null
   changes_items: number | null
   changes_p95_ms: number | null
   changes_success_rate: number | null
+  hold_completed: boolean
   level: number
   reasons: string[]
   status: RampLevelStatus
@@ -76,14 +77,17 @@ export type RampLevelResult = {
 }
 
 export type RampReport = {
+  cleanup_success_rate: number | null
   criteria: {
     minimum_delivery_ratio: number
     minimum_success_rate: number
     p95_limit_mode: 'absolute' | 'none'
     p95_limit_ms: number | null
   }
+  failure_reason: string | null
+  first_failed_level: number | null
   levels: RampLevelResult[]
-  max_sustained_level: number
+  max_sustained_level: number | null
   plan: {
     hold_ms: number
     levels: number[]
@@ -91,6 +95,7 @@ export type RampReport = {
     vus_per_level: RampVusPerLevel
   }
   result_bound: RampResultBound
+  status: 'completed' | 'infrastructure_failure'
 }
 
 type Environment = Record<string, string | undefined>
@@ -269,6 +274,13 @@ export function getRampTotalDurationMs(plan: RampPlan): number {
   return plan.levels.length * getLevelSpanMs(plan)
 }
 
+export function getCompletedRampLevels(plan: RampPlan, elapsedMs: number): number[] {
+  if (!Number.isFinite(elapsedMs)) {
+    return []
+  }
+  return plan.levels.filter((_, index) => elapsedMs >= (index + 1) * getLevelSpanMs(plan))
+}
+
 export function buildRampingVuStages(
   plan: RampPlan,
   vusPerLevel: number,
@@ -363,6 +375,7 @@ export function buildRampThresholds(
   }
 
   for (const level of plan.levels) {
+    thresholds[rampLevelMetricName('shared_drive_ramp_hold_completed', level)] = ['count>=0']
     for (const { metric } of judgedRates) {
       thresholds[rampLevelMetricName(metric, level)] = ['rate>=0']
     }
@@ -509,6 +522,7 @@ function evaluateLevel(
     ...ratios,
     ...trends,
     changes_success_rate: rates.changes_success_rate?.rate ?? null,
+    hold_completed: (readCount(metrics, rampLevelMetricName('shared_drive_ramp_hold_completed', level)) ?? 0) > 0,
     level,
     reasons: [],
     status: 'passed',
@@ -528,6 +542,9 @@ function evaluateLevel(
   judgeTrends(trends, criteria, verdicts)
 
   const { failures, missing } = verdicts
+  if (!result.hold_completed) {
+    return { ...result, reasons: ['hold did not complete', ...failures, ...missing], status: 'not_measured' }
+  }
   const status: RampLevelStatus =
     failures.length > 0 ? 'failed' : missing.length > 0 ? 'not_measured' : 'passed'
 
@@ -556,26 +573,48 @@ export function evaluateRampLevels(
     firstNotPassed === undefined
       ? 'lower_bound'
       : firstNotPassed.status === 'failed'
-        ? 'exact'
+        ? 'bracket'
         : 'inconclusive'
 
+  const cleanupRate = readRate(metrics, 'cleanup_success')?.rate ?? null
+  const cleanupPassed = cleanupRate === 1
+  const failureReason = cleanupPassed ? null : cleanupRate === null
+    ? 'test-directory cleanup was not measured' : 'test-directory cleanup failed'
+
   return {
+    cleanup_success_rate: cleanupRate,
     criteria: {
       minimum_delivery_ratio: criteria.minimumDeliveryRatio,
       minimum_success_rate: criteria.minimumSuccessRate,
       p95_limit_mode: criteria.p95LimitMs === null ? 'none' : 'absolute',
       p95_limit_ms: criteria.p95LimitMs,
     },
+    failure_reason: failureReason,
+    first_failed_level: cleanupPassed && firstNotPassed?.status === 'failed' ? firstNotPassed.level : null,
     levels,
-    max_sustained_level: maxSustainedLevel,
+    max_sustained_level: cleanupPassed ? maxSustainedLevel : null,
     plan: {
       hold_ms: plan.holdMs,
       levels: plan.levels,
       transition_ms: plan.transitionMs,
       vus_per_level: plan.vusPerLevel,
     },
-    result_bound: resultBound,
+    result_bound: cleanupPassed ? resultBound : 'inconclusive',
+    status: cleanupPassed ? 'completed' : 'infrastructure_failure',
   }
+}
+
+function formatRampBound(report: RampReport): string {
+  if (report.status === 'infrastructure_failure') {
+    return `Capacity result invalid: ${report.failure_reason}`
+  }
+  if (report.result_bound === 'bracket') {
+    return `Sustained level bracket: [${report.max_sustained_level}, ${report.first_failed_level})`
+  }
+  if (report.result_bound === 'lower_bound') {
+    return `Maximum sustained level: ≥ ${report.max_sustained_level} (lower_bound)`
+  }
+  return `Highest completed passing level: ${report.max_sustained_level} (inconclusive)`
 }
 
 export function formatRampReport(report: RampReport): string {
@@ -588,7 +627,7 @@ export function formatRampReport(report: RampReport): string {
         ? `  level ${level}: ${status} (${reasons.join('; ')})`
         : `  level ${level}: ${status}`,
     ),
-    `Maximum sustained level: ${report.max_sustained_level} (${report.result_bound})`,
+    formatRampBound(report),
     '',
   ]
 

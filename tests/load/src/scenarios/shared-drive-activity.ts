@@ -31,6 +31,7 @@ import {
 } from '../lib/duration.ts'
 import { parsePositiveIntegerEnv } from '../lib/env.ts'
 import {
+  getCompletedRampLevels,
   getRampPhaseAt,
   getRampTotalDurationMs,
   getRampUploadPrefix,
@@ -47,6 +48,8 @@ import {
 
 // --- Metrics ---
 export const cleanupSuccess = new Rate('cleanup_success')
+export const rampHoldCompleted = new Counter('shared_drive_ramp_hold_completed')
+let completedRampLevelCount = 0
 
 export const uploadSuccessRate = new Rate('shared_drive_upload_success_rate')
 
@@ -173,6 +176,15 @@ function tagRampLevel(
   if (data.rampPlan === null) {
     return null
   }
+
+  // Only a newly scheduled iteration may confirm a hold. Never infer this in
+  // teardown/handleSummary: setup, teardown and an interrupted request can all
+  // outlast a partial hold. Changes readers already drain past the final hold.
+  const completed = getCompletedRampLevels(data.rampPlan, elapsedMs)
+  for (const level of completed.slice(completedRampLevelCount)) {
+    rampHoldCompleted.add(1, { level: String(level) })
+  }
+  completedRampLevelCount = completed.length
 
   const phase = resolvePhase(data.rampPlan, elapsedMs)
   exec.vu.metrics.tags.level =

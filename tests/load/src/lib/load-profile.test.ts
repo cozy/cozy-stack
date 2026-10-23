@@ -6,6 +6,7 @@ import {
   buildRampingVuStages,
   evaluateRampLevels,
   formatRampReport,
+  getCompletedRampLevels,
   getRampPhaseAt,
   getRampUploadPrefix,
   getServedRampPhase,
@@ -69,7 +70,7 @@ function counter(value: number): { values: Record<string, number> } {
 // Delivery ratios are turned into event counts: every reader should see one
 // event or change per successful upload of its level.
 function makeMetrics(samples: Record<number, LevelSample>): SummaryMetrics {
-  const metrics: SummaryMetrics = {}
+  const metrics: SummaryMetrics = { cleanup_success: rate(1) }
 
   for (const [rawLevel, sample] of Object.entries(samples)) {
     const level = Number(rawLevel)
@@ -77,6 +78,7 @@ function makeMetrics(samples: Record<number, LevelSample>): SummaryMetrics {
     const name = (metric: string, tags: Record<string, string> = {}): string =>
       rampLevelMetricName(metric, level, tags)
 
+    metrics[name('shared_drive_ramp_hold_completed')] = counter(1)
     metrics[name('shared_drive_upload_success_rate')] = rate(sample.uploadSuccess)
     metrics[name('shared_drive_changes_success_rate')] = rate(sample.changesSuccess)
     metrics[name('shared_drive_ws_handshake_rate')] = rate(sample.wsHandshake)
@@ -186,6 +188,18 @@ describe('parseRampCriteria', (): void => {
 })
 
 describe('ramp schedule', (): void => {
+  it('completes holds only at their scenario-relative end, including the final hold', (): void => {
+    deepEqual(getCompletedRampLevels(plan, 69_999), [])
+    deepEqual(getCompletedRampLevels(plan, 70_000), [1])
+    deepEqual(getCompletedRampLevels(plan, 139_999), [1])
+    deepEqual(getCompletedRampLevels(plan, 140_000), [1, 2])
+    deepEqual(getCompletedRampLevels(plan, 209_999), [1, 2])
+    deepEqual(getCompletedRampLevels(plan, 210_000), [1, 2, 4])
+    deepEqual(getCompletedRampLevels(plan, 250_000), [1, 2, 4])
+    deepEqual(getCompletedRampLevels(plan, Number.NaN), [])
+    deepEqual(getCompletedRampLevels(plan, Number.POSITIVE_INFINITY), [])
+  })
+
   it('adds a transition and a hold stage per level', (): void => {
     deepEqual(buildRampingVuStages(plan, 3), [
       { duration: '10000ms', target: 3 },
@@ -256,6 +270,7 @@ describe('buildRampThresholds', (): void => {
       'shared_drive_changes_duration_ms{level:1}',
       'shared_drive_changes_items_total{level:1}',
       'shared_drive_changes_success_rate{level:1}',
+      'shared_drive_ramp_hold_completed{level:1}',
       'shared_drive_upload_success_rate{level:1}',
       'shared_drive_ws_auth_rate{level:1}',
       'shared_drive_ws_events_total{event:CREATED,level:1}',
@@ -268,6 +283,47 @@ describe('buildRampThresholds', (): void => {
 })
 
 describe('evaluateRampLevels', (): void => {
+  it('invalidates capacity when cleanup failed or was never measured', (): void => {
+    for (const cleanup of [rate(0), rate(undefined), undefined]) {
+      const metrics = makeMetrics({ 1: healthy, 2: healthy, 4: healthy })
+      metrics.cleanup_success = cleanup
+      const report = evaluateRampLevels(metrics, plan, criteria)
+
+      equal(report.status, 'infrastructure_failure')
+      equal(report.result_bound, 'inconclusive')
+      equal(report.max_sustained_level, null)
+      equal(report.cleanup_success_rate, cleanup?.values.rate === 0 && (cleanup.values.fails ?? 0) > 0 ? 0 : null)
+      match(report.failure_reason ?? '', /cleanup/)
+      match(formatRampReport(report), /Capacity result invalid:.*cleanup/)
+      equal(formatRampReport(report).includes('Maximum sustained level:'), false)
+      deepEqual(report.levels.map(level => level.status), ['passed', 'passed', 'passed'])
+    }
+  })
+
+  it('does not sustain a sampled partial hold without an explicit completion signal', (): void => {
+    const metrics = makeMetrics({ 1: healthy, 2: healthy, 4: healthy })
+    delete metrics[rampLevelMetricName('shared_drive_ramp_hold_completed', 4)]
+    const report = evaluateRampLevels(metrics, plan, criteria)
+
+    equal(report.max_sustained_level, 2)
+    equal(report.result_bound, 'inconclusive')
+    equal(report.levels[2]?.status, 'not_measured')
+    deepEqual(report.levels[2]?.reasons, ['hold did not complete'])
+    equal(report.levels[2]?.hold_completed, false)
+    equal(report.levels[1]?.hold_completed, true)
+  })
+
+  it('keeps an incomplete failed sample inconclusive and retains its diagnostics', (): void => {
+    const metrics = makeMetrics({ 1: healthy, 2: { ...healthy, wsAuth: 0.5 } })
+    metrics[rampLevelMetricName('shared_drive_ramp_hold_completed', 2)] = counter(0)
+    const report = evaluateRampLevels(metrics, plan, criteria)
+
+    equal(report.levels[1]?.status, 'not_measured')
+    equal(report.result_bound, 'inconclusive')
+    equal(report.first_failed_level, null)
+    deepEqual(report.levels[1]?.reasons, ['hold did not complete', 'ws auth rate 0.5 is below 0.99'])
+  })
+
   it('reports a lower bound when every level passes', (): void => {
     const report = evaluateRampLevels(
       makeMetrics({ 1: healthy, 2: healthy, 4: healthy }),
@@ -287,6 +343,20 @@ describe('evaluateRampLevels', (): void => {
     equal(report.levels[2]?.ws_delivery_ratio, 1)
   })
 
+  it('reports a sparse passing/failing bracket rather than an exact maximum', (): void => {
+    const report = evaluateRampLevels(
+      makeMetrics({ 8: healthy, 16: { ...healthy, wsAuth: 0.5 } }),
+      { ...plan, levels: [8, 16] },
+      criteria,
+    )
+
+    equal(report.max_sustained_level, 8)
+    equal(report.first_failed_level, 16)
+    equal(report.result_bound, 'bracket')
+    match(formatRampReport(report), /Sustained level bracket: \[8, 16\)/)
+    equal(formatRampReport(report).includes('Maximum sustained level: 8'), false)
+  })
+
   it('stops at the first level whose success rate is too low', (): void => {
     const report = evaluateRampLevels(
       makeMetrics({ 1: healthy, 2: { ...healthy, wsAuth: 0.5 }, 4: healthy }),
@@ -295,7 +365,7 @@ describe('evaluateRampLevels', (): void => {
     )
 
     equal(report.max_sustained_level, 1)
-    equal(report.result_bound, 'exact')
+    equal(report.result_bound, 'bracket')
     deepEqual(report.levels[1]?.reasons, ['ws auth rate 0.5 is below 0.99'])
   })
 
@@ -432,6 +502,6 @@ describe('formatRampReport', (): void => {
     match(text, /level 1: passed/)
     match(text, /level 2: failed \(upload success rate 0\.9 is below 0\.99\)/)
     match(text, /level 4: not_run/)
-    match(text, /Maximum sustained level: 1 \(exact\)/)
+    match(text, /Sustained level bracket: \[1, 2\)/)
   })
 })
