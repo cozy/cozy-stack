@@ -218,7 +218,7 @@ func Bind(body io.Reader, attrs interface{}) (*ObjectMarshalling, error) {
 // BindCompound is used to unmarshal an compound input JSONApi document.
 func BindCompound(body io.Reader) ([]*ObjectMarshalling, error) {
 	decoder := json.NewDecoder(body)
-	var doc *Document
+	var doc Document
 	if err := decoder.Decode(&doc); err != nil {
 		return nil, err
 	}
@@ -229,6 +229,11 @@ func BindCompound(body io.Reader) ([]*ObjectMarshalling, error) {
 	if err := json.Unmarshal(*doc.Data, &objs); err != nil {
 		return nil, err
 	}
+	for _, obj := range objs {
+		if obj == nil {
+			return nil, BadJSON()
+		}
+	}
 	return objs, nil
 }
 
@@ -236,7 +241,7 @@ func BindCompound(body io.Reader) ([]*ObjectMarshalling, error) {
 func BindRelations(req *http.Request) ([]couchdb.DocReference, error) {
 	var out []couchdb.DocReference
 	decoder := json.NewDecoder(req.Body)
-	var doc *Document
+	var doc Document
 	if err := decoder.Decode(&doc); err != nil {
 		return nil, err
 	}
