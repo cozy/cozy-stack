@@ -9,6 +9,11 @@ services:
     # Unset limits mean unlimited; campaigns record the effective values.
     cpus: ${COUCHDB_CPUS:-0}
     mem_limit: ${COUCHDB_MEMORY:-0}
+    # Docker's default of 1024 open files fails CouchDB (emfile) after about 20 extra instances.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     environment:
       COUCHDB_USER: cozy
       COUCHDB_PASSWORD: cozy
