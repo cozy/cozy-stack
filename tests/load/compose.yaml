@@ -141,7 +141,36 @@ services:
         aliases:
           - load.localhost
 
+  capacity-results:
+    image: node:22-alpine
+    restart: "${RESTART_POLICY:-no}"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command:
+      - node
+      - --experimental-strip-types
+      - /scripts/serve-capacity-results.ts
+    environment:
+      CAPACITY_RESULTS_DIR: /results
+      CAPACITY_RESULTS_PORT: "9465"
+    volumes:
+      - ./data/results:/results:ro
+      - ./src/scripts/capacity-metrics.ts:/scripts/capacity-metrics.ts:ro
+      - ./src/scripts/capacity/k6-summary.ts:/scripts/capacity/k6-summary.ts:ro
+      - ./src/scripts/serve-capacity-results.ts:/scripts/serve-capacity-results.ts:ro
+    expose:
+      - "9465"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9465/health >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - load-test
+
   prometheus:
+    depends_on:
+      capacity-results:
+        condition: service_healthy
     image: prom/prometheus:v3.14.0
     restart: "${RESTART_POLICY:-no}"
     command:

@@ -108,6 +108,29 @@ describe('describeStepResult', (): void => {
   })
 })
 
+describe('fanout campaign results', (): void => {
+  const step = { ...uploadStep, kind: 'org-drive-fanout' }
+
+  it('reports all-recipient verified lower bounds rather than upload capacity', (): void => {
+    equal(describeStepResult(step, { status: 'passed',
+      capacity: { kind: 'lower_bound', lower: 50, upper_exclusive: null, max: null } }),
+    'member batch ≥ 50 recipients (ready, access and revocation verified)')
+  })
+
+  it('keeps uncertain fanout results inconclusive with separately named observation counts', (): void => {
+    equal(describeStepResult(step, { status: 'inconclusive',
+      capacity: { kind: 'inconclusive', lower: null },
+      points: [{ n: 75, owner: { add: { ready_recipients: 72 } },
+        recipients: [{ add: { converged: true } }, { add: { converged: false } }] }] }),
+    'inconclusive; batch 75; owner ready 72; recipient access proofs 1')
+  })
+
+  it('links native overview without losing the explicit campaign identifier', (): void => {
+    match(buildGrafanaLink('http://grafana.test', step, 'parent-campaign') ?? '',
+      /\/d\/twake-drive-capacity\/stack-capacity-overview\?var-campaign=parent-campaign&/)
+  })
+})
+
 describe('buildGrafanaLink', (): void => {
   it('opens the matching dashboard on the step campaign and time range', (): void => {
     equal(

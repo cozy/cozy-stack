@@ -82,7 +82,9 @@ this is not a cold-cache or history-free comparison.
 - `FANOUT_POLL_MS`: observation interval, default `500`.
 - `FANOUT_POLL_CONCURRENCY`: bounded observer concurrency, default `8`.
 - `FANOUT_STABLE_MS`: required stable success window, default `3000`.
-- `FANOUT_REPORT`: optional new private JSON report; no overwrite or token output.
+- `FANOUT_REPORT`: new private JSON report; no overwrite or token output.
+  The Make target defaults to `data/results/<EXECUTION_ID>-org-drive-fanout.json`
+  for the [Capacity Overview](CAPACITY-OVERVIEW.md). The Node CLI itself keeps stdout-only mode available.
 
 N is the number of recipients; client mutation concurrency is **1**. Observer
 concurrency is separate and contributes read load. This first scenario does not

@@ -1,0 +1,82 @@
+import { deepEqual, equal, match, ok } from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, posix, resolve } from 'node:path'
+import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
+
+const cwd = fileURLToPath(new URL('../../', import.meta.url))
+
+test('Make persists standalone fanout reports in the observed results directory by default', t => {
+  const bin = mkdtempSync(join(tmpdir(), 'capacity-wiring-'))
+  t.after(() => rmSync(bin, { recursive: true, force: true }))
+  const executable = join(bin, 'tsx')
+  writeFileSync(executable,
+    '#!/usr/bin/env node\nconsole.log(JSON.stringify({ report: process.env.FANOUT_REPORT,' +
+    ' args: process.argv.slice(2) }))\n')
+  chmodSync(executable, 0o700)
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('FANOUT_')))
+  const result = spawnSync('make', ['--no-print-directory', '-s', '-o', 'node_modules/.load-ready',
+    `NODE_BIN=${bin}`, 'EXECUTION_ID=test-execution', 'org-drive-fanout'], { cwd, env, encoding: 'utf8' })
+  equal(result.status, 0, result.stderr)
+  deepEqual(JSON.parse(result.stdout), { report: 'data/results/test-execution-org-drive-fanout.json',
+    args: ['src/scripts/org-drive-fanout.ts'] })
+})
+
+test('Compose adds an internal read-only Node results service without exposing private reports', () => {
+  const source = readFileSync(join(cwd, 'compose.yaml'), 'utf8')
+  const section = source.match(/^  capacity-results:\n([\s\S]*?)(?=^  \S|^networks:)/m)?.[1]
+  ok(section, 'missing capacity-results service')
+  match(section, /image: node:22-alpine/)
+  match(section, /--experimental-strip-types/)
+  match(section, /\.\/data\/results:\/results:ro/)
+  match(section, /CAPACITY_RESULTS_DIR: \/results/)
+  match(section, /serve-capacity-results\.ts/)
+  equal(/^    ports:/m.test(section), false)
+  match(source, /capacity-results:\n\s+condition: service_healthy/)
+})
+
+test('Compose mounts every results entrypoint runtime import as an existing read-only file', () => {
+  const compose = readFileSync(join(cwd, 'compose.yaml'), 'utf8')
+  const section = compose.match(/^  capacity-results:\n([\s\S]*?)(?=^  \S|^networks:)/m)?.[1]
+  ok(section, 'missing capacity-results service')
+  const entrypoint = section.match(/^      - (\/scripts\/[^\s]+\.ts)$/m)?.[1]
+  ok(entrypoint, 'missing results entrypoint')
+  const mounts = new Map([...section.matchAll(/^      - (\.\/[^:\n]+):(\/[^:\n]+):ro$/gm)]
+    .map(([, source, target]) => [target!, resolve(cwd, source!)]))
+  const visited = new Set<string>()
+  const visit = (target: string): void => {
+    if (visited.has(target)) return
+    visited.add(target)
+    const source = mounts.get(target)
+    ok(source, `missing read-only Compose source mount for ${target}`)
+    ok(statSync(source).isFile(), `Compose source must be an existing file: ${source}`)
+    const text = readFileSync(source, 'utf8')
+    const imports = text.matchAll(/^import\s+(?:([\s\S]*?)\s+from\s+)?['"]([^'"]+)['"]/gm)
+    for (const [, clause, specifier] of imports) {
+      if (/^type\b/.test(clause ?? '')) continue
+      const named = clause?.trim().match(/^\{([\s\S]*)\}$/)?.[1]
+      const bindings = named?.split(',').map(binding => binding.trim()).filter(Boolean)
+      if (bindings?.length && bindings.every(binding => /^type\s/.test(binding))) continue
+      if (specifier!.startsWith('.')) visit(posix.resolve(posix.dirname(target), specifier!))
+    }
+  }
+  visit(entrypoint)
+})
+
+test('Prometheus scrapes results and Make observability starts their producer', () => {
+  const prometheus = readFileSync(join(cwd, 'config/prometheus/prometheus.yml'), 'utf8')
+  match(prometheus, /job_name: capacity-results/)
+  match(prometheus, /capacity-results:9465/)
+  const make = readFileSync(join(cwd, 'Makefile'), 'utf8')
+  ok(/observability-up:\n(?:\t[^\n]*\n)*\t@.*capacity-results/.test(make),
+    'observability-up must start the capacity-results service')
+  match(make, /capacity-dashboard-url:/)
+})
+
+test('campaigns can include fanout as a classified persisted step', () => {
+  const source = readFileSync(join(cwd, 'campaigns/run-campaign.sh'), 'utf8')
+  match(source, /org_drive_fanout\(\)/)
+  match(source, /run_step "\$name" org-drive-fanout/)
+})

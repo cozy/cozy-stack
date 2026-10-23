@@ -1,0 +1,292 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { renderMetrics, type ReportFile } from './capacity-metrics.ts'
+
+const counts = { valid: 1, invalid: 0, unsupported: 0 }
+
+test('upload root accepts lower bounds and zero but rejects absent or unsafe capacity', () => {
+  for (const bound of ['exact', 'lower_bound']) {
+    const output = renderMetrics([report('upload', {
+      status: 'completed', result_bound: bound, maximum_concurrent_uploads: 0,
+    })], counts)
+    assert.equal(value(output, 'capacity_lower'), 0)
+    assert.match(samples(output, 'result_info')[0]!, new RegExp(`bound="${bound}"`))
+  }
+  for (const lower of [undefined, null, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '57']) {
+    const output = renderMetrics([report('upload', {
+      status: 'completed', result_bound: 'exact', maximum_concurrent_uploads: lower,
+    })], counts)
+    assert.equal(value(output, 'capacity_lower'), undefined)
+    assert.match(samples(output, 'result_info')[0]!, /status="inconclusive"/)
+  }
+  for (const status of ['running', 'inconclusive', 'private-error', undefined]) {
+    const output = renderMetrics([report('upload', {
+      status, result_bound: 'exact', maximum_concurrent_uploads: 57,
+      attempts: [{ vus: 57, result: 'passed' }],
+    })], counts)
+    assert.equal(value(output, 'capacity_lower'), undefined)
+    if (status === 'running') assert.match(output, /status="running",bound="inconclusive",result="Running"/)
+  }
+})
+
+test('activity capacity projects only completed lower_bound or ordered bracket roots', () => {
+  for (const diagnostics of [{}, {
+    cleanup_success_rate: 0, criteria: {}, plan: {}, levels: [{ level: 99, status: 'passed' }],
+  }]) {
+    for (const result_bound of ['lower_bound', 'bracket']) {
+      const output = renderMetrics([report('shared_drive', {
+        status: 'completed', result_bound, max_sustained_level: 0, first_failed_level: 3, ...diagnostics,
+      })], counts)
+      assert.equal(value(output, 'capacity_lower'), 0)
+      assert.equal(value(output, 'capacity_upper'), result_bound === 'bracket' ? 3 : undefined)
+      assert.match(output, /scope="activity_mix",status="completed"/)
+      assert.match(output, result_bound === 'bracket' ? /result="\[0, 3\)"/ : /result=">= 0"/)
+    }
+  }
+  for (const override of [
+    { status: undefined }, { status: 'inconclusive' }, { status: 'unknown' },
+    { result_bound: 'exact' }, { result_bound: undefined }, { max_sustained_level: null },
+    { max_sustained_level: -1 }, { max_sustained_level: 1.5 },
+    { first_failed_level: 0 }, { first_failed_level: null }, { first_failed_level: Infinity },
+  ]) {
+    const output = renderMetrics([report('shared_drive', {
+      status: 'completed', result_bound: 'bracket', max_sustained_level: 0, first_failed_level: 3,
+      levels: [{ level: 1, status: 'passed' }, { level: 3, status: 'failed' }], ...override,
+    })], counts)
+    assert.equal(value(output, 'capacity_lower'), undefined)
+    assert.equal(value(output, 'capacity_upper'), undefined)
+    assert.match(output, /bound="inconclusive",result="Inconclusive"/)
+  }
+})
+
+test('fanout capacity projects producer passed lower bounds and failed brackets only', () => {
+  for (const diagnostics of [{}, {
+    settings: { stable_ms: -1 }, points: [{ n: 99, status: 'inconclusive' }], error: 'private',
+  }]) {
+    for (const status of ['passed', 'failed']) {
+      const output = renderMetrics([report('fanout', {
+        status, capacity: { kind: status === 'passed' ? 'lower_bound' : 'bracket',
+          lower: 0, upper_exclusive: 5 }, ...diagnostics,
+      })], counts)
+      assert.equal(value(output, 'capacity_lower'), 0)
+      assert.equal(value(output, 'capacity_upper'), status === 'failed' ? 5 : undefined)
+      assert.match(output, /scope="recipients",status="completed"/)
+    }
+  }
+  for (const override of [
+    { status: 'inconclusive' }, { status: undefined }, { status: 'unknown' },
+    { status: 'passed' }, { capacity: { kind: 'lower_bound', lower: 0 } },
+    { capacity: { kind: 'bracket', lower: 5, upper_exclusive: 5 } },
+    { capacity: { kind: 'bracket', lower: 6, upper_exclusive: 5 } },
+    { capacity: { kind: 'bracket', lower: null, upper_exclusive: 5 } },
+    { capacity: { kind: 'bracket', lower: 0, upper_exclusive: null } },
+    { capacity: { kind: 'bracket', lower: 0, upper_exclusive: 1.5 } },
+  ]) {
+    const output = renderMetrics([report('fanout', {
+      status: 'failed', capacity: { kind: 'bracket', lower: 0, upper_exclusive: 5 },
+      points: [{ n: 4, status: 'passed' }], ...override,
+    })], counts)
+    assert.equal(value(output, 'capacity_lower'), undefined)
+    assert.equal(value(output, 'capacity_upper'), undefined)
+  }
+})
+
+test('metadata is allowlisted and identities are escaped in Prometheus text', () => {
+  const input = report('upload', {
+    status: 'completed', result_bound: 'exact', maximum_concurrent_uploads: 2,
+    file_size: '1M', upload_target: 'shared-drive', result: 'secret-token', reason: 'private-error',
+    domain: 'private.example', token: 'secret-token',
+  })
+  input.campaign = 'line\n"quoted"\\campaign'
+  const output = renderMetrics([input], { valid: 1, invalid: 2, unsupported: 3 })
+  assert.match(output, /campaign="line\\n\\"quoted\\"\\\\campaign"/)
+  assert.match(output, /file_size="1M",upload_target="shared-drive",reason="recorded"/)
+  assert.equal(value(output, 'result_timestamp_seconds'), 123)
+  for (const family of ['result_info', 'result_timestamp_seconds', 'capacity_lower', 'exporter_reports']) {
+    assert.equal(output.split('\n').filter(line => line === `# TYPE cozy_load_${family} gauge`).length, 1)
+  }
+  assert.deepEqual(samples(output, 'exporter_reports'), [
+    'cozy_load_exporter_reports{state="valid"} 1',
+    'cozy_load_exporter_reports{state="invalid"} 2',
+    'cozy_load_exporter_reports{state="unsupported"} 3',
+  ])
+  assert.doesNotMatch(output, /private|secret/)
+  input.data.file_size = 'private.example'
+  input.data.upload_target = 'secret-token'
+  input.timestamp = NaN
+  const unknown = renderMetrics([input], { valid: Infinity, invalid: 0, unsupported: 0 })
+  assert.match(unknown, /file_size="n\/a",upload_target="n\/a"/)
+  assert.equal(value(unknown, 'result_timestamp_seconds'), undefined)
+  assert.doesNotMatch(unknown, /private|secret|NaN|Infinity/)
+})
+
+test('upload diagnostics project recorded statuses and numbers without reindexing malformed loads', () => {
+  const output = renderMetrics([report('upload', {
+    criteria: { minimum_success_rate: 0.9, confirmation_iterations_per_vu: 10, token: 'secret-token' },
+    p95_limit_ms: null, configured_max_vus: 20,
+    attempts: [null, { vus: '2' }, { vus: 2, phase: 'confirmation', result: 'passed',
+      p95_ms: 0, success_rate: 0.1, cleanup_rate: 0, consistency_rate: 0,
+      completed_iterations: 3, dropped_iterations: 4, iterations_per_vu: 5, error: 'private-error',
+    }, { vus: 3, phase: 'private-domain', result: 'private-error', p95_ms: Infinity },
+    { vus: -1 }, { vus: 4, phase: 'baseline', result: 'infrastructure_failure' }],
+  })], counts)
+  assert.equal(value(output, 'capacity_lower'), undefined)
+  assert.deepEqual(samples(output, 'point_info').map(line => line.match(/index="(\d+)"/)![1]), ['3', '4', '6'])
+  assert.match(samples(output, 'point_info')[0]!,
+    /load="2",phase="confirmation",status="passed",reason="recorded"/)
+  assert.match(samples(output, 'point_info')[1]!, /phase="unknown",status="inconclusive",reason="missing_result"/)
+  assert.match(samples(output, 'point_info')[2]!, /status="infrastructure_failure",reason="recorded"/)
+  for (const [metric, amount] of Object.entries({
+    upload_p95_ms: 0, success_rate: 0.1, cleanup_rate: 0, consistency_rate: 0,
+    completed_iterations: 3, dropped_iterations: 4, iterations_per_vu: 5,
+  })) assert.match(output, new RegExp(`index="3"[^\\n]+metric="${metric}"} ${amount}(?:\\n|$)`))
+  for (const [metric, amount] of Object.entries({
+    minimum_success_rate: 0.9, confirmation_iterations_per_vu: 10, configured_max_vus: 20,
+  })) assert.match(output, new RegExp(`cozy_load_result_value{[^\\n]+metric="${metric}"} ${amount}\\n`))
+  assert.doesNotMatch(output, /metric="p95_limit_ms"|private|secret|Infinity|NaN|validated/)
+})
+
+test('activity diagnostics preserve native statuses, scalar criteria and numeric point values', () => {
+  const output = renderMetrics([report('shared_drive', {
+    status: 'inconclusive', result_bound: 'bracket', max_sustained_level: 3, first_failed_level: 4,
+    cleanup_success_rate: 0, criteria: {
+      minimum_success_rate: 0.95, minimum_delivery_ratio: 0.9, p95_limit_ms: 500,
+    },
+    plan: { hold_ms: 5000, vus_per_level: { writers: 2, wsReaders: 3, changesReaders: 4 } },
+    levels: [{ level: null }, { level: 3, status: 'passed', upload_p95_ms: 12,
+      upload_success_rate: 0, ws_delivery_ratio: 1.2, changes_delivery_ratio: null,
+    }, { level: 4, status: 'not_run' }, { level: 5, status: 'not_measured' },
+    { level: 6, status: 'inconclusive' }, { level: 7, status: 'private-error' }],
+  })], counts)
+  assert.equal(value(output, 'capacity_lower'), undefined)
+  const points = samples(output, 'point_info')
+  assert.equal(points.length, 5)
+  assert.match(points[0]!, /index="2",load="3",phase="hold",status="passed",reason="recorded"/)
+  assert.match(points[1]!, /status="not_run",reason="recorded"/)
+  assert.match(points[2]!, /status="not_measured",reason="recorded"/)
+  assert.match(points[3]!, /status="inconclusive",reason="recorded"/)
+  assert.match(points[4]!, /status="inconclusive",reason="missing_result"/)
+  for (const [metric, amount] of Object.entries({
+    upload_p95_ms: 12, success_rate: 0, ws_delivery_ratio: 1.2, writers: 6, ws_readers: 9, changes_readers: 12,
+  })) assert.match(output, new RegExp(`index="2"[^\\n]+metric="${metric}"} ${amount}\\n`))
+  for (const [metric, amount] of Object.entries({
+    cleanup_rate: 0, minimum_success_rate: 0.95, minimum_delivery_ratio: 0.9, p95_limit_ms: 500,
+    hold_ms: 5000, writers_per_level: 2, ws_readers_per_level: 3, changes_readers_per_level: 4,
+  })) assert.match(output, new RegExp(`cozy_load_result_value{[^\\n]+metric="${metric}"} ${amount}\\n`))
+  assert.doesNotMatch(output, /metric="changes_delivery_ratio"|private|validated/)
+})
+
+test('fanout projects native owner and recipient observations without rebuilding proofs', () => {
+  const output = renderMetrics([report('fanout', {
+    settings: { timeout_ms: 100, stable_ms: 10, observer_concurrency: 2, effective_member_cap: 40 },
+    points: [null, { n: '3' }, { n: 3, status: 'passed', phase: 'complete', observer_concurrency: 2,
+      owner: { add: { ready_recipients: 57 }, remove: { revoked_recipients: 3 } },
+      recipients: [{ domain: 'private.example', add: { converged: true } },
+        { add: { converged: false } }, { add: { converged: 'true' } }],
+      add: { elapsed_ms: 90 }, remove: { status: 'passed', elapsed_ms: 80 },
+    }],
+  })], counts)
+  assert.equal(value(output, 'capacity_lower'), undefined)
+  assert.match(samples(output, 'point_info')[0]!, /index="3",load="3",phase="complete",status="passed"/)
+  for (const [metric, amount] of Object.entries({
+    recipients: 3, observer_concurrency: 2, owner_ready: 57, owner_revoked: 3,
+    recipient_access_proofs: 1, add_elapsed_ms: 90, remove_elapsed_ms: 80,
+    remove_started: 1, remove_verified: 1,
+  })) assert.match(output, new RegExp(`index="3"[^\\n]+metric="${metric}"} ${amount}\\n`))
+  for (const [metric, amount] of Object.entries({
+    budget_ms: 100, stable_ms: 10, observer_concurrency: 2, configured_member_cap: 40,
+  })) assert.match(output, new RegExp(`cozy_load_result_value{[^\\n]+metric="${metric}"} ${amount}\\n`))
+  assert.doesNotMatch(output, /private|metric="owner_pending"|validated/)
+})
+
+test('fanout removal flags follow only recognized native phase statuses', () => {
+  for (const [status, started, verified] of [
+    ['not_started', 0, undefined], ['observing', 1, undefined], ['passed', 1, 1],
+    ['failed', 1, 0], ['inconclusive', 1, 0], [undefined, undefined, undefined],
+    [null, undefined, undefined], ['private-error', undefined, undefined],
+  ] as const) {
+    const output = renderMetrics([report('fanout', {
+      points: [{ n: 1, status: 'inconclusive', phase: 'remove', remove: { status },
+        owner: { add: { ready_recipients: 1, pending_recipients: 0 } },
+        recipients: [{ add: { converged: false } }],
+      }],
+    })], counts)
+    const metric = (name: string) => {
+      const line = samples(output, 'point_value').find(line => line.includes(`metric="${name}"`))
+      return line === undefined ? undefined : Number(line.slice(line.lastIndexOf(' ') + 1))
+    }
+    assert.equal(metric('remove_started'), started, String(status))
+    assert.equal(metric('remove_verified'), verified, String(status))
+    assert.equal(metric('owner_pending'), 0)
+    assert.equal(metric('recipient_access_proofs'), 0)
+    assert.doesNotMatch(output, /private/)
+  }
+  const absent = renderMetrics([report('fanout', { points: [{ n: 1 }] })], counts)
+  assert.doesNotMatch(absent, /metric="(?:recipient_access_proofs|owner_ready|owner_pending|remove_verified)"/)
+})
+
+test('recorded campaign start and end timestamps are optional scalar values, never inferred', () => {
+  for (const kind of ['upload', 'shared_drive', 'fanout'] as const) {
+    const input = { ...report(kind, { started_at: 'private-date', ended_at: 999 }), startedAt: 0, endedAt: 10 }
+    const output = renderMetrics([input], counts)
+    assert.match(output, /metric="started_at_seconds"} 0\n/)
+    assert.match(output, /metric="ended_at_seconds"} 10\n/)
+    for (const missing of [report(kind, {}), { ...input, startedAt: undefined, endedAt: NaN }]) {
+      assert.doesNotMatch(renderMetrics([missing], counts), /metric="(?:started|ended)_at_seconds"/)
+    }
+    assert.doesNotMatch(output, /private-date|999/)
+  }
+})
+
+test('enum-shaped arrays are not accepted as producer enums', () => {
+  const upload = renderMetrics([report('upload', {
+    status: 'completed', result_bound: ['exact'], maximum_concurrent_uploads: 57,
+    file_size: ['1M'], upload_target: ['personal'],
+  })], counts)
+  assert.equal(value(upload, 'capacity_lower'), undefined)
+  assert.match(upload, /file_size="n\/a",upload_target="n\/a"/)
+  const fanout = renderMetrics([report('fanout', {
+    points: [{ n: 1, status: ['passed'], phase: ['complete'], remove: { status: ['passed'] } }],
+  })], counts)
+  assert.doesNotMatch(fanout, /metric="remove_(?:started|verified)"/)
+  assert.match(fanout, /phase="unknown",status="inconclusive",reason="missing_result"/)
+})
+
+test('nonpositive and malformed point loads are omitted without changing source indexes', () => {
+  const invalidLoads = [0, -1, 1.5, null, undefined, '2', NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]
+  for (const [kind, collection, loadKey] of [
+    ['upload', 'attempts', 'vus'], ['shared_drive', 'levels', 'level'], ['fanout', 'points', 'n'],
+  ] as const) {
+    const points = [...invalidLoads, 2].map(load => ({ [loadKey]: load, status: 'passed', result: 'passed' }))
+    const output = renderMetrics([report(kind, { [collection]: points })], counts)
+    assert.equal(samples(output, 'point_info').length, 1)
+    assert.match(samples(output, 'point_info')[0]!, /index="10",load="2"/)
+  }
+})
+
+function report(kind: ReportFile['kind'], data: Record<string, unknown>): ReportFile {
+  return { campaign: 'campaign', run: 'run', kind, timestamp: 123, data }
+}
+
+function samples(output: string, family: string): string[] {
+  return output.split('\n').filter(line => line.startsWith(`cozy_load_${family}{`))
+}
+
+function value(output: string, family: string): number | undefined {
+  const line = samples(output, family)[0]
+  return line === undefined ? undefined : Number(line.slice(line.lastIndexOf(' ') + 1))
+}
+
+test('upload capacity follows the completed producer root, not optional diagnostics', () => {
+  const root = { status: 'completed', result_bound: 'exact', maximum_concurrent_uploads: 57 }
+  for (const diagnostics of [{}, { criteria: {}, attempts: [] }, {
+    criteria: { minimum_success_rate: 1 },
+    attempts: [{ vus: 99, result: 'failed', cleanup_rate: 0 }],
+  }]) {
+    const output = renderMetrics([report('upload', { ...root, ...diagnostics })], counts)
+    assert.equal(value(output, 'capacity_lower'), 57)
+    assert.equal(value(output, 'capacity_upper'), undefined)
+    assert.match(samples(output, 'result_info')[0]!, /status="completed",bound="exact",result="= 57"/)
+    assert.match(samples(output, 'result_info')[0]!, /reason="recorded"/)
+  }
+})
