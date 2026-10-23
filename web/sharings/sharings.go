@@ -212,6 +212,9 @@ func PatchSharing(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapErrors(err)
 	}
+	if req.Sharing == nil {
+		return jsonapi.BadJSON()
+	}
 	if err := s.PatchDescription(inst, req.Description); err != nil {
 		return wrapErrors(err)
 	}

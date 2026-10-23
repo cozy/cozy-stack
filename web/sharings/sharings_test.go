@@ -1232,6 +1232,17 @@ func TestSharings(t *testing.T) {
 		require.NotEmpty(t, before.Rules)
 		originalRuleTitle := before.Rules[0].Title
 
+		for _, body := range []string{`{"data":{"type":"io.cozy.sharings"}}`, `{"data":{"attributes":{}}}`} {
+			eA.PATCH("/sharings/"+sharingID).
+				WithHeader("Authorization", "Bearer "+aliceAppToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithBytes([]byte(body)).
+				Expect().Status(http.StatusBadRequest)
+		}
+		var unchanged sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(aliceInstance, consts.Sharings, sharingID, &unchanged))
+		assert.Equal(t, before.Description, unchanged.Description)
+
 		obj := eA.PATCH("/sharings/"+sharingID).
 			WithHeader("Authorization", "Bearer "+aliceAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
