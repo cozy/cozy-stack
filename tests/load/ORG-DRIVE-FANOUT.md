@@ -1,0 +1,123 @@
+# Organization-drive group fanout
+
+Measure native shared-drive auto-accept and group revocation across an organization.
+This is a **recipient-count ramp**, not an upload benchmark or a VU/requests-per-second test.
+
+Each point uses one fresh organization-owned drive, one ordinary contact group and
+one small control file. A single group attach fans out to N recipients inside Stack.
+After every recipient is ready and can read the file, a single group detach tests
+revocation. Contact-group membership is not deleted. No managed LDAP/B2B directory
+metadata is fabricated.
+
+## Server prerequisites
+
+Use a disposable Stack deployment. Configure a dedicated context before creating
+the fixture, for example:
+
+```yaml
+contexts:
+  load-org-sharing:
+    common_contacts: true
+    max_members_per_sharing: 1001.0
+    sharing:
+      auto_accept_trusted: true
+      auto_accept_trusted_contacts: false
+      trusted_domains: []
+```
+
+Same-organization auto-accept requires the recipient's `common_contacts` and
+`sharing.auto_accept_trusted` flags, plus matching nonempty OrgIDs. Do not enable
+broad domain trust to make the test pass. The runner checks effective context,
+organization identities and the configured member cap before measured work.
+
+The default native sharing cap is 90 **including owner and retained revoked
+entries**. This Stack version reads its override as a floating-point context
+value, hence `1001.0` above. Native group expansion is capped at 1,000 contacts;
+keep cohort sizes within that bound. A configured cap is not a performance limit.
+
+**Canonical instance URLs must resolve and reach Stack from Stack itself.**
+Invitations, acceptance answers and notifications use HTTP even on one Stack.
+The seeder's connection-origin + `Host` support helps the Node client only; it
+cannot fix server-side DNS or a public port without an internal listener.
+Configure suitable deployment routing before running this scenario. Do not
+change host-wide DNS or trust settings merely for a disposable test.
+
+## Run
+
+Use the private admin/public connection origins and credentials described in
+[SEEDING.md](SEEDING.md), with Node 22+ and `npm ci`.
+
+```sh
+export SEED_CONTEXT_NAME=load-org-sharing
+export SEED_DOMAIN_SUFFIX=load.example.test:8443
+# Also set SEED_ADMIN_URL, SEED_STACK_URL and private admin credentials.
+
+make org-drive-fanout FANOUT_LEVELS=10,50,100
+```
+
+With no `FANOUT_ORG_DOMAIN`, the runner creates a fresh organization and enough
+empty users for the largest requested level through the existing API-only seeder.
+It does not populate personal files or drives. The organization instance owns
+the test drives; fixture preparation is outside the measured attach/remove times.
+
+To use a pre-created disposable fixture, including one restored from a baseline:
+
+```sh
+make seed-org SEED_USERS=100 SEED_CONTEXT_NAME=load-org-sharing
+# Preserve the printed organization domain and complete server-side routing.
+make org-drive-fanout FANOUT_ORG_DOMAIN='seed-<32-hex-id>.load.example.test:8443' \
+  FANOUT_LEVELS=10,50,100 FANOUT_REPORT="$HOME/private/fanout.json"
+```
+
+Selecting an existing organization is explicit; the runner verifies fixture scope
+and sufficient users rather than silently adopting an arbitrary organization.
+Point drives/groups are fresh, so earlier revoked entries do not consume the next
+sharing's member cap. Earlier point artifacts remain in the fixture for inspection;
+this is not a cold-cache or history-free comparison.
+
+## Settings and success criteria
+
+- `FANOUT_LEVELS`: increasing distinct recipient counts, default `1,2,4,8,16`.
+- `FANOUT_TIMEOUT_MS`: per-operation convergence budget, default `60000`.
+- `FANOUT_POLL_MS`: observation interval, default `500`.
+- `FANOUT_POLL_CONCURRENCY`: bounded observer concurrency, default `8`.
+- `FANOUT_STABLE_MS`: required stable success window, default `3000`.
+- `FANOUT_REPORT`: optional new private JSON report; no overwrite or token output.
+
+N is the number of recipients; client mutation concurrency is **1**. Observer
+concurrency is separate and contributes read load. This first scenario does not
+issue N competing writes to the same sharing document. A bulk-direct recipient
+control or concurrent individual mutation test can be added separately.
+
+Attach passes only when the owner reports exactly the expected ready members,
+every recipient's own sharing is active/ready, and each can read the actual drive
+root/control bytes. `pending`, `seen`, owner `active`, shortcut existence, HTTP 200
+or an empty job queue alone are not acceptance proofs. Timers include the mutation
+request and observation; late completion cannot count as meeting the budget.
+Recipient peer rosters can retain unresolved entries, so the runner checks each
+recipient's own member and the owner's complete cohort, not every peer snapshot.
+
+Detach is measured separately. The runner rediscovers the active group index,
+checks owner group/member revocation, recipient inactive/revoked state and denied
+file access. The empty organization drive must remain active on its owner.
+The cohort starts with group-only grants: removing a group does not promise loss
+of access when a recipient has another direct, group or ancestor-sharing grant.
+
+The report retains per-instance outcomes and add/remove timings. Sparse sampled
+levels produce a tested bracket `[last passing, first failing)`, not an exact
+maximum. All passing levels give a lower bound. Configuration errors, uncertain
+mutations, failed observations or unverified revocation make the result
+inconclusive rather than a claimed capacity limit.
+
+## Retained state and cleanup
+
+There are no write retries, hidden manual acceptance, instance auto-deletion or
+resume jobs. On a failure, the ramp stops and retains the fixture/point identifiers.
+A mutation timeout/disconnect does not prove server work ended; do not revoke or
+clean up a potentially active fanout merely because its client stopped.
+
+After establishing that accepted work has settled, use the explicit organization
+cleanup from [ORGANIZATIONS.md](ORGANIZATIONS.md), or discard the entire owned
+restored deployment. Never remove a shared bucket or another deployment's data.
+Reports contain fixture identities but never admin passwords, bearer tokens or
+sharing credentials. Keep reports and snapshot bundles private.

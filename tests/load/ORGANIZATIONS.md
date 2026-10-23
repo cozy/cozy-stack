@@ -3,6 +3,8 @@
 Extend the [API-only seeder](SEEDING.md) with one organization instance and a
 configurable number of user instances. No Docker dependency or new Stack API is
 needed. This is Stack organization scope, not LDAP/Twake Console provisioning.
+For recipient auto-accept and group add/remove convergence, see
+[ORG-DRIVE-FANOUT.md](ORG-DRIVE-FANOUT.md).
 
 ## Create users, with or without data
 
@@ -31,6 +33,9 @@ make seed-org SEED_USERS=10 SEED_FILES=100 SEED_DRIVES=2
   their own data; shared drives have no invited recipients. File payloads remain
   deterministic 1 KiB data, not a throughput benchmark.
 - The existing single-instance `seed-scale` defaults and behavior are unchanged.
+- Optional `SEED_CONTEXT_NAME` selects an existing server context for every new
+  instance and verifies that selection in creation/readback responses. It does
+  not create or change server configuration. Omit it to keep ordinary defaults.
 
 The builder prints the organization and planned user domains before writes.
 Keep the organization domain for cleanup and the generated user domains for your
