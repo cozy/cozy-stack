@@ -73,15 +73,69 @@
       "type": "stat"
     },
     {
-      "description": "Current shared-drive roles reuse one identity; virtual users are not distinct people.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Virtual writer / WS / changes profile units; one identity, not distinct users.",
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No run",
+          "unit": "none",
+          "displayName": "Activity units · ${__field.labels.status}",
+          "color": {"mode": "fixed", "fixedColor": "text"},
+          "mappings": [
+            {"type": "regex", "options": {"pattern": "^=\\s*\\d+$", "result": {"color": "green"}}},
+            {"type": "regex", "options": {"pattern": "^>=\\s*\\d+$", "result": {"color": "blue"}}},
+            {"type": "regex", "options": {"pattern": "^\\[\\s*\\d+,\\s*\\d+\\)$", "result": {"color": "blue"}}},
+            {"type": "regex", "options": {"pattern": "^Inconclusive$", "result": {"color": "orange"}}},
+            {"type": "regex", "options": {"pattern": "^Running$", "result": {"color": "blue"}}},
+            {
+              "type": "regex",
+              "options": {"pattern": "^(Unknown|No run|Not recorded)$", "result": {"color": "text"}}
+            }
+          ],
+          "links": [
+            {
+              "title": "Inspect this report",
+              "url":
+                "/d/twake-drive-capacity?${__url_time_range}&var-campaign=$campaign&var-size=$size&var-target=$target&var-run=${__field.name}",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      },
       "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
       "id": 2,
       "options": {
-        "mode": "markdown",
-        "content": "## NOT MEASURED\nOne token. Writer / WS / changes VUs are not distinct users."
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "reduceOptions": {"values": true, "calcs": ["lastNotNull"], "fields": "/.*/"}
       },
-      "title": "Distinct shared-drive users",
-      "type": "text"
+      "targets": [
+        {
+          "expr": "cozy_load_result_info{campaign=~\"$campaign\",run=~\"$run\",kind=\"shared_drive\"}",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Shared-drive activity capacity",
+      "transformations": [
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {"fieldName": "run", "handlerKey": "field.name"},
+              {"fieldName": "result", "handlerKey": "field.value"}
+            ]
+          }
+        }
+      ],
+      "type": "stat"
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},

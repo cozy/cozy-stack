@@ -50,7 +50,7 @@ function panelByTitle(dashboard: Dashboard, title: string): Panel {
   return panel
 }
 
-test('native capacity summaries distinguish upload workers, unmeasured users and recipient batches', () => {
+test('native capacity summaries distinguish upload workers, activity units and recipient batches', () => {
   const dashboard = readDashboard()
   assert.equal(dashboard.uid, 'twake-drive-capacity')
   assert.equal(dashboard.title, 'Stack Capacity Overview')
@@ -67,14 +67,14 @@ test('native capacity summaries distinguish upload workers, unmeasured users and
     }
   }
   const upload = panelByTitle(dashboard, 'Upload worker capacity')
-  const users = panelByTitle(dashboard, 'Distinct shared-drive users')
+  const activity = panelByTitle(dashboard, 'Shared-drive activity capacity')
   const fanout = panelByTitle(dashboard, 'Group member batch capacity')
-  assert.deepEqual([upload.gridPos.y, users.gridPos.y, fanout.gridPos.y], [0, 0, 0])
-  assert.equal(users.type, 'text')
-  assert.match(users.options.content ?? '', /NOT MEASURED/)
-  assert.match(users.options.content ?? '', /one (identity|token)/i)
-  assert.equal(users.targets?.length ?? 0, 0, 'one-token activity is not a user capacity metric')
-  for (const [panel, kind] of [[upload, 'upload'], [fanout, 'fanout']] as const) {
+  assert.deepEqual([upload.gridPos.y, activity.gridPos.y, fanout.gridPos.y], [0, 0, 0])
+  assert.match(activity.description, /profile/i)
+  assert.match(activity.description, /one identity/i)
+  assert.match(activity.description, /not distinct users/i)
+  assert.doesNotMatch(JSON.stringify(activity), /NOT MEASURED/)
+  for (const [panel, kind] of [[upload, 'upload'], [activity, 'shared_drive'], [fanout, 'fanout']] as const) {
     assert.equal(panel.type, 'stat', 'the actual report result must lead, not a raw metadata table')
     assert.equal(panel.targets?.length, 1)
     const selectedRun = kind === 'upload' ? '$upload_run' : '$run'
@@ -413,7 +413,9 @@ test('native XY selects worker and value fields across every frame, not only the
 test('native states preserve bound text and color exported statuses without green unknowns', () => {
   const dashboard = readDashboard()
   type RegexMapping = { type: string, options: { pattern: string, result: { color: string, text?: string } } }
-  for (const title of ['Upload worker capacity', 'Group member batch capacity']) {
+  for (const title of [
+    'Upload worker capacity', 'Shared-drive activity capacity', 'Group member batch capacity',
+  ]) {
     const panel = panelByTitle(dashboard, title)
     const mappings = panel.fieldConfig!.defaults.mappings as RegexMapping[]
     for (const [result, color] of [
@@ -457,6 +459,7 @@ test('native self-drilldowns route to the exact report with upload filters and s
   const run = `${campaign}-personal-1K`
   const sources = [
     ['Upload worker capacity', '${__field.name}'],
+    ['Shared-drive activity capacity', '${__field.name}'],
     ['Group member batch capacity', '${__field.name}'],
     ['Conclusions · each report', '${__data.fields.run}'],
     ['Tested points · outcome and reason', '${__data.fields.run}'],
