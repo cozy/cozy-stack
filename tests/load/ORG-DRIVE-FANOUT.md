@@ -45,7 +45,7 @@ change host-wide DNS or trust settings merely for a disposable test.
 ## Run
 
 Use the private admin/public connection origins and credentials described in
-[SEEDING.md](SEEDING.md), with Node 22+ and `npm ci`.
+[SEEDING.md](SEEDING.md), with Node 22.23.4+ and `npm ci`.
 
 ```sh
 export SEED_CONTEXT_NAME=load-org-sharing
