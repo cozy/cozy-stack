@@ -112,6 +112,10 @@ func SyncDeletedOrgContact(ctx context.Context, msg UserDeletedMessage) error {
 			log.Infof("user.deleted: no external contact for %s in %s, skipping", email, inst.Domain)
 			continue
 		}
+		// The feed deletes the contacts it wrote.
+		if _, ok := existing.M[contact.CardDAVPathKey]; ok {
+			continue
+		}
 		if err := couchdb.DeleteDoc(inst, existing); err != nil {
 			wrappedErr := fmt.Errorf("user.deleted: delete contact %s for %s in %s: %w", existing.ID(), email, inst.Domain, err)
 			log.Errorf("%v", wrappedErr)

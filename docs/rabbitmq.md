@@ -319,9 +319,9 @@ queue at once.
 Queue names are mapped to handlers in the stack. For example:
 
 - `user.password.updated` → updates an instance passphrase when a `user.password.updated` routing key is received.
-- `user.created` → validates and processes user creation events.
+- `user.created` → validates and processes user creation events. Copies no organization contact or group when the context sets `common_contacts`.
 - `user.phone.updated` → updates the phone number stored in user settings.
-- `domain.user.deleted` on the `b2b` exchange → removes externally managed organization contacts.
+- `domain.user.deleted` on the `b2b` exchange → removes externally managed organization contacts, except the ones written by the `twake:contacts:common` feed.
 - `banner.materialize` and `banner.clear` on the `platform` exchange → materializes or clears a platform banner, see [Banners](banners.md).
 - every message of the `twake:contacts:common` fanout exchange → writes a contact, see below.
 - `drive.org_drive.ensure` on the `drive` exchange → creates or updates a shared drive on an organization instance, see below.
@@ -405,7 +405,8 @@ The Stack consumes `b2b.group.created`, `b2b.group.updated`,
 `b2b.group.deleted`, `b2b.group.member.added`, and
 `b2b.group.member.removed` from one lifecycle queue. Groups are replicated as
 managed `io.cozy.contacts.groups` documents in every instance with the matching
-`org_id`. Group membership is stored on managed external contacts via
+`org_id`, and `b2b.group.member.added` creates the ones an instance is missing.
+Group membership is stored on managed external contacts via
 `relationships.groups.data`; existing generated-ID external contacts are reused
 by matching email or Cozy URL.
 
