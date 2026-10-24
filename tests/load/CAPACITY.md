@@ -8,6 +8,10 @@ covers [#4866](https://github.com/linagora/cozy-stack/issues/4866),
 databases targeted by
 [#4863](https://github.com/linagora/cozy-stack/issues/4863).
 
+See [Testing architecture](../../docs/testing.md) for the delivery order and
+shared DEV boundaries. The large levels below are proposals for isolated
+capacity work, not defaults for shared DEV regression runs.
+
 > [!IMPORTANT]
 > Every number marked **proposed** is a starting point for discussion, not
 > an agreed service level. Confirm it with the team before using it to gate
@@ -23,7 +27,7 @@ three methods, chosen by the shape of the dimension:
 | --- | --- | --- |
 | Point search | Each level needs an exact amount of work, its own data, and cleanup | `src/scripts/find-upload-capacity.ts` runs separate k6 points: baseline, doubling, bisection, confirmation |
 | k6 ramp | The load is sustained and the levels can share one run | `src/scenarios/shared-drive-ramp.ts`: one k6 run, samples tagged with `level`, judged in `handleSummary()` |
-| Step ladder | Each level needs data created first, and that data cannot be removed cheaply | Planned: create data up to the level, run a fixed probe workload, and stop at the first failing step. Needs the data generator below |
+| Step ladder | Each level needs data created first, and that data cannot be removed cheaply | Planned: extend the existing API seeder with representative profiles, run a fixed probe workload, and stop at the first failing step |
 
 Bisection does not fit the step ladder: going back down would mean deleting
 or recreating large datasets. A ladder result is therefore "passes at L,
@@ -33,11 +37,17 @@ fails at the next step", not an exact number.
 
 | Capacity | Unit | Command | Pass criteria |
 | --- | --- | --- | --- |
-| Concurrent uploads, per file size | simultaneous uploads | `make upload-capacity FILE_SIZE=…` | Success rate ≥ `MIN_SUCCESS_RATE` (0.99); no dropped uploads; every upload reads back with the same checksum; cleanup succeeds |
+| Concurrent uploads, per file size | upload-and-readback workers | `make upload-capacity FILE_SIZE=…` | Success rate ≥ `MIN_SUCCESS_RATE` (0.99); no dropped uploads; every successful upload reads back with the same checksum; cleanup succeeds |
 | Sustained shared-drive activity | level L = L writers, 3L WebSocket readers, 2L changes readers | `make cozy-shared-drive-ramp` | Upload, changes, WebSocket handshake, and WebSocket auth success rates ≥ `MIN_SUCCESS_RATE`; WebSocket events and changes received ≥ `MIN_DELIVERY_RATIO` (0.9) × uploads × readers |
+| Organization-drive group fan-out | recipients in one group attach/remove | `make org-drive-fanout` | Owner readiness, every recipient's access, and denial after removal within the configured convergence budget |
 
-Both measurements fail on errors, lost or corrupted data, and missing events.
-Latency is recorded but judged only when an absolute `P95_LIMIT_MS` is set,
+Upload tests verify bytes. Activity tests currently check upload status and
+aggregate delivery; they do not verify file readback or each reader's complete
+expected state. Fan-out verifies recipient access and revocation separately;
+see [its criteria and limits](ORG-DRIVE-FANOUT.md).
+
+Upload and activity latency is recorded but judged only when an absolute
+`P95_LIMIT_MS` is set,
 because a limit derived from a nearly idle baseline mostly measured latency
 doubling. The proposed latency criteria below are meant to be passed as
 `P95_LIMIT_MS` once the team agrees on them.
@@ -74,9 +84,10 @@ with it too.
   - afterwards, every member instance has the expected group membership
     (convergence check);
   - contact query p95 **< 200 ms**, error rate **< 0.1 %**.
-- **Prerequisites:** data generator; RabbitMQ queues declared in
-  `config/cozy/cozy.yaml` (the harness declares none today); Prometheus
-  scraping RabbitMQ for queue depth.
+- **Prerequisites:** extend organization fixtures beyond their current 1,000-user
+  bound and add real B2B event generation; declare the relevant RabbitMQ queues.
+  Prometheus scrape configuration already exists; verify the broker exporter and
+  per-queue metrics at runtime. Native group fan-out does not cover this event path.
 
 ### 2. Shares per instance
 
@@ -101,7 +112,8 @@ listings, permission checks, and changes feeds become too slow?
   - changes feed p95 **< 300 ms**;
   - first drive list after a batch **< 5 s**;
   - error rate **< 0.1 %**.
-- **Prerequisites:** data generator.
+- **Prerequisites:** extend the existing seeder with populated drives, recipient
+  relationships and the fixed probe workload.
 
 ### 3. Files per instance
 
@@ -126,7 +138,8 @@ and writes become too slow?
   - 1 KiB upload p95 **< 300 ms**;
   - first query after a batch **< 10 s**;
   - error rate **< 0.05 %**.
-- **Prerequisites:** data generator.
+- **Prerequisites:** extend the existing seeder's flat 1 KiB files with directory
+  profiles, fixture verification and the fixed probe workload.
 
 ### 4. Request rate per instance
 
@@ -150,7 +163,8 @@ workload before latency or errors exceed their limits?
   - error rate **< 0.1 %**;
   - 30 s after each step, goroutines are back within 10 % of their level
     before the step.
-- **Prerequisites:** data generator for the seeded state.
+- **Prerequisites:** verified fixture profiles and a mixed arrival-rate scenario.
+  Define workflows per second separately from the resulting HTTP request rate.
 
 ## Conditions for every campaign
 
@@ -166,15 +180,17 @@ workload before latency or errors exceed their limits?
   labelled `topology=single-host`. Compare them only with each other.
 - Vary one dimension at a time and keep the others at the fixed values
   above.
-- Every run creates its own data and cleans it up.
+- Record data ownership and cleanup outcomes. Upload/activity runs remove their
+  temporary directory; fan-out retains its fixture for inspection and explicit
+  cleanup. A timeout does not prove server writes have stopped.
 
-## Prerequisites to build
+## Remaining foundations
 
-1. **Data generator** (`src/scripts/seed-scale-data.ts`, planned): creates
-   members, groups, shares, and files up to a level in bulk, records how long
-   that took, and removes everything at the end.
-2. **RabbitMQ in the harness:** declare the `b2b.group.*` queues in
-   `config/cozy/cozy.yaml` and add a Prometheus scrape target for RabbitMQ.
-3. **Recipient paths:** a second stack with its own CouchDB. When the owner
-   instance is on the same stack, shared-drive requests from recipients skip
-   the HTTP proxy, so one stack cannot measure that path.
+1. **Fixtures:** build versioned manifests and representative profiles around the
+   existing [API seeder](SEEDING.md), [organization fixtures](ORGANIZATIONS.md)
+   and [isolated snapshots](SNAPSHOTS.md). Keep managed DEV provisioning separate.
+2. **Membership events:** add the B2B workload and queue declarations; verify the
+   existing dependency scrape targets against the running services.
+3. **Recipient paths:** use distinct identities, then a second stack with its own
+   CouchDB. When the owner instance is on the same stack, shared-drive requests
+   from recipients skip the HTTP proxy, so one stack cannot measure that path.

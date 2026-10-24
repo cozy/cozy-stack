@@ -86,6 +86,10 @@ $ make jslint
 
 #### Step 4: Test
 
+See the [testing architecture](testing.md) for test layers, load-test boundaries
+and the shared DEV rollout. `make unit-tests` uses `-short`; CI also runs Go
+integration tests with their dependencies.
+
 Don't forget to add tests and be sure they are green. You need CouchDB
 installed, with an account, and configuring the stack to use this account:
 

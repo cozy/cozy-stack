@@ -43,6 +43,7 @@ Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new) for 
 -   [Working with the stack assets](assets.md)
 -   [Build a release](release.md)
 -   [The contributing guide](CONTRIBUTING.md)
+-   [Testing architecture](testing.md)
 
 ## Explanation
 
