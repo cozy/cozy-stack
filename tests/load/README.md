@@ -2,8 +2,11 @@
 
 This directory contains the first infrastructure milestone for
 [issue #4864](https://github.com/linagora/cozy-stack/issues/4864). It runs k6
-as an on-demand container, stores metrics in Prometheus, and provisions a
+as an on-demand container, stores metrics in Prometheus, and provisions
 Grafana dashboards.
+
+See [Testing architecture](../../docs/testing.md) for lifecycle boundaries,
+correctness and result contracts, and the planned bounded shared DEV rollout.
 
 For classified workload limits, tested bounds and fanout readiness evidence, see
 [Stack Capacity Overview](CAPACITY-OVERVIEW.md). The existing diagnostic dashboards remain available.
@@ -14,22 +17,25 @@ adaptive search for the maximum upload concurrency of one Cozy instance.
 See [CAPACITY.md](./CAPACITY.md) for the operational capacity model and pass criteria.
 See [SEEDING.md](./SEEDING.md) for API-only fixtures and
 [SNAPSHOTS.md](./SNAPSHOTS.md) for isolated Compose snapshot/restore/discard commands.
-Organization membership and other file workloads remain separate future
-scenarios.
+See [ORG-DRIVE-FANOUT.md](./ORG-DRIVE-FANOUT.md) for native group attach/remove
+convergence. Upstream B2B membership events and broader file workloads remain
+separate future scenarios.
 
 ## How it is built
 
 The short version is:
 
-- k6 sends the load and decides whether one test run passed.
-- Node prepares data and coordinates several k6 runs.
+- k6 sends workload traffic and records checks and measurements.
+- Node prepares data, coordinates complete runs and observes group fan-out.
+- Scenario producers classify results; reports and dashboards preserve them.
 - Make and Docker Compose connect the commands and services.
 - Prometheus and Grafana store and display the results.
 
 The Node code is not another load-testing framework. There is no Jest
 dependency here either. `npm test` uses Node's built-in
-`node:test` runner to check helper code. All measured HTTP traffic
-comes from k6.
+`node:test` runner to check helper code. k6 generates measured workload traffic;
+the Node fan-out runner measures one administrative mutation and bounded
+convergence observations.
 
 ~~~mermaid
 flowchart LR
