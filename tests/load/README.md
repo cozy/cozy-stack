@@ -87,7 +87,8 @@ accidentally mixes both runtimes.
 
 - Docker Engine with Docker Compose
 - GNU Make
-- Node.js 22 or newer with npm
+- Node.js 22.23.4 or newer with npm (22.23.2 and 22.23.3 break TLS to IPv6
+  loopback), or Docker alone with the Node image commands below
 
 ## Run locally
 
@@ -591,6 +592,20 @@ without making one scenario change everything at once.
 | Cozy API flow | `make cozy-upload FILE_SIZE=1K VUS=1` |
 | Load model or limits | A small trial, then the dedicated load environment |
 
+To run the Node checks on the same runtime as Compose, for example on the load
+VM, whose host Node is too old, use `node:22-alpine` from `tests/load`. Pull the
+tag first, because a cached tag can still hold an unsupported Node. Keep the
+printed version and digest with the results:
+
+```console
+$ docker pull node:22-alpine
+$ docker image inspect node:22-alpine --format '{{index .RepoDigests 0}}'
+$ docker run --rm -v "$PWD":/app -v /app/node_modules -w /app node:22-alpine \
+    sh -c 'apk add --no-cache make bash && node --version && npm ci && npm test && npm run typecheck'
+```
+
+The anonymous `/app/node_modules` volume keeps the host install untouched.
+
 The mock checks our test code and API flow. It cannot give us a Cozy capacity
 number. The bundled Cozy stack is useful for integration testing, but it
 shares the machine with k6, so it is not a production benchmark either.
@@ -668,7 +683,7 @@ network.
 
 ## Components
 
-- Node.js 22 with TypeScript and `tsx` for local tooling
+- Node.js 22.23.4 or newer with TypeScript and `tsx` for local tooling
 - CouchDB 3.3.3, Redis 7.2, and RabbitMQ 3.13 in the optional `cozy` profile
 - cozy-stack built from the current checkout in development mode
 - `grafana/k6:2.2.0`
